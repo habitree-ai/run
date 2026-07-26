@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>러닝 누적기록 앱 (Track A 초안)</title>
+<style>
+  :root{color-scheme:light;
+    --surface-1:#fcfcfb;--plane:#f9f9f7;--text-primary:#0b0b0b;--text-secondary:#52514e;--muted:#898781;
+    --grid:#e1e0d9;--axis:#c3c2b7;--border:rgba(11,11,11,0.10);--series-1:#2a78d6;--series-1-soft:#cde2fb;
+    --seq-550:#1c5cab;--seq-700:#0d366b;--good:#0ca30c;--good-text:#006300;--warn:#b26a00;--warn-soft:#fdecc8;
+    --radius:14px;--shadow:0 1px 2px rgba(11,11,11,.04),0 4px 16px rgba(11,11,11,.05);
+    --font:system-ui,-apple-system,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Consolas,monospace;}
+  :root[data-theme="dark"]{color-scheme:dark;
+    --surface-1:#1a1a19;--plane:#0d0d0d;--text-primary:#fff;--text-secondary:#c3c2b7;--muted:#898781;
+    --grid:#2c2c2a;--axis:#383835;--border:rgba(255,255,255,0.10);--series-1:#3987e5;--series-1-soft:#184f95;
+    --seq-550:#6da7ec;--seq-700:#b7d3f6;--good:#0ca30c;--good-text:#0ca30c;--warn:#fab219;--warn-soft:#3a2f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+    --surface-1:#1a1a19;--plane:#0d0d0d;--text-primary:#fff;--text-secondary:#c3c2b7;--muted:#898781;
+    --grid:#2c2c2a;--axis:#383835;--border:rgba(255,255,255,0.10);--series-1:#3987e5;--series-1-soft:#184f95;
+    --seq-550:#6da7ec;--seq-700:#b7d3f6;--good-text:#0ca30c;--warn:#fab219;--warn-soft:#3a2f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);}}
+  *{box-sizing:border-box}html,body{margin:0}
+  body{background:var(--plane);color:var(--text-primary);font-family:var(--font);line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:var(--series-1);text-decoration:none}a:hover{text-decoration:underline}
+  button{font-family:inherit}
+  /* top bar */
+  header.top{border-bottom:1px solid var(--border);background:var(--surface-1);position:sticky;top:0;z-index:30}
+  .top-inner{display:flex;align-items:center;gap:14px;padding:11px 20px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:10px}
+  .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--series-1),var(--seq-550));display:grid;place-items:center;color:#fff}
+  .brand h1{font-size:15.5px;margin:0;letter-spacing:-.01em}
+  .brand .sub{font-size:11.5px;color:var(--muted)}
+  .draft-badge{font-size:10.5px;font-weight:700;color:#fff;background:var(--series-1);padding:2px 8px;border-radius:999px;margin-left:2px}
+  .spacer{flex:1}
+  .storage-pill{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-secondary);
+    border:1px solid var(--border);border-radius:999px;padding:4px 11px;background:var(--plane)}
+  .storage-pill .d{width:8px;height:8px;border-radius:50%;background:var(--warn)}
+  .storage-pill.connected .d{background:var(--good)}
+  .docnav{display:flex;gap:2px}
+  .docnav a{padding:6px 10px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text-secondary)}
+  .docnav a.active{background:var(--series-1-soft);color:var(--seq-700)}
+  :root[data-theme="dark"] .docnav a.active{color:#fff}
+  .toggle{border:1px solid var(--border);background:transparent;color:var(--text-secondary);width:34px;height:34px;border-radius:9px;cursor:pointer;display:grid;place-items:center}
+  .toggle:hover{background:var(--plane)}
+  /* layout */
+  .shell{display:grid;grid-template-columns:210px 1fr;gap:0;min-height:calc(100vh - 58px)}
+  @media(max-width:820px){.shell{grid-template-columns:1fr}}
+  nav.rail{border-right:1px solid var(--border);background:var(--surface-1);padding:16px 12px}
+  @media(max-width:820px){nav.rail{border-right:none;border-bottom:1px solid var(--border);display:flex;gap:6px;overflow:auto}}
+  nav.rail button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:none;background:transparent;
+    color:var(--text-secondary);font-size:13.5px;font-weight:600;padding:10px 12px;border-radius:10px;cursor:pointer;white-space:nowrap}
+  nav.rail button:hover{background:var(--plane)}
+  nav.rail button.active{background:var(--series-1-soft);color:var(--seq-700)}
+  :root[data-theme="dark"] nav.rail button.active{color:#fff}
+  nav.rail button svg{width:17px;height:17px;flex:none}
+  nav.rail .rail-h{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:6px 12px;margin-top:8px}
+  main.stage{padding:24px 26px 60px;max-width:1000px;min-width:0}
+  h2.vh{font-size:20px;letter-spacing:-.01em;margin:0 0 4px}
+  .vsub{color:var(--muted);font-size:13px;margin:0 0 20px}
+  /* cards / kpi */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .card{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);padding:15px 16px;box-shadow:var(--shadow)}
+  .kpi .label{font-size:12px;color:var(--text-secondary)}
+  .kpi .val{font-size:26px;font-weight:750;letter-spacing:-.02em;margin-top:6px;line-height:1.05}
+  .kpi .val small{font-size:13px;font-weight:600;color:var(--muted);margin-left:2px}
+  .kpi .foot{font-size:11px;color:var(--muted);margin-top:4px}
+  /* connect */
+  .backends{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:6px}
+  .be{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px}
+  .be .be-h{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px}
+  .be .be-ic{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:var(--series-1-soft);color:var(--seq-700)}
+  :root[data-theme="dark"] .be .be-ic{color:#dbe9ff}
+  .be p{font-size:12.5px;color:var(--text-secondary);margin:0;flex:1;line-height:1.5}
+  .be .tag{align-self:flex-start;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px}
+  .tag.rec{background:var(--good);color:#fff}
+  .tag.soon{background:var(--warn-soft);color:var(--warn)}
+  .btn{border:1px solid var(--series-1);background:var(--series-1);color:#fff;font-weight:600;font-size:13px;
+    padding:9px 14px;border-radius:10px;cursor:pointer;transition:opacity .12s}
+  .btn:hover{opacity:.9}
+  .btn.ghost{background:transparent;color:var(--series-1)}
+  .btn.sec{background:transparent;color:var(--text-secondary);border-color:var(--border)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.sm{padding:6px 11px;font-size:12px}
+  /* add / forms */
+  .subtabs{display:flex;gap:4px;margin-bottom:18px;border-bottom:1px solid var(--border)}
+  .subtabs button{border:none;background:transparent;color:var(--text-secondary);font-weight:600;font-size:13.5px;
+    padding:9px 13px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .subtabs button.active{color:var(--series-1);border-bottom-color:var(--series-1)}
+  .form{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);max-width:640px}
+  .fg{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:560px){.fg{grid-template-columns:1fr}}
+  .field label{display:block;font-size:12px;color:var(--text-secondary);margin-bottom:5px;font-weight:600}
+  .field input,.field select{width:100%;border:1px solid var(--border);border-radius:9px;padding:9px 11px;font-size:13.5px;
+    background:var(--plane);color:var(--text-primary);font-family:inherit}
+  .field input:focus,.field select:focus{outline:2px solid var(--series-1-soft);border-color:var(--series-1)}
+  .field .hint{font-size:11px;color:var(--muted);margin-top:3px}
+  .form-actions{display:flex;gap:10px;margin-top:18px;align-items:center;flex-wrap:wrap}
+  .note{font-size:12.5px;color:var(--text-secondary);background:var(--series-1-soft);border-radius:10px;padding:11px 13px;line-height:1.5}
+  :root[data-theme="dark"] .note{background:rgba(57,135,229,.12)}
+  .note.warn{background:var(--warn-soft);color:var(--warn)}
+  .drop{border:2px dashed var(--border);border-radius:12px;padding:26px;text-align:center;color:var(--muted);font-size:13px;background:var(--plane)}
+  /* table */
+  table.data{border-collapse:collapse;width:100%;font-size:13px;background:var(--surface-1);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  table.data th{background:var(--series-1-soft);color:var(--seq-700);text-align:left;padding:9px 11px;font-size:11.5px;font-weight:700;white-space:nowrap}
+  :root[data-theme="dark"] table.data th{color:#dbe9ff;background:#17324f}
+  table.data td{padding:8px 11px;border-top:1px solid var(--border);white-space:nowrap;font-variant-numeric:tabular-nums}
+  table.data tbody tr:hover{background:var(--plane)}
+  .src{font-size:10px;font-weight:700;padding:1px 6px;border-radius:5px}
+  .src.demo{background:var(--warn-soft);color:var(--warn)}
+  .src.manual{background:var(--series-1-soft);color:var(--seq-700)}
+  .src.ocr{background:#e7f6ee;color:#0a7a43}
+  .src.drive{background:#eef;color:#4a3aa7}
+  :root[data-theme="dark"] .src.manual{color:#dbe9ff}
+  .del{border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:14px}
+  .del:hover{color:#d03b3b}
+  /* charts */
+  .chart-card{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:15px 17px 10px}
+  .chart-card h3{margin:0;font-size:14px;font-weight:700}.chart-card .cs{font-size:11.5px;color:var(--muted);margin:2px 0 6px}
+  .charts2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+  @media(max-width:760px){.charts2{grid-template-columns:1fr}}
+  svg.chart{width:100%;height:auto;display:block;overflow:visible}
+  .tick{fill:var(--muted);font-size:10px;font-family:var(--font);font-variant-numeric:tabular-nums}
+  .gridline{stroke:var(--grid);stroke-width:1}.baseline{stroke:var(--axis);stroke-width:1}
+  .bar{fill:var(--series-1)}.bar:hover{opacity:.82;cursor:pointer}
+  .linepath{fill:none;stroke:var(--series-1);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+  .area{fill:var(--series-1);opacity:.08}.dot-m{fill:var(--surface-1);stroke:var(--series-1);stroke-width:2}
+  .empty{text-align:center;color:var(--muted);font-size:13px;padding:40px 10px;border:1px dashed var(--border);border-radius:12px}
+  /* modal */
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;place-items:center;z-index:50;padding:20px}
+  .modal-bg.open{display:grid}
+  .modal{background:var(--surface-1);border:1px solid var(--border);border-radius:16px;max-width:480px;width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .modal h3{margin:0 0 10px;font-size:17px}
+  .modal p{font-size:13.5px;color:var(--text-secondary);line-height:1.6}
+  .modal ol{font-size:13px;color:var(--text-secondary);padding-left:20px;line-height:1.6}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--text-primary);
+    color:var(--surface-1);padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;opacity:0;transition:.2s;z-index:60;pointer-events:none}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .tooltip{position:fixed;pointer-events:none;z-index:70;background:var(--text-primary);color:var(--surface-1);font-size:12px;padding:6px 9px;border-radius:8px;opacity:0;transition:opacity .1s;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .hide{display:none!important}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <div class="brand">
+      <div class="logo"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/><path d="M4 17l3-3 3 1 2-4 3 2 2-1"/><path d="M8.5 21l2.5-5 3 2 1 3"/></svg></div>
+      <div><h1>러닝 누적기록 앱 <span class="draft-badge">Track A 초안</span></h1><div class="sub">제로-DB · 데이터는 사용자 소유 · 자동발행</div></div>
+    </div>
+    <div class="spacer"></div>
+    <div class="storage-pill" id="storagePill"><span class="d"></span><span id="storageText">로컬 데모 모드</span></div>
+    <nav class="docnav">
+      <a href="index.html">대시보드</a><a href="app.html" class="active">앱</a>
+      <a href="plan.html">기획서</a><a href="platform.html">플랫폼</a><a href="spec.html">설계</a>
+    </nav>
+    <button class="toggle" id="themeBtn" aria-label="테마 전환"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
+  </div>
+</header>
+
+<div class="shell">
+  <nav class="rail" id="rail">
+    <div class="rail-h">시작</div>
+    <button data-view="connect" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1"/></svg>저장소 연결</button>
+    <div class="rail-h">기록</div>
+    <button data-view="add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>기록 추가</button>
+    <button data-view="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg>대시보드</button>
+    <button data-view="data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="18" height="4" rx="1"/></svg>데이터 · 내보내기</button>
+  </nav>
+
+  <main class="stage" id="stage"></main>
+</div>
+
+<div class="modal-bg" id="modalBg"><div class="modal" id="modalBox"></div></div>
+<div class="toast" id="toast"></div>
+<div class="tooltip" id="tip"></div>
+
+<script>
+/* ============ 유틸 ============ */
+const $=s=>document.querySelector(s), root=document.documentElement;
+const cssv=n=>getComputedStyle(root).getPropertyValue(n).trim();
+const pad=n=>String(n).padStart(2,'0');
+const WD=['일','월','화','수','목','금','토'];
+function paceTxt(s){if(!s&&s!==0)return '—';return Math.floor(s/60)+"'"+pad(Math.round(s%60))+'"';}
+function clock(s){if(!s&&s!==0)return '—';const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=Math.round(s%60);return h?h+':'+pad(m)+':'+pad(x):m+':'+pad(x);}
+function parsePace(t){const m=(t||'').match(/(\d+)\s*['′:]\s*(\d{1,2})/);return m?(+m[1]*60+ +m[2]):null;}
+function parseClock(t){const p=(t||'').split(':').map(Number);if(p.some(isNaN)||!p.length)return null;return p.length===3?p[0]*3600+p[1]*60+p[2]:p[0]*60+p[1];}
+function isoWeekKey(d){const dt=new Date(d);const day=(dt.getDay()+6)%7;dt.setDate(dt.getDate()-day);return dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());}
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1900);}
+
+/* ============ 상태 ============ */
+const state={records:[], backend:'local'};
+
+/* ============ 저장소 어댑터 (동일 인터페이스) ============ */
+// 인터페이스: listImages(), readDataset()->records[], writeDataset(records)
+const LocalFileAdapter={
+  id:'local', name:'로컬 파일 / 데모',
+  async readDataset(){return state.records;},               // 메모리(내보내기=파일)
+  async writeDataset(recs){state.records=recs;},            // 정본은 JSON 내보내기로 사용자 소유
+  export(){                                                  // = 정본 파일 쓰기
+    const blob=new Blob([JSON.stringify(datasetOut(),null,2)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    a.download='running_records.json';a.click();
+  }
+};
+// 실서비스에서 구현될 어댑터 (초안=스텁, 인터페이스만 확정)
+const DriveAdapter={ id:'drive', name:'구글드라이브', stub:true,
+  note:'OAuth `drive.file` + Google Picker로 폴더 선택 → 이미지 읽기 + 정본 JSON을 사용자 드라이브에 기록. (초안에선 미연동)' };
+const NotionAdapter={ id:'notion', name:'Notion', stub:true,
+  note:'템플릿 복제 + OAuth(무상태 Worker) → 레코드를 노션 DB 페이지로 기록, 노션 뷰가 대시보드. (초안에선 미연동)' };
+
+function datasetOut(){return {dataset:'러닝 누적기록',schema_version:'1.0',backend:state.backend,
+  exported_from:'app.html (Track A 초안)',count:state.records.length,records:state.records};}
+
+/* ============ 추출 엔진 ============ */
+// manual: 폼 / ocr: Tesseract(있으면) / byok: 스텁
+function calcConsistency(r){
+  if(r.distance_km&&r.avg_pace_sec_per_km&&!r.duration_sec) r.duration_sec=Math.round(r.distance_km*r.avg_pace_sec_per_km);
+  if(r.distance_km&&r.duration_sec&&!r.avg_pace_sec_per_km) r.avg_pace_sec_per_km=Math.round(r.duration_sec/r.distance_km);
+  return r;
+}
+function parseRunningText(t){
+  const r={};
+  let m=t.match(/(\d+[.,]\d+)\s*(?:킬로미터|km|㎞)/i)||t.match(/(?:킬로미터|km|거리)[^\d]{0,8}(\d+[.,]\d+)/i);
+  if(m)r.distance_km=parseFloat(m[1].replace(',','.'));
+  m=t.match(/(\d+)\s*['′]\s*(\d{1,2})\s*["″]?/); if(m)r.avg_pace_sec_per_km=+m[1]*60+ +m[2];
+  m=t.match(/(\d{1,2}:\d{2}(?::\d{2})?)/); if(m)r.duration_sec=parseClock(m[1]);
+  m=t.match(/(\d{2,4})\s*(?:칼로리|kcal|cal)/i); if(m)r.calories=+m[1];
+  m=t.match(/(\d{2,3})\s*(?:spm|케이던스)/i); if(m)r.cadence_spm=+m[1];
+  m=t.match(/(\d{2,3})\s*(?:bpm|심박)/i); if(m)r.avg_heart_rate_bpm=+m[1];
+  m=t.match(/(\d{1,2}:\d{2})\s*(?:시작|오전|오후)?/);
+  return r;
+}
+async function runOCR(file,cb){
+  if(!window.Tesseract){cb(null,'OCR 엔진(Tesseract.js)을 불러오지 못했습니다. 네트워크가 없거나 차단된 환경입니다 — 수동 입력을 이용하세요.');return;}
+  try{const {data}=await Tesseract.recognize(file,'kor+eng');cb(parseRunningText(data.text),null,data.text);}
+  catch(e){cb(null,'인식 실패: '+e.message);}
+}
+
+/* ============ 뷰 라우팅 ============ */
+const views={connect:renderConnect, add:renderAdd, dashboard:renderDashboard, data:renderData};
+let current='connect';
+function show(v){current=v;document.querySelectorAll('nav.rail button').forEach(b=>b.classList.toggle('active',b.dataset.view===v));views[v]();}
+document.querySelectorAll('nav.rail button').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));
+
+/* ============ 연결 뷰 ============ */
+function renderConnect(){
+  $('#stage').innerHTML=`
+    <h2 class="vh">저장소 연결</h2>
+    <p class="vsub">데이터는 <b>당신의 저장소</b>에 남습니다. 서버·DB 없이, 앱은 읽고 쓰기만 합니다.</p>
+    <div class="backends">
+      <div class="be"><span class="tag rec">추천 · 1순위</span>
+        <div class="be-h"><span class="be-ic">▲</span>구글드라이브</div>
+        <p>러닝기록 폴더의 캡쳐를 읽고, 누적 정본(JSON)을 당신의 드라이브에 저장. <code>drive.file</code>+Picker로 고른 폴더만 접근.</p>
+        <button class="btn" onclick="explainStub('drive')">연결 (초안: 설명 보기)</button></div>
+      <div class="be"><span class="tag soon">준비중</span>
+        <div class="be-h"><span class="be-ic">◆</span>Notion</div>
+        <p>템플릿 복제 후 연결. 레코드가 노션 DB로 쌓이고, 노션 뷰가 곧 대시보드가 됩니다.</p>
+        <button class="btn sec" onclick="explainStub('notion')">연결 (초안: 설명 보기)</button></div>
+      <div class="be"><span class="tag rec" style="background:var(--series-1)">지금 체험</span>
+        <div class="be-h"><span class="be-ic">■</span>로컬 · 데모</div>
+        <p>지금 바로 체험. 기록을 추가하고 대시보드를 확인한 뒤, 정본을 JSON 파일로 내보내 소유하세요.</p>
+        <button class="btn" onclick="seedDemo()">데모 데이터로 시작</button>
+        <button class="btn ghost sm" onclick="startEmpty()">빈 상태로 시작</button></div>
+    </div>
+    <div class="note" style="margin-top:20px">ℹ️ 이 초안은 <b>전 과정 클라이언트(브라우저)에서 동작</b>합니다. 구글/노션 실연동은 각 사용자의 OAuth로 붙는 부분이라 초안에선 스텁(설명)으로 두고, 인터페이스만 확정했습니다. 자세한 계획은 상단 <a href="spec.html">설계</a> 참고.</div>`;
+}
+function explainStub(k){const a=k==='drive'?DriveAdapter:NotionAdapter;
+  openModal(`<h3>${a.name} 연결 (실서비스)</h3><p>${a.note}</p>
+   <ol><li>${k==='drive'?'“드라이브 연결” → Google 로그인/동의':'노션 템플릿 “복제” → “연결”'}</li>
+   <li>${k==='drive'?'Picker로 러닝기록 폴더 선택(고른 폴더만 접근)':'무상태 Worker가 인증코드↔토큰 교환(데이터는 저장 안 함)'}</li>
+   <li>이미지 읽기 → 추출 → ${k==='drive'?'드라이브의 JSON 정본':'노션 DB'}에 누적</li></ol>
+   <p style="margin-top:12px">지금은 <b>로컬·데모</b>로 전체 흐름을 체험할 수 있어요.</p>
+   <div style="display:flex;gap:10px;margin-top:14px"><button class="btn" onclick="seedDemo();closeModal()">데모로 체험</button>
+   <button class="btn sec" onclick="closeModal()">닫기</button></div>`);}
+
+function setBackend(id,text,connected){state.backend=id;$('#storageText').textContent=text;$('#storagePill').classList.toggle('connected',!!connected);}
+function seedDemo(){state.records=DEMO.slice();setBackend('local','로컬 데모 · '+state.records.length+'건',true);toast('데모 데이터 '+state.records.length+'건을 불러왔습니다');show('dashboard');}
+function startEmpty(){state.records=[];setBackend('local','로컬 · 0건',true);toast('빈 상태로 시작합니다');show('add');}
+
+/* ============ 기록 추가 뷰 ============ */
+let addTab='manual';
+function renderAdd(){
+  $('#stage').innerHTML=`
+    <h2 class="vh">기록 추가</h2>
+    <p class="vsub">이미지 인식(OCR) 또는 수동 입력으로 러닝 세션을 추가합니다. 추출은 <b>당신의 브라우저</b>에서 실행됩니다.</p>
+    <div class="subtabs">
+      <button data-t="manual" class="${addTab==='manual'?'active':''}">✍️ 수동 입력</button>
+      <button data-t="ocr" class="${addTab==='ocr'?'active':''}">🖼️ 이미지 인식(OCR)</button>
+      <button data-t="import" class="${addTab==='import'?'active':''}">📁 데이터셋 불러오기</button>
+    </div>
+    <div id="addBody"></div>`;
+  document.querySelectorAll('.subtabs button').forEach(b=>b.onclick=()=>{addTab=b.dataset.t;renderAdd();});
+  ({manual:addManual,ocr:addOCR,import:addImport})[addTab]();
+}
+function formHTML(v={}){v=v||{};return `
+  <div class="form"><div class="fg">
+    <div class="field"><label>날짜 *</label><input id="f_date" type="date" value="${v.date||''}"></div>
+    <div class="field"><label>시작 시각</label><input id="f_time" type="time" value="${v.start_time||''}"></div>
+    <div class="field"><label>제목</label><input id="f_title" placeholder="예: 금요일 오전 러닝" value="${v.title||''}"></div>
+    <div class="field"><label>위치</label><input id="f_loc" placeholder="예: 서울특별시" value="${v.location||''}"></div>
+    <div class="field"><label>거리 (km) *</label><input id="f_dist" inputmode="decimal" placeholder="3.27" value="${v.distance_km||''}"></div>
+    <div class="field"><label>평균 페이스 (분'초")</label><input id="f_pace" placeholder="5'35&quot;" value="${v.avg_pace_sec_per_km?paceTxt(v.avg_pace_sec_per_km):''}"><div class="hint">페이스·시간 중 하나만 넣어도 나머지를 계산합니다</div></div>
+    <div class="field"><label>시간 (분:초)</label><input id="f_dur" placeholder="18:16" value="${v.duration_sec?clock(v.duration_sec):''}"></div>
+    <div class="field"><label>칼로리 (kcal)</label><input id="f_cal" inputmode="numeric" placeholder="167" value="${v.calories||''}"></div>
+    <div class="field"><label>케이던스 (spm)</label><input id="f_cad" inputmode="numeric" placeholder="—" value="${v.cadence_spm||''}"></div>
+    <div class="field"><label>평균 심박 (bpm)</label><input id="f_hr" inputmode="numeric" placeholder="—" value="${v.avg_heart_rate_bpm||''}"></div>
+  </div>
+  <div class="form-actions"><button class="btn" onclick="saveManual()">기록 저장</button>
+    <span id="calcHint" style="font-size:12px;color:var(--muted)"></span></div></div>`;
+}
+function addManual(){$('#addBody').innerHTML=formHTML(window._prefill||{});window._prefill=null;}
+function saveManual(){
+  const g=id=>$('#'+id).value.trim();
+  if(!g('f_date')||!g('f_dist')){toast('날짜와 거리는 필수입니다');return;}
+  const d=g('f_date'),tm=g('f_time');
+  const rec=calcConsistency({
+    record_id:'r'+Date.now(), date:d, weekday:WD[new Date(d).getDay()],
+    start_time:tm||null, day_part: tm? (+tm.slice(0,2)<12?'오전':'오후') : null,
+    title:g('f_title')||'러닝', location:g('f_loc')||null,
+    distance_km:parseFloat(g('f_dist')),
+    avg_pace_sec_per_km:parsePace(g('f_pace')), duration_sec:parseClock(g('f_dur')),
+    calories:+g('f_cal')||null, cadence_spm:+g('f_cad')||null, avg_heart_rate_bpm:+g('f_hr')||null,
+    source:'manual'
+  });
+  state.records.push(rec);state.records.sort((a,b)=>a.date<b.date?-1:1);
+  setBackend(state.backend, (state.backend==='local'?'로컬':state.backend)+' · '+state.records.length+'건', true);
+  toast('저장되었습니다 · 총 '+state.records.length+'건');show('dashboard');
+}
+function addOCR(){
+  $('#addBody').innerHTML=`
+   <div class="note" style="margin-bottom:14px">🖼️ 러닝 앱 캡쳐 이미지를 올리면 <b>브라우저에서 OCR</b>로 지표를 읽어 폼에 채웁니다. 값 확인 후 저장하세요. (엔진: Tesseract.js — 없으면 수동 입력)</div>
+   <label class="drop" for="ocrFile" id="drop">여기에 이미지를 선택하거나 끌어다 놓으세요<br><span style="font-size:11px">PNG · JPG</span>
+     <input id="ocrFile" type="file" accept="image/*" class="hide"></label>
+   <div id="ocrStatus" style="margin-top:14px;font-size:13px;color:var(--muted)"></div>`;
+  $('#ocrFile').onchange=e=>{const f=e.target.files[0];if(!f)return;
+    $('#ocrStatus').textContent='인식 중… (최초 실행 시 엔진 로딩으로 수십 초 걸릴 수 있어요)';
+    runOCR(f,(parsed,err)=>{
+      if(err){$('#ocrStatus').innerHTML='<span style="color:var(--warn)">'+err+'</span>';return;}
+      window._prefill=parsed;$('#ocrStatus').innerHTML='✅ 인식 완료 — 값을 확인하고 저장하세요.';
+      addTab='manual';renderAdd();
+    });};
+}
+function addImport(){
+  $('#addBody').innerHTML=`
+   <div class="note" style="margin-bottom:14px">📁 이전에 내보낸 <code>running_records.json</code>(당신의 정본)을 불러옵니다.</div>
+   <label class="drop" for="impFile">JSON 파일 선택<input id="impFile" type="file" accept="application/json,.json" class="hide"></label>`;
+  $('#impFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();
+    rd.onload=()=>{try{const j=JSON.parse(rd.result);const recs=Array.isArray(j)?j:j.records||[];
+      state.records=recs;setBackend('local','로컬 · '+recs.length+'건',true);toast('불러왔습니다 · '+recs.length+'건');show('dashboard');}
+      catch(x){toast('JSON을 읽을 수 없습니다');}};rd.readAsText(f);};
+}
+
+/* ============ 대시보드 뷰 ============ */
+function agg(){const r=state.records;const tot=r.reduce((a,x)=>({d:a.d+(x.distance_km||0),t:a.t+(x.duration_sec||0),c:a.c+(x.calories||0)}),{d:0,t:0,c:0});
+  const paces=r.filter(x=>x.avg_pace_sec_per_km).map(x=>x.avg_pace_sec_per_km);
+  const avgPace=paces.length?paces.reduce((a,b)=>a+b,0)/paces.length:null;
+  const longest=r.reduce((m,x)=>(x.distance_km>(m?.distance_km||0)?x:m),null);
+  const fastest=r.filter(x=>x.avg_pace_sec_per_km).reduce((m,x)=>(x.avg_pace_sec_per_km<(m?.avg_pace_sec_per_km||1e9)?x:m),null);
+  return {n:r.length,...tot,avgPace,longest,fastest};}
+function renderDashboard(){
+  const a=agg();
+  if(!state.records.length){$('#stage').innerHTML=`<h2 class="vh">대시보드</h2><p class="vsub">누적 러닝 지표</p>
+    <div class="empty">아직 기록이 없습니다. <a href="#" onclick="show('connect');return false">저장소 연결</a>에서 데모로 시작하거나 <a href="#" onclick="show('add');return false">기록 추가</a>로 첫 러닝을 넣어보세요.</div>`;return;}
+  $('#stage').innerHTML=`
+    <h2 class="vh">대시보드</h2><p class="vsub">누적 ${a.n}회 · 현재 저장소: ${state.backend==='local'?'로컬(내보내기로 소유)':state.backend}</p>
+    <div class="cards">
+      <div class="card kpi"><div class="label">총 러닝</div><div class="val">${a.n}<small>회</small></div></div>
+      <div class="card kpi"><div class="label">총 거리</div><div class="val">${a.d.toFixed(2)}<small>km</small></div></div>
+      <div class="card kpi"><div class="label">총 시간</div><div class="val">${clock(a.t)}</div></div>
+      <div class="card kpi"><div class="label">총 칼로리</div><div class="val">${a.c.toLocaleString()}<small>kcal</small></div></div>
+      <div class="card kpi"><div class="label">평균 페이스</div><div class="val">${paceTxt(a.avgPace)}<small>/km</small></div></div>
+      <div class="card kpi"><div class="label">최장 거리 (PR)</div><div class="val">${a.longest?a.longest.distance_km.toFixed(2):'—'}<small>km</small></div><div class="foot">${a.fastest?'최고 '+paceTxt(a.fastest.avg_pace_sec_per_km)+'/km':''}</div></div>
+    </div>
+    <div class="charts2">
+      <div class="chart-card"><h3>주간 거리</h3><div class="cs">주별 합계 · km</div><div id="ch-week"></div></div>
+      <div class="chart-card"><h3>페이스 추이</h3><div class="cs">기록 순 · 낮을수록 빠름</div><div id="ch-pace"></div></div>
+    </div>
+    <div class="chart-card" style="margin-top:14px"><h3>최근 러닝</h3><div class="cs">최신순</div>
+      <div id="recentList" style="margin-top:8px"></div></div>`;
+  drawWeekly();drawPace();drawRecent();
+}
+function drawWeekly(){
+  const map={};state.records.forEach(r=>{const k=isoWeekKey(r.date);map[k]=(map[k]||0)+(r.distance_km||0);});
+  const keys=Object.keys(map).sort().slice(-8);
+  const data=keys.map(k=>({w:k.slice(5).replace('-','/'),v:map[k]}));
+  barChart($('#ch-week'),data);
+}
+function drawPace(){
+  const data=state.records.filter(r=>r.avg_pace_sec_per_km).slice(-10).map(r=>({d:r.date.slice(5).replace('-','/'),s:r.avg_pace_sec_per_km}));
+  lineChart($('#ch-pace'),data);
+}
+function drawRecent(){
+  const r=state.records.slice().reverse().slice(0,5);
+  $('#recentList').innerHTML=r.map(x=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--border);font-size:13px">
+    <span><b>${x.date}</b> ${x.weekday?'('+x.weekday+')':''} · ${x.title||'러닝'} <span class="src ${x.source||'manual'}">${(x.source||'manual').toUpperCase()}</span></span>
+    <span style="color:var(--text-secondary);font-variant-numeric:tabular-nums">${(x.distance_km||0).toFixed(2)}km · ${paceTxt(x.avg_pace_sec_per_km)} · ${clock(x.duration_sec)}</span></div>`).join('');
+}
+/* charts */
+const tip=$('#tip');
+function bindHover(el){el.querySelectorAll('[data-t]').forEach(m=>{m.addEventListener('mousemove',e=>{tip.innerHTML=m.getAttribute('data-t');tip.style.opacity=1;tip.style.left=(e.clientX+12)+'px';tip.style.top=(e.clientY+12)+'px';});m.addEventListener('mouseleave',()=>tip.style.opacity=0);});}
+function barChart(el,data){
+  if(!data.length){el.innerHTML='<div class="empty">데이터 없음</div>';return;}
+  const W=el.clientWidth||460,H=200,P={t:12,r:8,b:24,l:28};
+  const iw=W-P.l-P.r,ih=H-P.t-P.b,max=Math.max(...data.map(d=>d.v),1)*1.12,bw=iw/data.length,bar=Math.min(30,bw*.6);
+  const y=v=>P.t+ih-(v/max)*ih;let g='';
+  [0,max/2,max].forEach(t=>{const yy=y(t);g+=`<line class="gridline" x1="${P.l}" y1="${yy}" x2="${W-P.r}" y2="${yy}"/><text class="tick" x="${P.l-5}" y="${yy+3}" text-anchor="end">${t.toFixed(0)}</text>`;});
+  data.forEach((d,i)=>{const cx=P.l+bw*i+bw/2,yy=y(d.v);g+=`<rect class="bar" x="${cx-bar/2}" y="${yy}" width="${bar}" height="${Math.max(1,P.t+ih-yy)}" rx="4" data-t="${d.w} · <b>${d.v.toFixed(1)}km</b>"/><text class="tick" x="${cx}" y="${H-7}" text-anchor="middle">${d.w}</text>`;});
+  el.innerHTML=`<svg class="chart" viewBox="0 0 ${W} ${H}">${g}<line class="baseline" x1="${P.l}" y1="${P.t+ih}" x2="${W-P.r}" y2="${P.t+ih}"/></svg>`;bindHover(el);
+}
+function lineChart(el,data){
+  if(data.length<2){el.innerHTML='<div class="empty">페이스 데이터가 2건 이상일 때 표시됩니다</div>';return;}
+  const W=el.clientWidth||460,H=200,P={t:14,r:14,b:24,l:38};const iw=W-P.l-P.r,ih=H-P.t-P.b;
+  const vs=data.map(d=>d.s),mn=Math.min(...vs)-6,mx=Math.max(...vs)+6;
+  const x=i=>P.l+iw*i/(data.length-1),y=s=>P.t+ih-((s-mn)/(mx-mn||1))*ih;let g='';
+  for(let k=0;k<=2;k++){const s=mn+(mx-mn)*k/2,yy=y(s);g+=`<line class="gridline" x1="${P.l}" y1="${yy}" x2="${W-P.r}" y2="${yy}"/><text class="tick" x="${P.l-5}" y="${yy+3}" text-anchor="end">${paceTxt(Math.round(s))}</text>`;}
+  const pts=data.map((d,i)=>[x(i),y(d.s)]);
+  g+=`<path class="area" d="M${pts[0][0]} ${P.t+ih} ${pts.map(p=>'L'+p[0]+' '+p[1]).join(' ')} L${pts.at(-1)[0]} ${P.t+ih} Z"/><path class="linepath" d="${pts.map((p,i)=>(i?'L':'M')+p[0]+' '+p[1]).join(' ')}"/>`;
+  data.forEach((d,i)=>{g+=`<circle class="dot-m" cx="${x(i)}" cy="${y(d.s)}" r="4"/><circle cx="${x(i)}" cy="${y(d.s)}" r="12" fill="transparent" data-t="${d.d} · <b>${paceTxt(d.s)}</b>"/><text class="tick" x="${x(i)}" y="${H-7}" text-anchor="middle">${d.d}</text>`;});
+  el.innerHTML=`<svg class="chart" viewBox="0 0 ${W} ${H}">${g}</svg>`;bindHover(el);
+}
+
+/* ============ 데이터 뷰 ============ */
+function renderData(){
+  const r=state.records;
+  $('#stage').innerHTML=`
+    <h2 class="vh">데이터 · 내보내기</h2>
+    <p class="vsub">누적 정본입니다. <b>내보내기(JSON)</b>가 곧 당신의 저장소에 저장하는 행위 — 데이터는 당신 것입니다.</p>
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <button class="btn" onclick="LocalFileAdapter.export()">⬇ 정본 내보내기 (JSON)</button>
+      <button class="btn sec" onclick="show('add')">＋ 기록 추가</button>
+      ${r.length?`<button class="btn sec" onclick="clearAll()">전체 비우기</button>`:''}
+      <span style="flex:1"></span><span style="align-self:center;font-size:12px;color:var(--muted)">스키마 v1.0 · ${r.length}건</span>
+    </div>
+    ${r.length?`<div style="overflow:auto"><table class="data"><thead><tr>
+      <th>날짜</th><th>제목</th><th>거리</th><th>페이스</th><th>시간</th><th>칼로리</th><th>케이던스</th><th>심박</th><th>출처</th><th></th></tr></thead>
+      <tbody>${r.slice().reverse().map(x=>`<tr>
+        <td>${x.date} ${x.weekday?'('+x.weekday+')':''}</td><td>${x.title||'러닝'}</td>
+        <td>${(x.distance_km||0).toFixed(2)}</td><td>${paceTxt(x.avg_pace_sec_per_km)}</td><td>${clock(x.duration_sec)}</td>
+        <td>${x.calories||'—'}</td><td>${x.cadence_spm||'—'}</td><td>${x.avg_heart_rate_bpm||'—'}</td>
+        <td><span class="src ${x.source||'manual'}">${(x.source||'manual').toUpperCase()}</span></td>
+        <td><button class="del" title="삭제" onclick="delRec('${x.record_id}')">✕</button></td></tr>`).join('')}</tbody></table></div>`
+      :`<div class="empty">기록이 없습니다.</div>`}`;
+}
+function delRec(id){state.records=state.records.filter(x=>x.record_id!==id);toast('삭제됨');renderData();}
+function clearAll(){if(confirm('모든 기록을 비웁니다. (내보내지 않은 데이터는 사라집니다)')){state.records=[];setBackend(state.backend,'로컬 · 0건',true);renderData();}}
+
+/* ============ 모달/테마 ============ */
+function openModal(html){$('#modalBox').innerHTML=html;$('#modalBg').classList.add('open');}
+function closeModal(){$('#modalBg').classList.remove('open');}
+$('#modalBg').addEventListener('click',e=>{if(e.target===$('#modalBg'))closeModal();});
+$('#themeBtn').addEventListener('click',()=>{root.setAttribute('data-theme',root.getAttribute('data-theme')==='dark'?'light':'dark');if(current==='dashboard')renderDashboard();});
+
+/* ============ 데모 데이터 ============ */
+const DEMO=[
+ {record_id:'d1',date:'2026-06-07',weekday:'일',title:'일요일 장거리',location:'서울',distance_km:12.4,avg_pace_sec_per_km:352,duration_sec:4365,calories:820,cadence_spm:168,avg_heart_rate_bpm:154,source:'demo'},
+ {record_id:'d2',date:'2026-06-14',weekday:'일',title:'하프 도전',location:'서울',distance_km:21.5,avg_pace_sec_per_km:314,duration_sec:6751,calories:1320,cadence_spm:172,avg_heart_rate_bpm:161,source:'demo'},
+ {record_id:'d3',date:'2026-06-21',weekday:'일',title:'회복 러닝',location:'서울',distance_km:6.2,avg_pace_sec_per_km:360,duration_sec:2232,calories:410,cadence_spm:165,avg_heart_rate_bpm:146,source:'demo'},
+ {record_id:'d4',date:'2026-06-30',weekday:'화',title:'인터벌',location:'서울',distance_km:8.0,avg_pace_sec_per_km:300,duration_sec:2400,calories:560,cadence_spm:178,avg_heart_rate_bpm:168,source:'demo'},
+ {record_id:'d5',date:'2026-07-02',weekday:'목',title:'템포런',location:'서울',distance_km:5.0,avg_pace_sec_per_km:282,duration_sec:1410,calories:360,cadence_spm:182,avg_heart_rate_bpm:170,source:'demo'},
+ {record_id:'d6',date:'2026-07-07',weekday:'화',title:'저녁 러닝',location:'서울',distance_km:10.3,avg_pace_sec_per_km:338,duration_sec:3481,calories:690,cadence_spm:170,avg_heart_rate_bpm:158,source:'demo'},
+ {record_id:'d7',date:'2026-07-14',weekday:'화',title:'아침 러닝',location:'서울',distance_km:7.6,avg_pace_sec_per_km:333,duration_sec:2531,calories:510,cadence_spm:169,avg_heart_rate_bpm:152,source:'demo'},
+ {record_id:'d8',date:'2026-07-21',weekday:'화',title:'한강 러닝',location:'서울',distance_km:9.1,avg_pace_sec_per_km:330,duration_sec:3003,calories:600,cadence_spm:171,avg_heart_rate_bpm:157,source:'demo'},
+ {record_id:'1IDlv1mV5pWTjc4jRV8b2DuuVPOVQZ0jp',date:'2026-07-24',weekday:'금',start_time:'06:03',day_part:'오전',title:'금요일 오전 러닝',location:'서울특별시, 대한민국',distance_km:3.27,avg_pace_sec_per_km:335,duration_sec:1096,calories:167,source:'drive'}
+];
+
+/* Tesseract 지연 로드(있을 때만) */
+(function(){const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';s.async=true;document.head.appendChild(s);})();
+
+show('connect');
+</script>
+</body>
+</html>

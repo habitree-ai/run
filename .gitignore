@@ -1,0 +1,12 @@
+# 로컬 캡쳐 인박스 (서빙용 복사본은 images/)
+기록/
+
+# 개인 메모 (공개 repo 제외)
+DOC/
+
+# Vercel
+.vercel/
+
+# OS
+Thumbs.db
+.DS_Store

@@ -1,0 +1,53 @@
+{
+  "dataset": "러닝 누적기록",
+  "schema_version": "1.0",
+  "phase": "Phase 0 초안",
+  "source_folder": {
+    "name": "러닝기록",
+    "drive_folder_id": "1nS5kvPDMBWFqYIGZDaOe5nmMukunSUEO",
+    "url": "https://drive.google.com/drive/folders/1nS5kvPDMBWFqYIGZDaOe5nmMukunSUEO"
+  },
+  "notes": [
+    "실데이터 1건(IMG_5072.PNG)을 스키마 v1.0에 맞춰 구조화한 예시입니다.",
+    "cadence_spm / avg_heart_rate_bpm / elevation_*는 표준 OCR이 놓친 값으로 null이며, 비전 추출 단계에서 채웁니다.",
+    "date는 이미지에 절대 날짜가 없어, 드라이브 업로드 시각(KST)과 이미지의 요일('금요일') 교차검증으로 확정했습니다."
+  ],
+  "records": [
+    {
+      "record_id": "1IDlv1mV5pWTjc4jRV8b2DuuVPOVQZ0jp",
+      "date": "2026-07-24",
+      "weekday": "금",
+      "start_time": "06:03",
+      "day_part": "오전",
+      "title": "금요일 오전 러닝",
+      "distance_km": 3.27,
+      "duration_sec": 1096,
+      "duration_text": "18:16",
+      "avg_pace_sec_per_km": 335,
+      "avg_pace_text": "5'35\"",
+      "calories": 167,
+      "cadence_spm": null,
+      "avg_heart_rate_bpm": null,
+      "max_heart_rate_bpm": null,
+      "elevation_avg_m": null,
+      "elevation_gain_m": null,
+      "location": "서울특별시, 대한민국",
+      "route_summary": ["선릉로190길", "뚝섬로5길", "성덕정길", "성수이로", "강변북로"],
+      "app_source": "러닝앱(미확정)",
+      "source_file_id": "1IDlv1mV5pWTjc4jRV8b2DuuVPOVQZ0jp",
+      "original_filename": "IMG_5072.PNG",
+      "renamed_filename": "20260724_0603_3.27km_0535.png",
+      "image_url": "https://drive.google.com/file/d/1IDlv1mV5pWTjc4jRV8b2DuuVPOVQZ0jp/view",
+      "date_source": "drive_ctime+요일일치",
+      "confidence": { "overall": 0.9 },
+      "needs_review": false
+    }
+  ],
+  "aggregates": {
+    "total_runs": 1,
+    "total_distance_km": 3.27,
+    "total_duration_sec": 1096,
+    "total_calories": 167,
+    "avg_pace_text": "5'35\""
+  }
+}
