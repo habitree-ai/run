@@ -1,0 +1,6 @@
+기록/
+DOC/
+.playwright-mcp/
+.git/
+*.md
+!README.md

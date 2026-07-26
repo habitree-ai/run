@@ -11,3 +11,5 @@ DOC/
 Thumbs.db
 .DS_Store
 .playwright-mcp/
+
+.vercel
