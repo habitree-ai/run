@@ -7,6 +7,12 @@ DOC/
 # Vercel
 .vercel/
 
+# 블로그 자동 발행 스크립트 산출물 (로그인 세션·스크린샷 — 커밋 금지)
+scripts/node_modules/
+scripts/.naver-profile/
+scripts/out/
+scripts/package-lock.json
+
 # OS
 Thumbs.db
 .DS_Store

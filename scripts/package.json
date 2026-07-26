@@ -1,0 +1,9 @@
+{
+  "name": "run-blog-auto-post",
+  "private": true,
+  "type": "module",
+  "description": "러닝 기록 → 네이버 블로그 완전 자동 발행 (관리자 전용 · 트랙 B — 설계는 ../blog_v1.md)",
+  "dependencies": {
+    "playwright": "^1.54.0"
+  }
+}
