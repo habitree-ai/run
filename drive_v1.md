@@ -11,8 +11,8 @@
 | 항목 | 결정 | 근거 |
 |---|---|---|
 | 인증 | Google Identity Services(GIS) 토큰 클라이언트 — 브라우저 전용 OAuth | 서버 불필요, 토큰은 메모리에만 보관(약 1시간) |
-| 권한 스코프 | `drive.file` (최소 권한) | 사용자가 Picker로 **직접 선택한 파일만** 접근 가능. 전체 드라이브 읽기 권한 불필요 |
-| 이미지 선택 | Google Picker (이미지 뷰 · 다중 선택) | 폴더 전체 자동 스캔은 `drive.readonly`가 필요해 후순위(M2)로 미룸 |
+| 권한 스코프 | `drive.file` + `drive.readonly` | `drive.file`은 정본 JSON 쓰기용. **기본 폴더 고정·폴더 탐색 뷰는 `drive.file`만으로는 Picker가 403**을 반환해 읽기 스코프를 함께 요청 (전 과정이 사용자 브라우저 안에서만 동작) |
+| 이미지 선택 | Google Picker (이미지 뷰 · 다중 선택 · 기본 폴더에서 바로 열림) | 폴더 전체 자동 스캔(신규 감지)은 후순위(M2) |
 | 자격 정보 | 사용자가 설정 UI에 입력 → localStorage 저장 | 코드에 하드코딩하지 않음(BYO 원칙). 재배포 없이 즉시 적용 |
 | 정본 백업 | `running_records.json`을 드라이브에 생성/갱신 (multipart upload) | 파일 ID를 localStorage에 기억해 같은 파일을 계속 갱신 |
 

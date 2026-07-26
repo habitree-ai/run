@@ -72,8 +72,8 @@
 <thead><tr><th>항목</th><th>결정</th><th>근거</th></tr></thead>
 <tbody>
 <tr><td>인증</td><td>Google Identity Services(GIS) 토큰 클라이언트</td><td>서버 불필요, 토큰은 메모리에만 보관(약 1시간)</td></tr>
-<tr><td>권한 스코프</td><td><code>drive.file</code> (최소 권한)</td><td>Picker로 <b>직접 선택한 파일만</b> 접근. 전체 드라이브 읽기 불필요</td></tr>
-<tr><td>이미지 선택</td><td>Google Picker (이미지 · 다중 선택)</td><td>폴더 자동 스캔은 <code>drive.readonly</code>가 필요해 M2로 미룸</td></tr>
+<tr><td>권한 스코프</td><td><code>drive.file</code> + <code>drive.readonly</code></td><td><code>drive.file</code>은 정본 JSON 쓰기용. <b>기본 폴더 고정·폴더 탐색 뷰는 <code>drive.file</code>만으로는 Picker가 403</b>이라 읽기 스코프를 함께 요청 (전 과정이 사용자 브라우저 안에서만 동작)</td></tr>
+<tr><td>이미지 선택</td><td>Google Picker (이미지 · 다중 선택 · 기본 폴더에서 바로 열림)</td><td>폴더 자동 스캔(신규 감지)은 M2</td></tr>
 <tr><td>자격 정보</td><td>설정 UI 입력 → localStorage</td><td>코드에 하드코딩하지 않음(BYO). 재배포 없이 적용</td></tr>
 <tr><td>정본 백업</td><td><code>running_records.json</code> 생성/갱신</td><td>파일 ID를 기억해 같은 파일을 계속 갱신</td></tr>
 </tbody>

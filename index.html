@@ -330,7 +330,8 @@ async function driveToken(){
     try{
       _tokenClient=google.accounts.oauth2.initTokenClient({
         client_id:s.clientId,
-        scope:'https://www.googleapis.com/auth/drive.file',
+        /* drive.file: 앱 생성 파일 쓰기(정본 백업) · drive.readonly: 폴더 고정/탐색 뷰(Picker 403 방지) */
+        scope:'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly',
         callback:t=>{
           if(t&&t.access_token){_gisToken=t.access_token;_gisTokenExp=Date.now()+((+t.expires_in||3600)*1000);res(_gisToken);}
           else rej(new Error((t&&t.error)||'토큰 발급 실패'));
