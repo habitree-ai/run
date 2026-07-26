@@ -3,394 +3,751 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>러닝 누적기록 대시보드 (초안)</title>
+<title>러닝 누적기록 · 집계 대시보드</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏃</text></svg>">
 <style>
-  :root{
-    color-scheme: light;
-    --surface-1:#fcfcfb; --plane:#f9f9f7;
-    --text-primary:#0b0b0b; --text-secondary:#52514e; --muted:#898781;
-    --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,0.10);
-    --series-1:#2a78d6; --series-1-soft:#cde2fb;
-    --good:#0ca30c; --good-text:#006300;
-    --seq-100:#cde2fb; --seq-250:#86b6ef; --seq-400:#3987e5; --seq-550:#1c5cab; --seq-700:#0d366b;
-    --radius:14px; --shadow:0 1px 2px rgba(11,11,11,.04),0 4px 16px rgba(11,11,11,.05);
+  :root{color-scheme:light;
+    --surface-1:#fcfcfb;--plane:#f9f9f7;--text-primary:#0b0b0b;--text-secondary:#52514e;--muted:#898781;
+    --grid:#e1e0d9;--axis:#c3c2b7;--border:rgba(11,11,11,0.10);--series-1:#2a78d6;--series-1-soft:#cde2fb;
+    --seq-550:#1c5cab;--seq-700:#0d366b;--good:#0ca30c;--good-text:#006300;--warn:#b26a00;--warn-soft:#fdecc8;
+    --radius:14px;--shadow:0 1px 2px rgba(11,11,11,.04),0 4px 16px rgba(11,11,11,.05);
     --font:system-ui,-apple-system,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
-  }
-  :root[data-theme="dark"]{
-    color-scheme: dark;
-    --surface-1:#1a1a19; --plane:#0d0d0d;
-    --text-primary:#ffffff; --text-secondary:#c3c2b7; --muted:#898781;
-    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
-    --series-1:#3987e5; --series-1-soft:#184f95;
-    --good:#0ca30c; --good-text:#0ca30c;
-    --seq-100:#184f95; --seq-250:#256abf; --seq-400:#3987e5; --seq-550:#6da7ec; --seq-700:#b7d3f6;
-    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);
-  }
-  @media (prefers-color-scheme: dark){
-    :root:not([data-theme="light"]){
-      color-scheme: dark;
-      --surface-1:#1a1a19; --plane:#0d0d0d;
-      --text-primary:#ffffff; --text-secondary:#c3c2b7; --muted:#898781;
-      --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
-      --series-1:#3987e5; --series-1-soft:#184f95;
-      --good-text:#0ca30c;
-      --seq-100:#184f95; --seq-250:#256abf; --seq-400:#3987e5; --seq-550:#6da7ec; --seq-700:#b7d3f6;
-      --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);
-    }
-  }
-  *{box-sizing:border-box}
-  html,body{margin:0}
-  body{background:var(--plane);color:var(--text-primary);font-family:var(--font);
-    line-height:1.55;-webkit-font-smoothing:antialiased;padding-bottom:64px}
-  a{color:var(--series-1);text-decoration:none}
-  a:hover{text-decoration:underline}
-  .wrap{max-width:1120px;margin:0 auto;padding:0 20px}
-
-  header.top{border-bottom:1px solid var(--border);background:var(--surface-1);position:sticky;top:0;z-index:20;
-    backdrop-filter:saturate(1.1)}
-  .top-inner{display:flex;align-items:center;gap:16px;padding:14px 20px;max-width:1120px;margin:0 auto;flex-wrap:wrap}
-  .brand{display:flex;align-items:center;gap:11px;min-width:0}
-  .logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--series-1),var(--seq-550));
-    display:grid;place-items:center;color:#fff;flex:none;box-shadow:var(--shadow)}
-  .logo svg{width:22px;height:22px}
-  .brand h1{font-size:17px;margin:0;letter-spacing:-.01em}
-  .brand .sub{font-size:12px;color:var(--muted);margin-top:1px}
-  .draft-badge{font-size:11px;font-weight:700;color:#fff;background:var(--series-1);
-    padding:3px 9px;border-radius:999px;letter-spacing:.02em}
+    --mono:ui-monospace,SFMono-Regular,Consolas,monospace;}
+  :root[data-theme="dark"]{color-scheme:dark;
+    --surface-1:#1a1a19;--plane:#0d0d0d;--text-primary:#fff;--text-secondary:#c3c2b7;--muted:#898781;
+    --grid:#2c2c2a;--axis:#383835;--border:rgba(255,255,255,0.10);--series-1:#3987e5;--series-1-soft:#184f95;
+    --seq-550:#6da7ec;--seq-700:#b7d3f6;--good:#0ca30c;--good-text:#0ca30c;--warn:#fab219;--warn-soft:#3a2f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+    --surface-1:#1a1a19;--plane:#0d0d0d;--text-primary:#fff;--text-secondary:#c3c2b7;--muted:#898781;
+    --grid:#2c2c2a;--axis:#383835;--border:rgba(255,255,255,0.10);--series-1:#3987e5;--series-1-soft:#184f95;
+    --seq-550:#6da7ec;--seq-700:#b7d3f6;--good-text:#0ca30c;--warn:#fab219;--warn-soft:#3a2f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);}}
+  *{box-sizing:border-box}html,body{margin:0}
+  body{background:var(--plane);color:var(--text-primary);font-family:var(--font);line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:var(--series-1);text-decoration:none}a:hover{text-decoration:underline}
+  button{font-family:inherit}
+  /* top bar */
+  header.top{border-bottom:1px solid var(--border);background:var(--surface-1);position:sticky;top:0;z-index:30}
+  .top-inner{display:flex;align-items:center;gap:14px;padding:11px 20px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:10px}
+  .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--series-1),var(--seq-550));display:grid;place-items:center;color:#fff}
+  .brand h1{font-size:15.5px;margin:0;letter-spacing:-.01em}
+  .brand .sub{font-size:11.5px;color:var(--muted)}
+  .draft-badge{font-size:10.5px;font-weight:700;color:#fff;background:var(--series-1);padding:2px 8px;border-radius:999px;margin-left:2px}
   .spacer{flex:1}
-  nav.tabs{display:flex;gap:4px}
-  nav.tabs a{padding:7px 13px;border-radius:9px;font-size:13.5px;font-weight:600;color:var(--text-secondary)}
-  nav.tabs a.active{background:var(--series-1-soft);color:var(--seq-700)}
-  :root[data-theme="dark"] nav.tabs a.active{color:#fff}
-  .toggle{border:1px solid var(--border);background:transparent;color:var(--text-secondary);
-    width:36px;height:36px;border-radius:9px;cursor:pointer;display:grid;place-items:center;flex:none}
+  .storage-pill{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-secondary);
+    border:1px solid var(--border);border-radius:999px;padding:4px 11px;background:var(--plane)}
+  .storage-pill .d{width:8px;height:8px;border-radius:50%;background:var(--warn)}
+  .storage-pill.connected .d{background:var(--good)}
+  .docnav{display:flex;gap:2px}
+  .docnav a{padding:6px 10px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text-secondary)}
+  .docnav a.active{background:var(--series-1-soft);color:var(--seq-700)}
+  :root[data-theme="dark"] .docnav a.active{color:#fff}
+  .toggle{border:1px solid var(--border);background:transparent;color:var(--text-secondary);width:34px;height:34px;border-radius:9px;cursor:pointer;display:grid;place-items:center}
   .toggle:hover{background:var(--plane)}
-
-  .status{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:22px 0 6px;
-    font-size:13px;color:var(--text-secondary)}
-  .dot{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 0 3px color-mix(in srgb,var(--good) 22%,transparent)}
-  .chip{border:1px solid var(--border);border-radius:999px;padding:3px 10px;font-size:12px;color:var(--text-secondary);background:var(--surface-1)}
-
-  h2.sec{font-size:14px;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);
-    margin:34px 0 14px;font-weight:700;display:flex;align-items:center;gap:10px}
-  h2.sec .sample-tag{text-transform:none;letter-spacing:0;font-size:11.5px;font-weight:700;color:#8a5a00;
-    background:#fdecc8;border:1px solid #f2d28a;padding:2px 9px;border-radius:999px}
-  :root[data-theme="dark"] h2.sec .sample-tag{color:#fab219;background:#3a2f10;border-color:#5c4a15}
-  .sec-note{font-size:12.5px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0}
-
-  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:14px}
-  .card{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);
-    padding:16px 17px;box-shadow:var(--shadow)}
-  .kpi .label{font-size:12.5px;color:var(--text-secondary);display:flex;align-items:center;gap:7px}
-  .kpi .val{font-size:29px;font-weight:750;letter-spacing:-.02em;margin-top:7px;line-height:1.05}
-  .kpi .val small{font-size:14px;font-weight:600;color:var(--muted);margin-left:3px}
-  .kpi .foot{font-size:11.5px;color:var(--muted);margin-top:5px}
-  .kpi.waiting .val{color:var(--muted);font-size:16px;font-weight:600;margin-top:12px}
-  .ic{width:15px;height:15px;color:var(--series-1);flex:none}
-
-  .run-card{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);
-    box-shadow:var(--shadow);overflow:hidden;display:grid;grid-template-columns:1.15fr 1fr}
-  @media(max-width:720px){.run-card{grid-template-columns:1fr}}
-  .run-main{padding:20px 22px}
-  .run-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-  .run-title{font-size:19px;font-weight:700;letter-spacing:-.01em}
-  .run-date{font-size:13px;color:var(--text-secondary)}
-  .run-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 8px;margin-top:18px}
-  .rm .l{font-size:11.5px;color:var(--muted)}
-  .rm .v{font-size:20px;font-weight:700;margin-top:2px;letter-spacing:-.01em}
-  .rm .v small{font-size:12px;color:var(--muted);font-weight:600}
-  .run-side{background:var(--plane);border-left:1px solid var(--border);padding:18px 20px}
-  @media(max-width:720px){.run-side{border-left:none;border-top:1px solid var(--border)}}
-  .run-side .l{font-size:11.5px;color:var(--muted);margin-bottom:6px}
-  .route{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
-  .route span{font-size:12px;background:var(--surface-1);border:1px solid var(--border);
-    padding:3px 9px;border-radius:8px;color:var(--text-secondary)}
-  .maplink{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;margin-top:4px}
-
-  .charts{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  @media(max-width:820px){.charts{grid-template-columns:1fr}}
-  .chart-card{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);
-    box-shadow:var(--shadow);padding:16px 18px 12px;position:relative}
-  .chart-card h3{margin:0;font-size:14.5px;font-weight:700;letter-spacing:-.01em}
-  .chart-card .csub{font-size:12px;color:var(--muted);margin-top:2px;margin-bottom:6px}
-  .chart-card.full{grid-column:1/-1}
+  /* layout */
+  .shell{display:grid;grid-template-columns:210px 1fr;gap:0;min-height:calc(100vh - 58px)}
+  @media(max-width:820px){.shell{grid-template-columns:1fr}}
+  nav.rail{border-right:1px solid var(--border);background:var(--surface-1);padding:16px 12px}
+  @media(max-width:820px){nav.rail{border-right:none;border-bottom:1px solid var(--border);display:flex;gap:6px;overflow:auto}}
+  nav.rail button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:none;background:transparent;
+    color:var(--text-secondary);font-size:13.5px;font-weight:600;padding:10px 12px;border-radius:10px;cursor:pointer;white-space:nowrap}
+  nav.rail button:hover{background:var(--plane)}
+  nav.rail button.active{background:var(--series-1-soft);color:var(--seq-700)}
+  :root[data-theme="dark"] nav.rail button.active{color:#fff}
+  nav.rail button svg{width:17px;height:17px;flex:none}
+  nav.rail .rail-h{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:6px 12px;margin-top:8px}
+  main.stage{padding:24px 26px 60px;max-width:1000px;min-width:0}
+  h2.vh{font-size:20px;letter-spacing:-.01em;margin:0 0 4px}
+  .vsub{color:var(--muted);font-size:13px;margin:0 0 20px}
+  /* cards / kpi */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .card{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);padding:15px 16px;box-shadow:var(--shadow)}
+  .kpi .label{font-size:12px;color:var(--text-secondary)}
+  .kpi .val{font-size:26px;font-weight:750;letter-spacing:-.02em;margin-top:6px;line-height:1.05}
+  .kpi .val small{font-size:13px;font-weight:600;color:var(--muted);margin-left:2px}
+  .kpi .foot{font-size:11px;color:var(--muted);margin-top:4px}
+  /* backends */
+  .backends{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:6px}
+  .be{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px}
+  .be .be-h{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px}
+  .be .be-ic{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:var(--series-1-soft);color:var(--seq-700)}
+  :root[data-theme="dark"] .be .be-ic{color:#dbe9ff}
+  .be p{font-size:12.5px;color:var(--text-secondary);margin:0;flex:1;line-height:1.5}
+  .be .tag{align-self:flex-start;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px}
+  .tag.rec{background:var(--good);color:#fff}
+  .tag.soon{background:var(--warn-soft);color:var(--warn)}
+  .btn{border:1px solid var(--series-1);background:var(--series-1);color:#fff;font-weight:600;font-size:13px;
+    padding:9px 14px;border-radius:10px;cursor:pointer;transition:opacity .12s}
+  .btn:hover{opacity:.9}
+  .btn.ghost{background:transparent;color:var(--series-1)}
+  .btn.sec{background:transparent;color:var(--text-secondary);border-color:var(--border)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.sm{padding:6px 11px;font-size:12px}
+  label.btn{display:inline-block}
+  /* forms */
+  .form{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);max-width:640px}
+  .fg{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:560px){.fg{grid-template-columns:1fr}}
+  .field label{display:block;font-size:12px;color:var(--text-secondary);margin-bottom:5px;font-weight:600}
+  .field input,.field select{width:100%;border:1px solid var(--border);border-radius:9px;padding:9px 11px;font-size:13.5px;
+    background:var(--plane);color:var(--text-primary);font-family:inherit}
+  .field input:focus,.field select:focus{outline:2px solid var(--series-1-soft);border-color:var(--series-1)}
+  .field .hint{font-size:11px;color:var(--muted);margin-top:3px}
+  .form-actions{display:flex;gap:10px;margin-top:18px;align-items:center;flex-wrap:wrap}
+  .note{font-size:12.5px;color:var(--text-secondary);background:var(--series-1-soft);border-radius:10px;padding:11px 13px;line-height:1.5}
+  :root[data-theme="dark"] .note{background:rgba(57,135,229,.12)}
+  .note.warn{background:var(--warn-soft);color:var(--warn)}
+  .drop{display:block;border:2px dashed var(--border);border-radius:12px;padding:26px;text-align:center;color:var(--muted);font-size:13px;background:var(--plane);cursor:pointer;transition:border-color .12s,background .12s}
+  .drop.over,.drop:hover{border-color:var(--series-1);color:var(--series-1)}
+  /* table */
+  table.data{border-collapse:collapse;width:100%;font-size:13px;background:var(--surface-1);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  table.data th{background:var(--series-1-soft);color:var(--seq-700);text-align:left;padding:9px 11px;font-size:11.5px;font-weight:700;white-space:nowrap}
+  :root[data-theme="dark"] table.data th{color:#dbe9ff;background:#17324f}
+  table.data td{padding:8px 11px;border-top:1px solid var(--border);white-space:nowrap;font-variant-numeric:tabular-nums}
+  table.data tbody tr:hover{background:var(--plane)}
+  .src{font-size:10px;font-weight:700;padding:1px 6px;border-radius:5px}
+  .src.seed{background:var(--warn-soft);color:var(--warn)}
+  .src.manual{background:var(--series-1-soft);color:var(--seq-700)}
+  .src.ocr{background:#e7f6ee;color:#0a7a43}
+  .src.import{background:#eee;color:#555}
+  .src.drive{background:#eef;color:#4a3aa7}
+  :root[data-theme="dark"] .src.manual{color:#dbe9ff}
+  :root[data-theme="dark"] .src.import{background:#333;color:#bbb}
+  .del{border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:14px}
+  .del:hover{color:#d03b3b}
+  .edit{border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:13px}
+  .edit:hover{color:var(--series-1)}
+  /* charts */
+  .chart-card{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:15px 17px 10px}
+  .chart-card h3{margin:0;font-size:14px;font-weight:700}.chart-card .cs{font-size:11.5px;color:var(--muted);margin:2px 0 6px}
+  .charts2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+  @media(max-width:760px){.charts2{grid-template-columns:1fr}}
   svg.chart{width:100%;height:auto;display:block;overflow:visible}
-  .axis-label{fill:var(--muted);font-size:10.5px;font-family:var(--font)}
-  .tick{fill:var(--muted);font-size:10.5px;font-family:var(--font);font-variant-numeric:tabular-nums}
-  .gridline{stroke:var(--grid);stroke-width:1}
-  .baseline{stroke:var(--axis);stroke-width:1}
-  .bar{fill:var(--series-1);transition:opacity .12s}
-  .bar:hover{opacity:.82;cursor:pointer}
+  .tick{fill:var(--muted);font-size:10px;font-family:var(--font);font-variant-numeric:tabular-nums}
+  .gridline{stroke:var(--grid);stroke-width:1}.baseline{stroke:var(--axis);stroke-width:1}
+  .bar{fill:var(--series-1)}.bar:hover{opacity:.82;cursor:pointer}
   .linepath{fill:none;stroke:var(--series-1);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
-  .area{fill:var(--series-1);opacity:.08}
-  .dot-m{fill:var(--surface-1);stroke:var(--series-1);stroke-width:2}
-  .dot-hit{fill:transparent;cursor:pointer}
-  .pr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
-  .pr{background:linear-gradient(160deg,var(--series-1-soft),transparent);border:1px solid var(--border);
-    border-radius:var(--radius);padding:15px 16px}
-  :root[data-theme="dark"] .pr{background:linear-gradient(160deg,rgba(57,135,229,.18),transparent)}
-  .pr .l{font-size:12px;color:var(--text-secondary);display:flex;align-items:center;gap:6px}
-  .pr .v{font-size:23px;font-weight:750;margin-top:8px;letter-spacing:-.02em}
-  .pr .d{font-size:11px;color:var(--muted);margin-top:3px}
-
-  .cal{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
-  .cal-legend{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-top:8px}
-  .cal-legend i{width:13px;height:13px;border-radius:3px;display:inline-block;border:1px solid var(--border)}
-
-  .tooltip{position:fixed;pointer-events:none;z-index:60;background:var(--text-primary);color:var(--surface-1);
-    font-size:12px;padding:7px 10px;border-radius:8px;opacity:0;transition:opacity .1s;white-space:nowrap;
-    box-shadow:0 4px 14px rgba(0,0,0,.25);font-variant-numeric:tabular-nums}
-  .tooltip b{font-weight:700}
-
-  footer.foot{margin-top:44px;border-top:1px solid var(--border);padding-top:20px;color:var(--muted);font-size:12.5px}
-  footer.foot a{font-weight:600}
-  .foot-row{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .area{fill:var(--series-1);opacity:.08}.dot-m{fill:var(--surface-1);stroke:var(--series-1);stroke-width:2}
+  .empty{text-align:center;color:var(--muted);font-size:13px;padding:40px 10px;border:1px dashed var(--border);border-radius:12px}
+  /* goals */
+  .goalcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-top:12px}
+  .goal-row{margin-top:12px}
+  .goal-top{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--text-secondary);margin-bottom:5px}
+  .goal-top b{font-variant-numeric:tabular-nums;color:var(--text-primary);font-weight:650;white-space:nowrap}
+  .gbar{height:8px;background:var(--grid);border-radius:999px;overflow:hidden}
+  .gfill{height:100%;background:var(--series-1);border-radius:999px;transition:width .3s}
+  .gfill.done{background:var(--good)}
+  .goal-h{font-size:13px;font-weight:700;margin:0}
+  .sect{margin:26px 0 8px;font-size:15px;font-weight:700}
+  /* images */
+  .thumb{width:42px;height:42px;object-fit:cover;object-position:top;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--plane);display:block}
+  .thumb.sm{width:34px;height:34px}
+  .imgprev{max-width:230px;max-height:300px;object-fit:contain;border-radius:12px;border:1px solid var(--border);box-shadow:var(--shadow);display:block;background:var(--plane)}
+  .addwrap{display:grid;grid-template-columns:minmax(0,640px);gap:14px}
+  /* modal */
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;place-items:center;z-index:50;padding:20px}
+  .modal-bg.open{display:grid}
+  .modal{background:var(--surface-1);border:1px solid var(--border);border-radius:16px;max-width:480px;width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:90vh;overflow:auto}
+  .modal h3{margin:0 0 10px;font-size:17px}
+  .modal p{font-size:13.5px;color:var(--text-secondary);line-height:1.6}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--text-primary);
+    color:var(--surface-1);padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;opacity:0;transition:.2s;z-index:60;pointer-events:none}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .tooltip{position:fixed;pointer-events:none;z-index:70;background:var(--text-primary);color:var(--surface-1);font-size:12px;padding:6px 9px;border-radius:8px;opacity:0;transition:opacity .1s;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .hide{display:none!important}
 </style>
 </head>
 <body>
 <header class="top">
   <div class="top-inner">
     <div class="brand">
-      <div class="logo" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/><path d="M4 17l3-3 3 1 2-4 3 2 2-1"/><path d="M8.5 21l2.5-5 3 2 1 3"/><path d="M10 9l3 2"/></svg>
-      </div>
-      <div>
-        <h1>러닝 누적기록 대시보드 <span class="draft-badge">초안 · DRAFT</span></h1>
-        <div class="sub">자동발행 · Phase 0 미리보기 — 구글드라이브 러닝기록 폴더 기반</div>
-      </div>
+      <div class="logo"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/><path d="M4 17l3-3 3 1 2-4 3 2 2-1"/><path d="M8.5 21l2.5-5 3 2 1 3"/></svg></div>
+      <div><h1>러닝 누적기록 <span class="draft-badge">v2</span></h1><div class="sub">사진 한 장 = 기록 한 건 · 데이터는 내 브라우저에</div></div>
     </div>
     <div class="spacer"></div>
-    <nav class="tabs">
+    <div class="storage-pill" id="storagePill"><span class="d"></span><span id="storageText">불러오는 중…</span></div>
+    <nav class="docnav">
       <a href="index.html" class="active">대시보드</a>
-      <a href="app.html">앱</a>
-      <a href="plan.html">기획서</a>
-      <a href="platform.html">플랫폼</a>
-      <a href="spec.html">설계</a>
+      <a href="plan.html">기획서</a><a href="platform.html">플랫폼</a><a href="spec.html">설계</a>
     </nav>
-    <button class="toggle" id="themeBtn" title="라이트/다크 전환" aria-label="테마 전환">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
-    </button>
+    <button class="toggle" id="themeBtn" aria-label="테마 전환"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
   </div>
 </header>
 
-<div class="wrap">
-  <div class="status">
-    <span class="dot"></span>
-    <strong style="color:var(--text-primary)">구글드라이브 · 러닝기록 폴더 연결됨</strong>
-    <span class="chip">실데이터 1건</span>
-    <span class="chip">자동 파이프라인 미구축 (현재 수동 반영)</span>
-    <span class="chip">스키마 v1.0</span>
-  </div>
+<div class="shell">
+  <nav class="rail" id="rail">
+    <div class="rail-h">개요</div>
+    <button data-view="dashboard" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg>대시보드</button>
+    <div class="rail-h">기록</div>
+    <button data-view="add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>기록 추가</button>
+    <button data-view="goals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>목표 · 달성도</button>
+    <button data-view="data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="18" height="4" rx="1"/></svg>데이터 · 내보내기</button>
+  </nav>
 
-  <!-- 실데이터 KPI -->
-  <h2 class="sec">현재 누적 <span class="sec-note">— 폴더의 실제 캡쳐 1건 기준</span></h2>
-  <div class="cards" id="kpis">
-    <div class="card kpi">
-      <div class="label"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/><path d="M4 18l3-3 3 1 2-4 3 2 3-2"/></svg>총 러닝</div>
-      <div class="val">1<small>회</small></div>
-      <div class="foot">첫 기록 적재됨</div>
-    </div>
-    <div class="card kpi">
-      <div class="label"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>총 거리</div>
-      <div class="val">3.27<small>km</small></div>
-      <div class="foot">서울 · 성수/한강</div>
-    </div>
-    <div class="card kpi">
-      <div class="label"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M12 1h0M9 1h6"/></svg>총 시간</div>
-      <div class="val">18:16</div>
-      <div class="foot">18분 16초</div>
-    </div>
-    <div class="card kpi">
-      <div class="label"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c4-1.5 6-4.5 6-8 0-2-1-3.5-2-4.5 0 1.5-1 2.5-2 2.5 .5-2-1-4.5-3-6-.2 2.5-1.5 3.5-3 5.2C10.8 8 9 9.5 9 12c-1 0-1.7-1-1.8-2C6 11 5.5 12.6 5.5 14c0 3.5 2.5 6.5 6.5 8z"/></svg>총 칼로리</div>
-      <div class="val">167<small>kcal</small></div>
-      <div class="foot">누적 소모</div>
-    </div>
-    <div class="card kpi">
-      <div class="label"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg>평균 페이스</div>
-      <div class="val">5'35"<small>/km</small></div>
-      <div class="foot">거리·시간과 정합 ✓</div>
-    </div>
-    <div class="card kpi waiting">
-      <div class="label"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 12.9a8 8 0 1 0-3.9 4.2"/><path d="M3.5 12.5H8l1.5-3 2.5 6 1.5-3H16"/></svg>심박수 · 케이던스</div>
-      <div class="val">데이터 대기</div>
-      <div class="foot">비전 추출 단계에서 채움</div>
-    </div>
-  </div>
-
-  <!-- 최근 러닝 -->
-  <h2 class="sec">최근 러닝 <span class="sec-note">— IMG_5072.PNG</span></h2>
-  <div class="run-card">
-    <div class="run-main">
-      <div class="run-head">
-        <span class="run-title">금요일 오전 러닝</span>
-        <span class="run-date">2026-07-24 (금) · 오전 06:03 시작</span>
-      </div>
-      <div class="run-metrics">
-        <div class="rm"><div class="l">거리</div><div class="v">3.27<small> km</small></div></div>
-        <div class="rm"><div class="l">평균 페이스</div><div class="v">5'35"<small> /km</small></div></div>
-        <div class="rm"><div class="l">시간</div><div class="v">18:16</div></div>
-        <div class="rm"><div class="l">칼로리</div><div class="v">167<small> kcal</small></div></div>
-        <div class="rm"><div class="l">케이던스</div><div class="v" style="color:var(--muted)">—</div></div>
-        <div class="rm"><div class="l">평균 심박수</div><div class="v" style="color:var(--muted)">—</div></div>
-      </div>
-    </div>
-    <div class="run-side">
-      <div class="l">위치</div>
-      <div style="font-size:14px;font-weight:600;margin-bottom:14px">서울특별시, 대한민국</div>
-      <div class="l">경로 (읽힌 도로명)</div>
-      <div class="route">
-        <span>선릉로190길</span><span>뚝섬로5길</span><span>성덕정길</span><span>성수이로</span><span>강변북로</span>
-      </div>
-      <a class="maplink" href="https://drive.google.com/file/d/1IDlv1mV5pWTjc4jRV8b2DuuVPOVQZ0jp/view" target="_blank" rel="noopener">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6M10 14L21 3"/></svg>
-        드라이브 원본 캡쳐 열기
-      </a>
-    </div>
-  </div>
-
-  <!-- 미리보기: 누적 시 예상 화면 -->
-  <h2 class="sec">데이터가 쌓이면 <span class="sample-tag">샘플 · 실제 데이터 아님</span></h2>
-  <p class="sec-note" style="margin:-6px 0 16px">아래 차트는 파이프라인이 러닝 기록을 누적했을 때의 <strong>예상 화면</strong>입니다. 값은 설명용 가상 데이터이며, 실제 지표로 자동 대체됩니다.</p>
-
-  <div class="charts">
-    <div class="chart-card">
-      <h3>주간 거리</h3>
-      <div class="csub">최근 8주 · km</div>
-      <div id="chart-weekly"></div>
-    </div>
-    <div class="chart-card">
-      <h3>평균 페이스 추이</h3>
-      <div class="csub">최근 러닝 · 낮을수록 빠름 (m'ss"/km)</div>
-      <div id="chart-pace"></div>
-    </div>
-  </div>
-
-  <div class="charts" style="margin-top:16px">
-    <div class="chart-card full">
-      <h3>러닝 캘린더</h3>
-      <div class="csub">날짜별 거리 강도 · 진할수록 긴 거리</div>
-      <div id="chart-cal"></div>
-      <div class="cal-legend"><span>적음</span>
-        <i style="background:var(--seq-100)"></i><i style="background:var(--seq-250)"></i><i style="background:var(--seq-400)"></i><i style="background:var(--seq-550)"></i><i style="background:var(--seq-700)"></i>
-        <span>많음</span></div>
-    </div>
-  </div>
-
-  <h2 class="sec" style="margin-top:30px">개인기록 (PR) <span class="sample-tag">샘플</span></h2>
-  <div class="pr-grid">
-    <div class="pr"><div class="l">🏁 최장 거리</div><div class="v">21.5 km</div><div class="d">2026-06-14 일요일</div></div>
-    <div class="pr"><div class="l">⚡ 최고 평균 페이스</div><div class="v">4'42" /km</div><div class="d">2026-07-02 · 5.0km</div></div>
-    <div class="pr"><div class="l">🔥 최다 칼로리</div><div class="v">1,320 kcal</div><div class="d">2026-06-14 · 21.5km</div></div>
-    <div class="pr"><div class="l">⏱️ 최장 시간</div><div class="v">1:52:30</div><div class="d">2026-06-14 · 21.5km</div></div>
-  </div>
-
-  <footer class="foot">
-    <div class="foot-row">
-      <div>러닝 누적기록 대시보드 <b>초안 v1</b> · 스키마 v1.0 · 자동발행 프로젝트</div>
-      <div><a href="plan.html">기획서 전체 보기 →</a></div>
-    </div>
-    <div style="margin-top:8px">데이터 소스: 구글드라이브 러닝기록 폴더 · 실데이터 1건(IMG_5072.PNG) + 미리보기용 샘플. 대시보드 구성은 Phase 3에서 실제 데이터로 확정됩니다.</div>
-  </footer>
+  <main class="stage" id="stage"></main>
 </div>
 
+<div class="modal-bg" id="modalBg"><div class="modal" id="modalBox" role="dialog" aria-modal="true" tabindex="-1"></div></div>
+<div class="toast" id="toast"></div>
 <div class="tooltip" id="tip"></div>
 
 <script>
-/* ---------- 테마 토글 ---------- */
-const root=document.documentElement, tb=document.getElementById('themeBtn');
-tb.addEventListener('click',()=>{root.setAttribute('data-theme',
-  root.getAttribute('data-theme')==='dark'?'light':'dark');drawAll();});
+/* ============ 유틸 ============ */
+const $=s=>document.querySelector(s), root=document.documentElement;
+const pad=n=>String(n).padStart(2,'0');
+const WD=['일','월','화','수','목','금','토'];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function paceTxt(s){if(!s&&s!==0)return '—';return Math.floor(s/60)+"'"+pad(Math.round(s%60))+'"';}
+function clock(s){if(!s&&s!==0)return '—';const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=Math.round(s%60);return h?h+':'+pad(m)+':'+pad(x):m+':'+pad(x);}
+function parsePace(t){const m=(t||'').match(/(\d+)\s*['′’:]\s*(\d{1,2})/);return m?(+m[1]*60+ +m[2]):null;}
+function parseClock(t){t=(t||'').trim();if(!t)return null;const p=t.split(':').map(Number);if(p.some(isNaN))return null;
+  if(p.length===3)return p[0]*3600+p[1]*60+p[2];if(p.length===2)return p[0]*60+p[1];if(p.length===1)return p[0]*60;return null;}
+function isoWeekKey(d){const dt=new Date(d+'T00:00:00');const day=(dt.getDay()+6)%7;dt.setDate(dt.getDate()-day);return dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());}
+const monthKey=d=>String(d).slice(0,7);
+const yearKey=d=>String(d).slice(0,4);
+function todayISO(){const t=new Date();return t.getFullYear()+'-'+pad(t.getMonth()+1)+'-'+pad(t.getDate());}
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1900);}
 
-/* ---------- 툴팁 ---------- */
-const tip=document.getElementById('tip');
-function showTip(html,x,y){tip.innerHTML=html;tip.style.opacity=1;
-  tip.style.left=(x+14)+'px';tip.style.top=(y+14)+'px';}
-function hideTip(){tip.style.opacity=0;}
-const cssv=n=>getComputedStyle(root).getPropertyValue(n).trim();
+/* ============ 상태 ============ */
+const state={records:[], goals:null, backend:'local', pendingImage:null, pendingRawOcr:null, editingId:null};
 
-/* ---------- 샘플 데이터 (설명용 가상값) ---------- */
-const weekly=[{w:'6/2',v:12.4},{w:'6/9',v:18.1},{w:'6/16',v:9.6},{w:'6/23',v:22.3},
-  {w:'6/30',v:15.0},{w:'7/7',v:24.7},{w:'7/14',v:19.2},{w:'7/21',v:21.5}];
-const pace=[{d:'7/2',s:352},{d:'7/5',s:345},{d:'7/8',s:349},{d:'7/12',s:340},
-  {d:'7/15',s:338},{d:'7/18',s:335},{d:'7/21',s:333},{d:'7/24',s:335}];
-function paceTxt(s){return Math.floor(s/60)+"'"+String(s%60).padStart(2,'0')+'"';}
-
-/* ---------- 막대 차트 ---------- */
-function barChart(el,data){
-  const W=el.clientWidth||480,H=210,P={t:14,r:8,b:26,l:30};
-  const iw=W-P.l-P.r, ih=H-P.t-P.b, max=Math.max(...data.map(d=>d.v))*1.12;
-  const bw=iw/data.length, bar=Math.min(30,bw*0.6);
-  const y=v=>P.t+ih-(v/max)*ih;
-  let g='';
-  [0,max/2,max].forEach(t=>{const yy=y(t);
-    g+=`<line class="gridline" x1="${P.l}" y1="${yy}" x2="${W-P.r}" y2="${yy}"/>`+
-       `<text class="tick" x="${P.l-6}" y="${yy+3}" text-anchor="end">${t.toFixed(0)}</text>`;});
-  data.forEach((d,i)=>{const cx=P.l+bw*i+bw/2, h=P.t+ih-y(d.v), yy=y(d.v);
-    g+=`<rect class="bar" x="${cx-bar/2}" y="${yy}" width="${bar}" height="${Math.max(1,h)}" rx="4" ry="4"
-         data-t="${d.w} 주&nbsp; <b>${d.v.toFixed(1)} km</b>"/>`+
-       `<text class="tick" x="${cx}" y="${H-8}" text-anchor="middle">${d.w}</text>`;});
-  el.innerHTML=`<svg class="chart" viewBox="0 0 ${W} ${H}">${g}
-    <line class="baseline" x1="${P.l}" y1="${P.t+ih}" x2="${W-P.r}" y2="${P.t+ih}"/></svg>`;
-  bindHover(el);
+/* ============ 영속화 (localStorage) ============ */
+const LS_RECORDS='run.records.v2', LS_GOALS='run.goals.v1';
+const NUM_FIELDS=['distance_km','duration_sec','avg_pace_sec_per_km','elevation_gain_m','cadence_spm','avg_heart_rate_bpm'];
+let _idSeq=0;
+function migrateRecord(r){
+  if(!r||typeof r!=='object')return r;
+  delete r.calories;r.schema_version='2.0';
+  NUM_FIELDS.forEach(k=>{if(r[k]!=null){const n=Number(r[k]);r[k]=isFinite(n)?n:null;}});
+  if(r.title!=null)r.title=String(r.title);
+  if(r.location!=null)r.location=String(r.location);
+  if(r.image_url!=null){const u=String(r.image_url).trim(); /* javascript: 등 위험 스킴 차단 */
+    r.image_url=(/^https?:\/\//i.test(u)||!u.includes(':'))&&u?u:null;}
+  return r;
 }
-
-/* ---------- 라인 차트 ---------- */
-function lineChart(el,data){
-  const W=el.clientWidth||480,H=210,P={t:16,r:14,b:26,l:38};
-  const iw=W-P.l-P.r, ih=H-P.t-P.b;
-  const vals=data.map(d=>d.s), mn=Math.min(...vals)-6, mx=Math.max(...vals)+6;
-  const x=i=>P.l+iw*i/(data.length-1), y=s=>P.t+ih-((s-mn)/(mx-mn))*ih;
-  let g='';
-  for(let k=0;k<=2;k++){const s=mn+(mx-mn)*k/2,yy=y(s);
-    g+=`<line class="gridline" x1="${P.l}" y1="${yy}" x2="${W-P.r}" y2="${yy}"/>`+
-       `<text class="tick" x="${P.l-6}" y="${yy+3}" text-anchor="end">${paceTxt(Math.round(s))}</text>`;}
-  const pts=data.map((d,i)=>[x(i),y(d.s)]);
-  const dline=pts.map((p,i)=>(i?'L':'M')+p[0]+' '+p[1]).join(' ');
-  const darea=`M${pts[0][0]} ${P.t+ih} `+pts.map(p=>'L'+p[0]+' '+p[1]).join(' ')+` L${pts[pts.length-1][0]} ${P.t+ih} Z`;
-  g+=`<path class="area" d="${darea}"/><path class="linepath" d="${dline}"/>`;
-  data.forEach((d,i)=>{g+=`<circle class="dot-m" cx="${x(i)}" cy="${y(d.s)}" r="4"/>`+
-    `<text class="tick" x="${x(i)}" y="${H-8}" text-anchor="middle">${d.d}</text>`+
-    `<circle class="dot-hit" cx="${x(i)}" cy="${y(d.s)}" r="12" data-t="${d.d}&nbsp; <b>${paceTxt(d.s)}/km</b>"/>`;});
-  el.innerHTML=`<svg class="chart" viewBox="0 0 ${W} ${H}">${g}</svg>`;
-  bindHover(el);
-}
-
-/* ---------- 캘린더 히트맵 ---------- */
-function calChart(el){
-  const cols=18, rows=7, cell=15, gap=4, P={t:6,l:30};
-  const days=['월','','수','','금','','일'];
-  const steps=[cssv('--seq-100'),cssv('--seq-250'),cssv('--seq-400'),cssv('--seq-550'),cssv('--seq-700')];
-  const W=P.l+cols*(cell+gap), H=P.t+rows*(cell+gap)+4;
-  let g='';
-  days.forEach((d,r)=>{if(d)g+=`<text class="tick" x="${P.l-8}" y="${P.t+r*(cell+gap)+cell-3}" text-anchor="end">${d}</text>`;});
-  let seed=7;const rnd=()=>{seed=(seed*9301+49297)%233280;return seed/233280;};
-  for(let c=0;c<cols;c++)for(let r=0;r<rows;r++){
-    const x=P.l+c*(cell+gap), yy=P.t+r*(cell+gap);
-    const run=rnd()>0.52, lvl=run?Math.min(4,Math.floor(rnd()*5)):-1;
-    const fill=lvl<0?'var(--plane)':steps[lvl];
-    const km=lvl<0?0:(3+lvl*4+rnd()*3).toFixed(1);
-    g+=`<rect x="${x}" y="${yy}" width="${cell}" height="${cell}" rx="3" fill="${fill}"
-        stroke="var(--border)" stroke-width="1" ${lvl>=0?`class="cell" data-t="거리 <b>${km} km</b>"`:''}/>`;
-  }
-  el.innerHTML=`<svg class="chart" viewBox="0 0 ${W} ${H}" style="max-width:${W}px">${g}</svg>`;
-  bindHover(el);
-}
-
-/* ---------- 공통 hover ---------- */
-function bindHover(el){
-  el.querySelectorAll('[data-t]').forEach(m=>{
-    m.addEventListener('mousemove',e=>showTip(m.getAttribute('data-t'),e.clientX,e.clientY));
-    m.addEventListener('mouseleave',hideTip);
+function normalizeRecords(arr){ /* 외부 JSON 유입 대비: 날짜 형식·record_id 검증/재발급 */
+  const seen=new Set();
+  return arr.filter(r=>r&&typeof r==='object'&&/^\d{4}-\d{2}-\d{2}$/.test(String(r.date||''))).map(r=>{
+    r=migrateRecord(r);r.date=String(r.date);
+    if(!r.record_id||!/^[A-Za-z0-9_-]+$/.test(String(r.record_id))||seen.has(r.record_id))
+      r.record_id='r'+Date.now()+'_'+(_idSeq++);
+    else r.record_id=String(r.record_id);
+    seen.add(r.record_id);
+    return r;
   });
 }
-
-function drawAll(){
-  barChart(document.getElementById('chart-weekly'),weekly);
-  lineChart(document.getElementById('chart-pace'),pace);
-  calChart(document.getElementById('chart-cal'));
+function loadRecords(){
+  try{const j=JSON.parse(localStorage.getItem(LS_RECORDS)||'[]');return Array.isArray(j)?normalizeRecords(j):[];}
+  catch(e){return [];}
 }
-drawAll();
-let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(drawAll,150);});
+function saveRecords(){
+  try{localStorage.setItem(LS_RECORDS,JSON.stringify(state.records));}
+  catch(e){toast('저장 공간이 부족합니다 — JSON 내보내기 후 오래된 기록을 정리하세요');}
+}
+function defaultGoals(){return {weekly:{distance_km:null,runs:3}, monthly:{distance_km:null,runs:15}, yearly:{distance_km:null,runs:180}};}
+function sanitizeGoals(g){ /* 외부 JSON 유입 대비: 유한 양수만 허용 */
+  const d=defaultGoals(),n=v=>{const x=Number(v);return isFinite(x)&&x>0?x:null;};
+  const pick=(src,def)=>{if(!src||typeof src!=='object')return {...def};
+    return {distance_km:'distance_km'in src?n(src.distance_km):def.distance_km, runs:'runs'in src?n(src.runs):def.runs};};
+  g=g&&typeof g==='object'?g:null;
+  return {weekly:pick(g&&g.weekly,d.weekly), monthly:pick(g&&g.monthly,d.monthly), yearly:pick(g&&g.yearly,d.yearly)};
+}
+function loadGoals(){
+  try{return sanitizeGoals(JSON.parse(localStorage.getItem(LS_GOALS)));}
+  catch(e){return defaultGoals();}
+}
+function saveGoals(){try{localStorage.setItem(LS_GOALS,JSON.stringify(state.goals));}catch(e){toast('목표 저장 실패(저장 공간 부족)');}}
+
+/* ============ 시드 (기록/260726.png 캡쳐 1건) ============ */
+const SEED=[{record_id:'260726', date:'2026-07-26', weekday:'일', start_time:'08:17', day_part:'오전',
+  title:'일요일 오전 러닝', location:'서울특별시, 대한민국', distance_km:3.18,
+  avg_pace_sec_per_km:328, duration_sec:1044, cadence_spm:165, avg_heart_rate_bpm:null,
+  elevation_gain_m:5, route_summary:['강변북로'], source:'seed', has_image:false,
+  image_url:'images/260726.png', schema_version:'2.0'}];
+function ensureSeed(){if(localStorage.getItem(LS_RECORDS)===null){try{localStorage.setItem(LS_RECORDS,JSON.stringify(SEED));}catch(e){}}}
+
+/* ============ 이미지 저장 (IndexedDB) ============ */
+let _dbp=null;
+function idb(){
+  if(!_dbp){_dbp=new Promise((res,rej)=>{
+    if(!window.indexedDB){rej(new Error('IndexedDB 미지원'));return;}
+    const rq=indexedDB.open('run-app',1);
+    rq.onupgradeneeded=()=>rq.result.createObjectStore('images');
+    rq.onsuccess=()=>res(rq.result);rq.onerror=()=>rej(rq.error);});
+    _dbp.catch(()=>{_dbp=null;});}
+  return _dbp;
+}
+function txDone(tx,res,rej){tx.oncomplete=res;tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error||new Error('IDB 트랜잭션 중단(저장 공간 부족 가능)'));}
+async function imgPut(id,blob){const db=await idb();return new Promise((res,rej)=>{const tx=db.transaction('images','readwrite');tx.objectStore('images').put(blob,id);txDone(tx,res,rej);});}
+async function imgGet(id){const db=await idb();return new Promise((res,rej)=>{const tx=db.transaction('images');const rq=tx.objectStore('images').get(id);rq.onsuccess=()=>res(rq.result);rq.onerror=()=>rej(rq.error);tx.onabort=()=>rej(tx.error||new Error('IDB 트랜잭션 중단'));});}
+async function imgDel(id){const db=await idb();return new Promise((res,rej)=>{const tx=db.transaction('images','readwrite');tx.objectStore('images').delete(id);txDone(tx,res,rej);});}
+async function imgClear(){const db=await idb();return new Promise((res,rej)=>{const tx=db.transaction('images','readwrite');tx.objectStore('images').clear();txDone(tx,res,rej);});}
+const objUrls=new Map();
+async function imgUrl(rec){
+  if(rec.has_image){
+    if(objUrls.has(rec.record_id))return objUrls.get(rec.record_id);
+    try{const b=await imgGet(rec.record_id);if(b){const u=URL.createObjectURL(b);objUrls.set(rec.record_id,u);return u;}}catch(e){}
+    return rec.image_url||null;
+  }
+  return rec.image_url||null;
+}
+function revokeImg(id){if(objUrls.has(id)){URL.revokeObjectURL(objUrls.get(id));objUrls.delete(id);}}
+async function hydrateThumbs(){
+  for(const img of document.querySelectorAll('img[data-rid]')){
+    const rec=state.records.find(r=>r.record_id===img.dataset.rid);
+    if(!rec)continue;
+    const drop=()=>{if(img.parentElement&&img.parentElement.classList.contains('thumbwrap'))img.parentElement.remove();};
+    const u=await imgUrl(rec);
+    if(u){img.onerror=drop;img.src=u;}else drop();
+  }
+}
+
+/* ============ 저장소 어댑터 (구글드라이브 연동 대비 인터페이스) ============ */
+// 인터페이스: listImages(), readDataset()->records[], writeDataset(records)
+const DriveAdapter={ id:'drive', name:'구글드라이브', stub:true,
+  note:'OAuth drive.file + Google Picker로 러닝기록 폴더 선택 → 캡쳐 이미지 읽기 + 정본 JSON을 사용자 드라이브에 기록. (연동 예정)' };
+function datasetOut(){return {dataset:'러닝 누적기록',schema_version:'2.0',backend:state.backend,
+  exported_from:'index.html',exported_at:new Date().toISOString(),count:state.records.length,
+  goals:state.goals,records:state.records};}
+function exportJSON(){
+  const blob=new Blob([JSON.stringify(datasetOut(),null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;
+  a.download='running_records.json';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+  toast('정본 JSON을 내보냈습니다 (사진은 미포함)');
+}
+
+/* ============ 추출 엔진 ============ */
+function calcConsistency(r){
+  if(r.distance_km&&r.avg_pace_sec_per_km&&!r.duration_sec) r.duration_sec=Math.round(r.distance_km*r.avg_pace_sec_per_km);
+  if(r.distance_km&&r.duration_sec&&!r.avg_pace_sec_per_km) r.avg_pace_sec_per_km=Math.round(r.duration_sec/r.distance_km);
+  return r;
+}
+function parseRunningText(t){
+  const r={};let m;
+  m=t.match(/(오늘|어제)\s*[-–—]?\s*(\d{1,2}:\d{2})/);
+  if(m){const dt=new Date();if(m[1]==='어제')dt.setDate(dt.getDate()-1);
+    r.date=dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());
+    r.start_time=m[2].length===4?'0'+m[2]:m[2];}
+  m=t.match(/(\d+[.,]\d+)\s*(?:킬로미터|km|㎞)/i)||t.match(/(?:킬로미터|km|거리)[^\d]{0,8}(\d+[.,]\d+)/i);
+  if(m)r.distance_km=parseFloat(m[1].replace(',','.'));
+  if(!r.distance_km){m=t.match(/^\s*(\d{1,3}[.,]\d{1,2})\s*$/m);if(m)r.distance_km=parseFloat(m[1].replace(',','.'));} /* NRC 대형 숫자: 라벨 없이 단독 라인 */
+  m=t.match(/(\d+)\s*['′’]\s*(\d{1,2})/); if(m)r.avg_pace_sec_per_km=+m[1]*60+ +m[2];
+  m=t.match(/(\d{1,2}:\d{2}(?::\d{2})?)\s*\n?\s*시간/);
+  if(m)r.duration_sec=parseClock(m[1]);
+  else{const all=[...t.matchAll(/\d{1,2}:\d{2}(?::\d{2})?/g)].map(x=>x[0]).filter(x=>x!==r.start_time);
+    if(all.length)r.duration_sec=parseClock(all[all.length-1]);}
+  m=t.match(/(\d{2,3})\s*\n?\s*(?:spm|케이던스)/i); if(m)r.cadence_spm=+m[1];
+  m=t.match(/(\d{2,3})\s*\n?\s*(?:bpm|(?:평균\s*)?심박)/i); if(m)r.avg_heart_rate_bpm=+m[1];
+  m=t.match(/(\d+(?:[.,]\d+)?)\s*m\s*\n?\s*고도/)||t.match(/고도\s*상승?\s*[^\d]{0,6}(\d+)/);
+  if(m)r.elevation_gain_m=Math.round(parseFloat(String(m[1]).replace(',','.')));
+  if(r.elevation_gain_m==null){m=t.match(/(?:^|\s)(\d{1,4})\s*m(?:\s|$)/m);if(m)r.elevation_gain_m=+m[1];} /* 라벨 유실 시 'N m' 단독 표기 */
+  m=t.match(/[가-힣A-Za-z ]{0,14}러닝/); if(m)r.title=m[0].trim();
+  m=t.match(/[가-힣]+(?:특별시|광역시|특별자치시|특별자치도)(?:\s*,\s*[가-힣]+)?/); if(m)r.location=m[0].replace(/\s*,\s*/,', ');
+  return r;
+}
+let _tessP=null;
+function loadTesseract(){
+  if(window.Tesseract)return Promise.resolve();
+  if(!_tessP){_tessP=new Promise((res,rej)=>{
+    const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    s.async=true;s.onload=res;s.onerror=()=>rej(new Error('load'));document.head.appendChild(s);});
+    _tessP.catch(()=>{_tessP=null;});}
+  return _tessP;
+}
+async function runOCR(file,cb){
+  try{await loadTesseract();}
+  catch(e){cb(null,'OCR 엔진(Tesseract.js)을 불러오지 못했습니다 — 네트워크가 없거나 차단된 환경입니다.');return;}
+  try{const {data}=await Tesseract.recognize(file,'kor+eng');cb(parseRunningText(data.text),null,data.text);}
+  catch(e){cb(null,'인식 실패: '+e.message);}
+}
+
+/* ============ 집계 ============ */
+function agg(){
+  const r=state.records;
+  const tot=r.reduce((a,x)=>({d:a.d+(x.distance_km||0),t:a.t+(x.duration_sec||0)}),{d:0,t:0});
+  const paced=r.filter(x=>x.avg_pace_sec_per_km&&x.distance_km);
+  const pd=paced.reduce((a,x)=>a+x.distance_km,0);
+  const avgPace=pd?paced.reduce((a,x)=>a+x.avg_pace_sec_per_km*x.distance_km,0)/pd:null;
+  const longest=r.reduce((m,x)=>(x.distance_km>(m?.distance_km||0)?x:m),null);
+  const fastest=r.filter(x=>x.avg_pace_sec_per_km).reduce((m,x)=>(x.avg_pace_sec_per_km<(m?.avg_pace_sec_per_km||1e9)?x:m),null);
+  return {n:r.length,...tot,avgPace,longest,fastest};
+}
+function periodTotals(keyFn,key){
+  let dist=0,runs=0;
+  state.records.forEach(x=>{if(x.date&&keyFn(x.date)===key){dist+=x.distance_km||0;runs++;}});
+  return {dist,runs};
+}
+function goalProgress(){
+  const t=todayISO();
+  return {weekly:periodTotals(isoWeekKey,isoWeekKey(t)), monthly:periodTotals(monthKey,monthKey(t)), yearly:periodTotals(yearKey,yearKey(t))};
+}
+function goalBarHTML(label,actual,target,unit){
+  if(!target)return '';
+  const done=actual>=target; /* 달성 판정은 반올림 전 원값 기준 */
+  const pct=Math.round(actual/target*100);
+  const at=unit==='km'?(Math.round(actual*100)/100):actual;
+  return `<div class="goal-row"><div class="goal-top"><span>${label}</span><b>${at} / ${target}${unit} · ${pct}%${done?' ✓':''}</b></div>
+    <div class="gbar"><div class="gfill${done?' done':''}" style="width:${Math.min(100,done?100:Math.min(pct,99))}%"></div></div></div>`;
+}
+function goalCard(title,goal,prog){
+  const bars=goalBarHTML('횟수',prog.runs,goal.runs,'회')+goalBarHTML('거리',prog.dist,goal.distance_km,'km');
+  return `<div class="card"><p class="goal-h">${title}</p>${bars||'<div class="goal-row" style="color:var(--muted);font-size:12.5px">목표 미설정 — <a href="#" onclick="show(\'goals\');return false">목표 설정하기 →</a></div>'}</div>`;
+}
+
+/* ============ 뷰 라우팅 ============ */
+const views={dashboard:renderDashboard, add:renderAdd, goals:renderGoals, data:renderData};
+let current='dashboard';
+function show(v){
+  if(v!=='add'){state.editingId=null;state.pendingImage=null;state.pendingRawOcr=null;
+    if(_prevUrl){URL.revokeObjectURL(_prevUrl);_prevUrl=null;}}
+  current=v;document.querySelectorAll('nav.rail button').forEach(b=>b.classList.toggle('active',b.dataset.view===v));views[v]();
+}
+document.querySelectorAll('nav.rail button').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));
+function setPill(){$('#storageText').textContent='브라우저 저장 · '+state.records.length+'건';$('#storagePill').classList.add('connected');}
+
+/* ============ 대시보드 뷰 ============ */
+function renderDashboard(){
+  const a=agg();
+  if(!state.records.length){$('#stage').innerHTML=`<h2 class="vh">대시보드</h2><p class="vsub">누적 러닝 지표</p>
+    <div class="empty">아직 기록이 없습니다. <a href="#" onclick="show('add');return false">기록 추가</a>에서 러닝 앱 캡쳐를 올려 첫 기록을 만들어보세요.</div>`;return;}
+  const p=goalProgress(), g=state.goals;
+  $('#stage').innerHTML=`
+    <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px"><h2 class="vh">대시보드</h2><p class="vsub">누적 ${a.n}회 · 브라우저 저장(localStorage + IndexedDB)</p></div>
+      <button class="btn" onclick="show('add')">＋ 기록 추가</button>
+    </div>
+    <div class="cards">
+      <div class="card kpi"><div class="label">총 러닝</div><div class="val">${a.n}<small>회</small></div></div>
+      <div class="card kpi"><div class="label">총 거리</div><div class="val">${a.d.toFixed(2)}<small>km</small></div></div>
+      <div class="card kpi"><div class="label">총 시간</div><div class="val">${clock(a.t)}</div></div>
+      <div class="card kpi"><div class="label">평균 페이스</div><div class="val">${paceTxt(a.avgPace?Math.round(a.avgPace):null)}<small>/km</small></div></div>
+      <div class="card kpi"><div class="label">최장 거리 (PR)</div><div class="val">${a.longest?a.longest.distance_km.toFixed(2):'—'}<small>km</small></div><div class="foot">${a.fastest?'최고 '+paceTxt(a.fastest.avg_pace_sec_per_km)+'/km':''}</div></div>
+    </div>
+    <div class="sect">목표 달성도 <a href="#" onclick="show('goals');return false" style="font-size:12px;font-weight:600;margin-left:6px">설정 →</a></div>
+    <div class="goalcards">${goalCard('이번 주',g.weekly,p.weekly)}${goalCard('이번 달',g.monthly,p.monthly)}${goalCard('올해',g.yearly,p.yearly)}</div>
+    <div class="charts2">
+      <div class="chart-card"><h3>주간 거리</h3><div class="cs">주별 합계 · km</div><div id="ch-week"></div></div>
+      <div class="chart-card"><h3>페이스 추이</h3><div class="cs">기록 순 · 낮을수록 빠름</div><div id="ch-pace"></div></div>
+    </div>
+    <div class="chart-card" style="margin-top:14px"><h3>최근 러닝</h3><div class="cs">최신순</div>
+      <div id="recentList" style="margin-top:8px"></div></div>`;
+  drawWeekly();drawPace();drawRecent();hydrateThumbs();
+}
+function drawWeekly(){
+  const map={};state.records.forEach(r=>{if(!r.date)return;const k=isoWeekKey(r.date);map[k]=(map[k]||0)+(r.distance_km||0);});
+  const keys=lastWeeks(8).reverse(); /* 달력 기준 연속 8주 — 기록 없는 주는 0 */
+  const data=keys.map(k=>({w:k.slice(5).replace('-','/'),v:map[k]||0}));
+  barChart($('#ch-week'),data);
+}
+function drawPace(){
+  const data=state.records.filter(r=>r.avg_pace_sec_per_km).slice(-10).map(r=>({d:r.date.slice(5).replace('-','/'),s:r.avg_pace_sec_per_km}));
+  lineChart($('#ch-pace'),data);
+}
+function drawRecent(){
+  const r=state.records.slice().reverse().slice(0,5);
+  $('#recentList').innerHTML=r.map(x=>`<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid var(--border);font-size:13px">
+    ${(x.has_image||x.image_url)?`<span class="thumbwrap"><img class="thumb sm" data-rid="${esc(x.record_id)}" alt="" onclick="showImageModal('${esc(x.record_id)}')"></span>`:''}
+    <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis"><b>${esc(x.date)}</b> ${x.weekday?'('+esc(x.weekday)+')':''} · ${esc(x.title||'러닝')} <span class="src ${esc(x.source||'manual')}">${esc((x.source||'manual').toUpperCase())}</span></span>
+    <span style="color:var(--text-secondary);font-variant-numeric:tabular-nums;white-space:nowrap">${(x.distance_km||0).toFixed(2)}km · ${paceTxt(x.avg_pace_sec_per_km)} · ${clock(x.duration_sec)}</span></div>`).join('');
+}
+
+/* ============ 기록 추가 뷰 (사진 업로드 우선) ============ */
+function renderAdd(){
+  const editing=state.editingId?state.records.find(r=>r.record_id===state.editingId):null;
+  $('#stage').innerHTML=`
+    <h2 class="vh">${editing?'기록 수정':'기록 추가'}</h2>
+    <p class="vsub">러닝 앱 캡쳐 <b>사진 업로드가 기본</b>입니다 — 브라우저 OCR이 값을 읽어 채우면 확인·수정 후 저장하세요. 사진은 기기(IndexedDB)에 함께 저장됩니다.</p>
+    <div class="addwrap">
+      <label class="drop" for="photoFile" id="dropzone">📷 여기에 캡쳐 이미지를 선택하거나 끌어다 놓으세요<br><span style="font-size:11px">PNG · JPG · 추출은 전부 브라우저 안에서 실행됩니다</span>
+        <input id="photoFile" type="file" accept="image/*" class="hide"></label>
+      <div id="ocrStatus" style="font-size:13px;color:var(--muted)"></div>
+      <div id="photoPrev"></div>
+      <div id="formArea"></div>
+      <div id="manualLink"><a href="#" onclick="showForm({});document.getElementById('manualLink').classList.add('hide');return false">사진 없이 직접 입력 →</a></div>
+    </div>`;
+  const dz=$('#dropzone');
+  $('#photoFile').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)handleFile(f);};
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over');});
+  dz.addEventListener('dragleave',e=>{if(dz.contains(e.relatedTarget))return;dz.classList.remove('over');});
+  dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');const f=e.dataTransfer.files[0];if(f)handleFile(f);});
+  if(editing){
+    showForm(editing);$('#manualLink').classList.add('hide');
+    if(editing.has_image||editing.image_url){imgUrl(editing).then(u=>{if(u&&current==='add'&&$('#photoPrev'))$('#photoPrev').innerHTML=`<img class="imgprev" src="${esc(u)}" alt="기록 사진">`;});}
+    $('#ocrStatus').textContent='저장된 기록을 수정합니다. 새 사진을 올리면 사진이 교체됩니다.';
+  }
+}
+let _prevUrl=null;
+function handleFile(f){
+  if(!f.type||!f.type.startsWith('image/')){toast('이미지 파일만 업로드할 수 있습니다');return;}
+  state.pendingImage=f;
+  if(_prevUrl)URL.revokeObjectURL(_prevUrl);
+  _prevUrl=URL.createObjectURL(f);
+  $('#photoPrev').innerHTML=`<img class="imgprev" src="${_prevUrl}" alt="업로드 미리보기">`;
+  $('#manualLink').classList.add('hide');
+  if(!$('#f_date'))showForm({});
+  $('#ocrStatus').innerHTML='⏳ 이미지에서 값을 읽는 중… (최초 실행 시 OCR 엔진 로딩으로 수십 초 걸릴 수 있어요 — 기다리는 동안 직접 입력해도 됩니다)';
+  runOCR(f,(parsed,err,raw)=>{
+    /* 스테일 가드: 뷰를 떠났다 돌아온 뒤 도착한 이전 사진의 콜백 차단 */
+    if(state.pendingImage!==f||current!=='add'||!$('#ocrStatus'))return;
+    if(err){$('#ocrStatus').innerHTML='<span style="color:var(--warn)">'+esc(err)+'</span> 값을 직접 입력해주세요 — 사진은 저장 시 함께 보관됩니다.';return;}
+    state.pendingRawOcr=raw||null;
+    applyPrefill(parsed||{});
+    $('#ocrStatus').innerHTML='✅ 인식 완료 — 값을 확인하고 필요하면 수정한 뒤 저장하세요. (빈 칸만 자동으로 채웠습니다)';
+  });
+}
+function formHTML(v={}){v=v||{};return `
+  <div class="form"><div class="fg">
+    <div class="field"><label>날짜 *</label><input id="f_date" type="date" value="${esc(v.date||'')}"></div>
+    <div class="field"><label>시작 시각</label><input id="f_time" type="time" value="${esc(v.start_time||'')}"></div>
+    <div class="field"><label>제목</label><input id="f_title" placeholder="예: 일요일 오전 러닝" value="${esc(v.title||'')}"></div>
+    <div class="field"><label>위치</label><input id="f_loc" placeholder="예: 서울특별시" value="${esc(v.location||'')}"></div>
+    <div class="field"><label>거리 (km) *</label><input id="f_dist" inputmode="decimal" placeholder="3.18" value="${esc(v.distance_km||'')}"></div>
+    <div class="field"><label>평균 페이스 (분'초")</label><input id="f_pace" placeholder="5'28&quot;" value="${esc(v.avg_pace_sec_per_km?paceTxt(v.avg_pace_sec_per_km):'')}"><div class="hint">페이스·시간 중 하나만 넣어도 나머지를 계산합니다</div></div>
+    <div class="field"><label>시간 (분:초)</label><input id="f_dur" placeholder="17:24" value="${esc(v.duration_sec?clock(v.duration_sec):'')}"></div>
+    <div class="field"><label>고도 상승 (m)</label><input id="f_elev" inputmode="numeric" placeholder="—" value="${esc(v.elevation_gain_m??'')}"></div>
+    <div class="field"><label>케이던스 (spm)</label><input id="f_cad" inputmode="numeric" placeholder="—" value="${esc(v.cadence_spm||'')}"></div>
+    <div class="field"><label>평균 심박 (bpm)</label><input id="f_hr" inputmode="numeric" placeholder="—" value="${esc(v.avg_heart_rate_bpm||'')}"></div>
+  </div>
+  <div class="form-actions"><button class="btn" onclick="saveRecord()">기록 저장</button>
+    <button class="btn sec" onclick="show('dashboard')">취소</button></div></div>`;
+}
+function showForm(v){$('#formArea').innerHTML=formHTML(v);}
+function applyPrefill(p){
+  const setIf=(id,val)=>{const el=$('#'+id);if(el&&!el.value&&(val||val===0))el.value=val;};
+  if(!$('#f_date'))showForm({});
+  setIf('f_date',p.date);setIf('f_time',p.start_time);setIf('f_title',p.title);setIf('f_loc',p.location);
+  setIf('f_dist',p.distance_km);setIf('f_pace',p.avg_pace_sec_per_km?paceTxt(p.avg_pace_sec_per_km):null);
+  setIf('f_dur',p.duration_sec?clock(p.duration_sec):null);setIf('f_elev',p.elevation_gain_m);
+  setIf('f_cad',p.cadence_spm);setIf('f_hr',p.avg_heart_rate_bpm);
+}
+let _saving=false;
+async function saveRecord(){
+  if(_saving)return; /* await imgPut 중 재클릭으로 인한 중복 저장 차단 */
+  _saving=true;
+  try{await _saveRecordInner();}finally{_saving=false;}
+}
+async function _saveRecordInner(){
+  const g=id=>{const el=$('#'+id);return el?el.value.trim():'';};
+  if(!g('f_date')||!g('f_dist')){toast('날짜와 거리는 필수입니다');return;}
+  const d=g('f_date'),tm=g('f_time');
+  const fields=calcConsistency({
+    date:d, weekday:WD[new Date(d+'T00:00:00').getDay()],
+    start_time:tm||null, day_part: tm? (+tm.slice(0,2)<12?'오전':'오후') : null,
+    title:g('f_title')||'러닝', location:g('f_loc')||null,
+    distance_km:parseFloat(g('f_dist')),
+    avg_pace_sec_per_km:parsePace(g('f_pace')), duration_sec:parseClock(g('f_dur')),
+    elevation_gain_m:g('f_elev')?Math.round(+g('f_elev')):null,
+    cadence_spm:+g('f_cad')||null, avg_heart_rate_bpm:+g('f_hr')||null
+  });
+  if(!(fields.distance_km>0)){toast('거리는 0보다 큰 숫자여야 합니다');return;}
+  const editing=state.editingId?state.records.find(r=>r.record_id===state.editingId):null;
+  let rec;
+  if(editing){rec=Object.assign(editing,fields);}
+  else{
+    rec={record_id:'r'+Date.now(), ...fields, source:state.pendingImage?'ocr':'manual',
+      has_image:false, image_url:null, raw_ocr:state.pendingRawOcr||null,
+      created_at:new Date().toISOString(), schema_version:'2.0'};
+    state.records.push(rec);
+  }
+  if(state.pendingImage){
+    try{await imgPut(rec.record_id,state.pendingImage);revokeImg(rec.record_id);rec.has_image=true;
+      if(state.pendingRawOcr)rec.raw_ocr=state.pendingRawOcr;}
+    catch(e){toast('사진 저장에 실패했습니다 — 기록만 저장됩니다');}
+  }
+  state.records.sort((a,b)=>a.date<b.date?-1:1);
+  saveRecords();setPill();
+  const wasEdit=!!editing;
+  state.pendingImage=null;state.pendingRawOcr=null;state.editingId=null;
+  toast(wasEdit?'기록이 수정되었습니다':'저장되었습니다 · 총 '+state.records.length+'건');
+  show('dashboard');
+}
+function editRec(id){state.editingId=id;state.pendingImage=null;state.pendingRawOcr=null;show('add');}
+
+/* ============ 목표 뷰 ============ */
+function goalInputs(px,label,goal){return `
+  <div>
+    <p class="goal-h" style="margin-bottom:10px">${label}</p>
+    <div class="field" style="margin-bottom:10px"><label>거리 (km)</label><input id="g_${px}_dist" inputmode="decimal" placeholder="없음" value="${goal.distance_km??''}"></div>
+    <div class="field"><label>횟수 (회)</label><input id="g_${px}_runs" inputmode="numeric" placeholder="없음" value="${goal.runs??''}"></div>
+  </div>`;}
+function renderGoals(){
+  const g=state.goals,p=goalProgress();
+  const wkKeys=lastWeeks(8),moKeys=lastMonths(6);
+  $('#stage').innerHTML=`
+    <h2 class="vh">목표 · 달성도</h2>
+    <p class="vsub">주간·월간·연간 목표를 설정하면 대시보드와 이 페이지에 달성률이 표시됩니다. 빈 칸은 목표 없음.</p>
+    <div class="form" style="max-width:720px"><div class="fg" style="grid-template-columns:repeat(3,1fr)">
+      ${goalInputs('w','주간',g.weekly)}${goalInputs('m','월간',g.monthly)}${goalInputs('y','연간',g.yearly)}
+    </div>
+    <div class="form-actions"><button class="btn" onclick="saveGoalsForm()">목표 저장</button></div></div>
+    <div class="sect">현재 달성 현황</div>
+    <div class="goalcards">${goalCard('이번 주',g.weekly,p.weekly)}${goalCard('이번 달',g.monthly,p.monthly)}${goalCard('올해',g.yearly,p.yearly)}</div>
+    <div class="sect">주간 이력 (최근 8주)</div>
+    <div style="overflow:auto"><table class="data"><thead><tr><th>주 (월요일 시작)</th><th>횟수</th><th>거리</th><th>횟수 달성률</th><th>거리 달성률</th></tr></thead>
+      <tbody>${historyRows(wkKeys,isoWeekKey,g.weekly,k=>k.slice(5).replace('-','/')+' 주')}</tbody></table></div>
+    <div class="sect">월간 이력 (최근 6개월)</div>
+    <div style="overflow:auto"><table class="data"><thead><tr><th>월</th><th>횟수</th><th>거리</th><th>횟수 달성률</th><th>거리 달성률</th></tr></thead>
+      <tbody>${historyRows(moKeys,monthKey,g.monthly,k=>k.replace('-','년 ')+'월')}</tbody></table></div>
+    <p style="font-size:11.5px;color:var(--muted);margin-top:8px">이력 달성률은 현재 설정된 목표를 과거 기간에도 동일하게 적용해 계산합니다.</p>`;
+}
+function lastWeeks(n){
+  const out=[];const cur=new Date(isoWeekKey(todayISO())+'T00:00:00');
+  for(let i=0;i<n;i++){out.push(cur.getFullYear()+'-'+pad(cur.getMonth()+1)+'-'+pad(cur.getDate()));cur.setDate(cur.getDate()-7);}
+  return out;
+}
+function lastMonths(n){
+  const out=[];const t=new Date();let y=t.getFullYear(),m=t.getMonth()+1;
+  for(let i=0;i<n;i++){out.push(y+'-'+pad(m));m--;if(m===0){m=12;y--;}}
+  return out;
+}
+function historyRows(keys,keyFn,goal,labelFn){
+  return keys.map(k=>{
+    const t=periodTotals(keyFn,k);
+    const cell=(actual,target)=>{if(!target)return '<td>—</td>';
+      const done=actual>=target; /* 원값 비교 */
+      return `<td style="${done?'color:var(--good-text);font-weight:700':''}">${Math.round(actual/target*100)}%</td>`;};
+    return `<tr><td>${labelFn(k)}</td><td>${t.runs}회</td><td>${t.dist.toFixed(1)}km</td>${cell(t.runs,goal.runs)}${cell(t.dist,goal.distance_km)}</tr>`;
+  }).join('');
+}
+function saveGoalsForm(){
+  const num=id=>{const v=$('#'+id).value.trim();if(v==='')return null;const n=parseFloat(v);return isFinite(n)&&n>0?n:null;};
+  state.goals={
+    weekly:{distance_km:num('g_w_dist'),runs:num('g_w_runs')},
+    monthly:{distance_km:num('g_m_dist'),runs:num('g_m_runs')},
+    yearly:{distance_km:num('g_y_dist'),runs:num('g_y_runs')},
+    updated_at:new Date().toISOString()
+  };
+  saveGoals();toast('목표를 저장했습니다');renderGoals();
+}
+
+/* ============ 데이터 뷰 ============ */
+function renderData(){
+  const r=state.records;
+  $('#stage').innerHTML=`
+    <h2 class="vh">데이터 · 내보내기</h2>
+    <p class="vsub">브라우저(localStorage + IndexedDB)에 저장된 정본입니다. <b>JSON 내보내기</b>로 백업하세요 — 사진은 내보내기에 포함되지 않습니다.</p>
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <button class="btn" onclick="exportJSON()">⬇ 정본 내보내기 (JSON)</button>
+      <label class="btn sec" for="impFile">📁 JSON 가져오기<input id="impFile" type="file" accept="application/json,.json" class="hide"></label>
+      <button class="btn sec" onclick="show('add')">＋ 기록 추가</button>
+      ${r.length?`<button class="btn sec" onclick="clearAll()">전체 비우기</button>`:''}
+      <span style="flex:1"></span><span style="align-self:center;font-size:12px;color:var(--muted)">스키마 v2.0 · ${r.length}건</span>
+    </div>
+    ${r.length?`<div style="overflow:auto"><table class="data"><thead><tr>
+      <th>사진</th><th>날짜</th><th>제목</th><th>거리</th><th>페이스</th><th>시간</th><th>고도</th><th>케이던스</th><th>심박</th><th>출처</th><th></th><th></th></tr></thead>
+      <tbody>${r.slice().reverse().map(x=>`<tr>
+        <td>${(x.has_image||x.image_url)?`<span class="thumbwrap"><img class="thumb sm" data-rid="${esc(x.record_id)}" alt="" onclick="showImageModal('${esc(x.record_id)}')"></span>`:'—'}</td>
+        <td>${esc(x.date)} ${x.weekday?'('+esc(x.weekday)+')':''}</td><td>${esc(x.title||'러닝')}</td>
+        <td>${(x.distance_km||0).toFixed(2)}</td><td>${paceTxt(x.avg_pace_sec_per_km)}</td><td>${clock(x.duration_sec)}</td>
+        <td>${x.elevation_gain_m??'—'}</td><td>${x.cadence_spm||'—'}</td><td>${x.avg_heart_rate_bpm||'—'}</td>
+        <td><span class="src ${esc(x.source||'manual')}">${esc((x.source||'manual').toUpperCase())}</span></td>
+        <td><button class="edit" title="수정" onclick="editRec('${esc(x.record_id)}')">✎</button></td>
+        <td><button class="del" title="삭제" onclick="delRec('${esc(x.record_id)}')">✕</button></td></tr>`).join('')}</tbody></table></div>`
+      :`<div class="empty">기록이 없습니다.</div>`}
+    <div class="backends" style="margin-top:22px">
+      <div class="be"><span class="tag rec" style="background:var(--series-1)">현재</span>
+        <div class="be-h"><span class="be-ic">■</span>브라우저 로컬 저장</div>
+        <p>레코드는 localStorage, 사진은 IndexedDB에 저장됩니다. 이 브라우저·이 기기에서만 유지되므로 주기적으로 JSON을 내보내 백업하세요.</p></div>
+      <div class="be"><span class="tag soon">연동 예정</span>
+        <div class="be-h"><span class="be-ic">▲</span>${DriveAdapter.name}</div>
+        <p>${DriveAdapter.note}</p></div>
+    </div>`;
+  $('#impFile').onchange=importJSON;
+  hydrateThumbs();
+}
+function importJSON(e){
+  const f=e.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onerror=()=>{toast('파일을 읽지 못했습니다');e.target.value='';};
+  rd.onload=()=>{
+    try{
+      const j=JSON.parse(rd.result);
+      const recs=normalizeRecords(Array.isArray(j)?j:(Array.isArray(j.records)?j.records:[]));
+      if(!recs.length){toast('가져올 기록이 없습니다 — 파일 형식을 확인하세요');e.target.value='';return;}
+      if(!confirm('현재 기록 '+state.records.length+'건을 불러온 데이터 '+recs.length+'건으로 교체합니다. 계속할까요?')){e.target.value='';return;}
+      recs.forEach(x=>{if(!x.source||x.source==='demo')x.source='import';});
+      const newIds=new Set(recs.map(x=>x.record_id));
+      state.records.forEach(x=>{if(!newIds.has(x.record_id)){revokeImg(x.record_id);imgDel(x.record_id).catch(()=>{});}}); /* 교체로 사라지는 레코드의 사진 정리 */
+      state.records=recs.sort((a,b)=>a.date<b.date?-1:1);
+      if(j.goals){state.goals=sanitizeGoals(j.goals);saveGoals();}
+      saveRecords();setPill();toast('불러왔습니다 · '+recs.length+'건');renderData();
+    }catch(x){toast('JSON을 읽을 수 없습니다');}
+    e.target.value='';
+  };
+  rd.readAsText(f);
+}
+function delRec(id){
+  state.records=state.records.filter(x=>x.record_id!==id);
+  saveRecords();setPill();revokeImg(id);imgDel(id).catch(()=>{});
+  toast('삭제됨');renderData();
+}
+function clearAll(){
+  if(!confirm('모든 기록과 사진을 삭제합니다. 내보내지 않은 데이터는 복구할 수 없습니다. 계속할까요?'))return;
+  state.records=[];saveRecords();setPill();
+  objUrls.forEach(u=>URL.revokeObjectURL(u));objUrls.clear();imgClear().catch(()=>{});
+  renderData();
+}
+async function showImageModal(id){
+  const rec=state.records.find(x=>x.record_id===id);if(!rec)return;
+  const u=await imgUrl(rec);if(!u){toast('사진을 불러올 수 없습니다');return;}
+  openModal(`<h3>${esc(rec.title||'러닝')} · ${esc(rec.date)}</h3>
+    <img src="${esc(u)}" alt="기록 사진" style="max-width:100%;border-radius:10px;margin-top:6px">
+    <div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn sec" onclick="closeModal()">닫기</button></div>`);
+}
+
+/* ============ 차트 (순수 SVG) ============ */
+const tip=$('#tip');
+function bindHover(el){el.querySelectorAll('[data-t]').forEach(m=>{m.addEventListener('mousemove',e=>{tip.innerHTML=m.getAttribute('data-t');tip.style.opacity=1;tip.style.left=(e.clientX+12)+'px';tip.style.top=(e.clientY+12)+'px';});m.addEventListener('mouseleave',()=>tip.style.opacity=0);});}
+function barChart(el,data){
+  if(!data.length){el.innerHTML='<div class="empty">데이터 없음</div>';return;}
+  const W=el.clientWidth||460,H=200,P={t:12,r:8,b:24,l:28};
+  const iw=W-P.l-P.r,ih=H-P.t-P.b,max=Math.max(...data.map(d=>d.v),1)*1.12,bw=iw/data.length,bar=Math.min(30,bw*.6);
+  const y=v=>P.t+ih-(v/max)*ih;let g='';
+  [0,max/2,max].forEach(t=>{const yy=y(t);g+=`<line class="gridline" x1="${P.l}" y1="${yy}" x2="${W-P.r}" y2="${yy}"/><text class="tick" x="${P.l-5}" y="${yy+3}" text-anchor="end">${t.toFixed(0)}</text>`;});
+  data.forEach((d,i)=>{const cx=P.l+bw*i+bw/2,yy=y(d.v);g+=`<rect class="bar" x="${cx-bar/2}" y="${yy}" width="${bar}" height="${Math.max(1,P.t+ih-yy)}" rx="4" data-t="${esc(d.w+' · <b>'+d.v.toFixed(1)+'km</b>')}"/><text class="tick" x="${cx}" y="${H-7}" text-anchor="middle">${esc(d.w)}</text>`;});
+  el.innerHTML=`<svg class="chart" viewBox="0 0 ${W} ${H}">${g}<line class="baseline" x1="${P.l}" y1="${P.t+ih}" x2="${W-P.r}" y2="${P.t+ih}"/></svg>`;bindHover(el);
+}
+function lineChart(el,data){
+  if(data.length<2){el.innerHTML='<div class="empty">페이스 데이터가 2건 이상일 때 표시됩니다</div>';return;}
+  const W=el.clientWidth||460,H=200,P={t:14,r:14,b:24,l:38};const iw=W-P.l-P.r,ih=H-P.t-P.b;
+  const vs=data.map(d=>d.s),mn=Math.min(...vs)-6,mx=Math.max(...vs)+6;
+  const x=i=>P.l+iw*i/(data.length-1),y=s=>P.t+ih-((s-mn)/(mx-mn||1))*ih;let g='';
+  for(let k=0;k<=2;k++){const s=mn+(mx-mn)*k/2,yy=y(s);g+=`<line class="gridline" x1="${P.l}" y1="${yy}" x2="${W-P.r}" y2="${yy}"/><text class="tick" x="${P.l-5}" y="${yy+3}" text-anchor="end">${paceTxt(Math.round(s))}</text>`;}
+  const pts=data.map((d,i)=>[x(i),y(d.s)]);
+  g+=`<path class="area" d="M${pts[0][0]} ${P.t+ih} ${pts.map(p=>'L'+p[0]+' '+p[1]).join(' ')} L${pts.at(-1)[0]} ${P.t+ih} Z"/><path class="linepath" d="${pts.map((p,i)=>(i?'L':'M')+p[0]+' '+p[1]).join(' ')}"/>`;
+  data.forEach((d,i)=>{g+=`<circle class="dot-m" cx="${x(i)}" cy="${y(d.s)}" r="4"/><circle cx="${x(i)}" cy="${y(d.s)}" r="12" fill="transparent" data-t="${esc(d.d+' · <b>'+paceTxt(d.s)+'</b>')}"/><text class="tick" x="${x(i)}" y="${H-7}" text-anchor="middle">${esc(d.d)}</text>`;});
+  el.innerHTML=`<svg class="chart" viewBox="0 0 ${W} ${H}">${g}</svg>`;bindHover(el);
+}
+
+/* ============ 모달/테마 ============ */
+let _modalPrevFocus=null;
+function openModal(html){_modalPrevFocus=document.activeElement;$('#modalBox').innerHTML=html;$('#modalBg').classList.add('open');$('#modalBox').focus();}
+function closeModal(){$('#modalBg').classList.remove('open');if(_modalPrevFocus&&_modalPrevFocus.focus){_modalPrevFocus.focus();}_modalPrevFocus=null;}
+$('#modalBg').addEventListener('click',e=>{if(e.target===$('#modalBg'))closeModal();});
+$('#themeBtn').addEventListener('click',()=>{root.setAttribute('data-theme',root.getAttribute('data-theme')==='dark'?'light':'dark');});
+/* 차트·UI 색상은 전부 CSS 변수 기반이라 테마 전환 시 재렌더 불필요 (입력 중 폼 보존) */
+['dragover','drop'].forEach(ev=>window.addEventListener(ev,e=>e.preventDefault()));
+window.addEventListener('storage',e=>{ /* 다중 탭 동기화: 다른 탭의 저장을 반영 */
+  if(e.key!==LS_RECORDS&&e.key!==LS_GOALS)return;
+  state.records=loadRecords();state.goals=loadGoals();setPill();
+  if(current!=='add')views[current]();
+});
+window.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+/* Tesseract 미리 로드 (실패해도 업로드 시 재시도) */
+loadTesseract().catch(()=>{});
+
+/* ============ 부트 ============ */
+ensureSeed();
+state.records=loadRecords();
+state.goals=loadGoals();
+saveRecords(); /* v1 → v2 마이그레이션 결과 즉시 반영 */
+setPill();
+show('dashboard');
 </script>
 </body>
 </html>
