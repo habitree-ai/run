@@ -348,13 +348,41 @@ async function openDrivePicker(){
     const token=await driveToken();
     await ensureGoogleLibs();
     const view=new google.picker.DocsView(google.picker.ViewId.DOCS_IMAGES).setIncludeFolders(true);
+    if(s.folderId)view.setParent(s.folderId); /* 기본 폴더 지정 시 그 폴더에서 바로 열림 */
     const b=new google.picker.PickerBuilder()
       .setOAuthToken(token).setDeveloperKey(s.apiKey).addView(view)
       .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
-      .setTitle('러닝 캡쳐 선택').setCallback(pickerCb);
+      .setTitle('러닝 캡쳐 선택'+(s.folderName?' — '+s.folderName:'')).setCallback(pickerCb);
     if(s.appId)b.setAppId(s.appId);
     b.build().setVisible(true);
   }catch(e){toast('드라이브 연결 실패: '+((e&&e.message)||e));}
+}
+async function pickDriveFolder(){ /* 기본 캡쳐 폴더 1회 지정 → 이후 선택창이 바로 그 폴더에서 열림 */
+  const s=driveSettings();
+  if(!s.clientId||!s.apiKey){openDriveSetup();return;}
+  try{
+    const token=await driveToken();
+    await ensureGoogleLibs();
+    const view=new google.picker.DocsView(google.picker.ViewId.FOLDERS)
+      .setSelectFolderEnabled(true).setMimeTypes('application/vnd.google-apps.folder');
+    const b=new google.picker.PickerBuilder()
+      .setOAuthToken(token).setDeveloperKey(s.apiKey).addView(view)
+      .setTitle('기본 캡쳐 폴더 선택')
+      .setCallback(d=>{
+        if(!(window.google&&google.picker)||d.action!==google.picker.Action.PICKED)return;
+        const f=(d.docs||[])[0];if(!f||!f.id)return;
+        const cur=driveSettings();cur.folderId=f.id;cur.folderName=f.name||null;saveDriveSettings(cur);
+        toast('기본 폴더 지정: '+(f.name||f.id));
+        if(current==='data')renderData();
+      });
+    if(s.appId)b.setAppId(s.appId);
+    b.build().setVisible(true);
+  }catch(e){toast('폴더 선택 실패: '+((e&&e.message)||e));}
+}
+function clearDriveFolder(){
+  const s=driveSettings();delete s.folderId;delete s.folderName;saveDriveSettings(s);
+  toast('기본 폴더를 해제했습니다');closeModal();
+  if(current==='data')renderData();
 }
 function pickerCb(data){
   if(!(window.google&&google.picker)||data.action!==google.picker.Action.PICKED)return;
@@ -422,6 +450,7 @@ function openDriveSetup(){
     <div class="field" style="margin-bottom:10px"><label>OAuth Client ID *</label><input id="dv_cid" placeholder="xxxx.apps.googleusercontent.com" value="${esc(s.clientId||'')}"></div>
     <div class="field" style="margin-bottom:10px"><label>API Key (Picker) *</label><input id="dv_key" placeholder="AIza…" value="${esc(s.apiKey||'')}"></div>
     <div class="field"><label>프로젝트 번호 (선택)</label><input id="dv_app" placeholder="1234567890" value="${esc(s.appId||'')}"></div>
+    ${s.folderId?`<p style="font-size:12px;color:var(--muted);margin:10px 0 0">기본 폴더: <b>${esc(s.folderName||s.folderId)}</b> · <a href="#" onclick="clearDriveFolder();return false">해제</a></p>`:''}
     <div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end">
       <button class="btn sec" onclick="closeModal()">닫기</button>
       <button class="btn" onclick="saveDriveSetupForm()">저장</button></div>`);
@@ -787,9 +816,10 @@ function renderData(){
         <p>레코드는 localStorage, 사진은 IndexedDB에 저장됩니다. 이 브라우저·이 기기에서만 유지되므로 주기적으로 JSON을 내보내거나 드라이브에 백업하세요.</p></div>
       <div class="be"><span class="tag ${driveSettings().clientId?'rec':'soon'}">${driveSettings().clientId?'설정됨':'설정 필요'}</span>
         <div class="be-h"><span class="be-ic">▲</span>구글드라이브</div>
-        <p>드라이브에서 캡쳐를 직접 골라 가져오고(중복 자동 스킵 · OCR 프리필 · 순차 검토), 정본 JSON을 드라이브에 백업합니다. 설계·설정 방법: <a href="drive.html">드라이브 문서</a></p>
+        <p>드라이브에서 캡쳐를 골라 가져오고(중복 자동 스킵 · OCR 프리필 · 순차 검토), 정본 JSON을 드라이브에 백업합니다. ${driveSettings().folderId?`기본 폴더 <b>${esc(driveSettings().folderName||'지정됨')}</b>에서 바로 열립니다.`:'<b>📁 기본 폴더</b>를 지정하면 선택창이 매번 그 폴더에서 바로 열립니다.'} 설계·설정: <a href="drive.html">드라이브 문서</a></p>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn sm" onclick="openDrivePicker()">📥 캡쳐 가져오기</button>
+          <button class="btn sm" onclick="openDrivePicker()">📥 캡쳐 가져오기${driveSettings().folderName?' · '+esc(driveSettings().folderName):''}</button>
+          <button class="btn sm sec" onclick="pickDriveFolder()">📁 기본 폴더</button>
           <button class="btn sm sec" onclick="backupToDrive()">☁ 정본 백업</button>
           <button class="btn sm sec" onclick="openDriveSetup()">⚙ 설정</button>
         </div></div>
