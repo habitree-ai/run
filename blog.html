@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>네이버 블로그 자동 게시 설계 (v1)</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏃</text></svg>">
+<style>
+  :root{color-scheme:light;
+    --surface-1:#fcfcfb;--plane:#f9f9f7;--text-primary:#0b0b0b;--text-secondary:#52514e;--muted:#898781;
+    --border:rgba(11,11,11,0.10);--series-1:#2a78d6;--series-1-soft:#cde2fb;--seq-700:#0d366b;
+    --good:#0ca30c;--warn:#b26a00;--warn-soft:#fdecc8;
+    --radius:14px;--shadow:0 1px 2px rgba(11,11,11,.04),0 4px 16px rgba(11,11,11,.05);
+    --font:system-ui,-apple-system,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Consolas,monospace;}
+  :root[data-theme="dark"]{color-scheme:dark;
+    --surface-1:#1a1a19;--plane:#0d0d0d;--text-primary:#fff;--text-secondary:#c3c2b7;--muted:#898781;
+    --border:rgba(255,255,255,0.10);--series-1:#3987e5;--series-1-soft:#184f95;--seq-700:#b7d3f6;
+    --warn:#fab219;--warn-soft:#3a2f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+    --surface-1:#1a1a19;--plane:#0d0d0d;--text-primary:#fff;--text-secondary:#c3c2b7;--muted:#898781;
+    --border:rgba(255,255,255,0.10);--series-1:#3987e5;--series-1-soft:#184f95;--seq-700:#b7d3f6;
+    --warn:#fab219;--warn-soft:#3a2f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);}}
+  *{box-sizing:border-box}html,body{margin:0}
+  body{background:var(--plane);color:var(--text-primary);font-family:var(--font);line-height:1.65;-webkit-font-smoothing:antialiased}
+  a{color:var(--series-1);text-decoration:none}a:hover{text-decoration:underline}
+  header.top{border-bottom:1px solid var(--border);background:var(--surface-1);position:sticky;top:0;z-index:30}
+  .top-inner{display:flex;align-items:center;gap:14px;padding:11px 20px;flex-wrap:wrap;max-width:960px;margin:0 auto}
+  .brand h1{font-size:15.5px;margin:0}
+  .spacer{flex:1}
+  .tabs{display:flex;gap:2px}
+  .tabs a{padding:6px 10px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text-secondary)}
+  .tabs a.active{background:var(--series-1-soft);color:var(--seq-700)}
+  :root[data-theme="dark"] .tabs a.active{color:#fff}
+  .toggle{border:1px solid var(--border);background:transparent;color:var(--text-secondary);width:34px;height:34px;border-radius:9px;cursor:pointer}
+  main{max-width:760px;margin:0 auto;padding:32px 22px 80px}
+  h1.doc{font-size:24px;letter-spacing:-.01em;margin:0 0 4px}
+  .doc-sub{color:var(--muted);font-size:13px;margin:0 0 28px}
+  h2{font-size:18px;margin:34px 0 10px;letter-spacing:-.01em}
+  p,li{font-size:14px;color:var(--text-secondary)}
+  b,strong{color:var(--text-primary)}
+  table{border-collapse:collapse;width:100%;font-size:13px;background:var(--surface-1);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  th{background:var(--series-1-soft);color:var(--seq-700);text-align:left;padding:9px 11px;font-size:11.5px;white-space:nowrap}
+  :root[data-theme="dark"] th{color:#dbe9ff;background:#17324f}
+  td{padding:9px 11px;border-top:1px solid var(--border);vertical-align:top}
+  pre{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:16px;font-family:var(--mono);font-size:12px;line-height:1.6;overflow:auto;color:var(--text-secondary);box-shadow:var(--shadow)}
+  code{font-family:var(--mono);font-size:.92em;background:var(--series-1-soft);padding:1px 5px;border-radius:5px;color:var(--seq-700)}
+  :root[data-theme="dark"] code{color:#dbe9ff}
+  .note{font-size:13px;color:var(--text-secondary);background:var(--series-1-soft);border-radius:10px;padding:12px 14px;margin:14px 0}
+  :root[data-theme="dark"] .note{background:rgba(57,135,229,.12)}
+  ol.steps li{margin-bottom:8px}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-inner">
+  <div class="brand"><h1>네이버 블로그 자동 게시 설계 <span style="font-size:11px;color:var(--muted)">v1</span></h1></div>
+  <div class="spacer"></div>
+  <nav class="tabs"><a href="index.html">대시보드</a><a href="drive.html">드라이브</a><a href="blog.html" class="active">블로그</a><a href="plan.html">기획서</a><a href="platform.html">플랫폼</a><a href="spec.html">설계</a></nav>
+  <button class="toggle" id="themeBtn" aria-label="테마 전환">◐</button>
+</div></header>
+<main>
+<h1 class="doc">네이버 블로그 자동 게시 설계</h1>
+<p class="doc-sub">2026-07-27 · 집계 앱 v2 대상 · 공식 API 없음 — 2트랙(반자동/완전자동)</p>
+
+<h2>1. 목표</h2>
+<p>앱에 기록을 저장하는 순간 네이버 블로그 <code>운동</code> 카테고리에 올릴 <b>글감(제목 + 캡쳐 이미지)이 자동으로 완성</b>되어, 사용자는 최소 동작(붙여넣기 + 발행)만으로 게시를 마친다. 관리자는 로컬 스크립트로 발행까지 완전 자동화한다. 제로-DB 원칙은 그대로 — 서버 없이 브라우저(와 관리자 PC) 안에서만 동작한다.</p>
+
+<h2>2. 전제 조사</h2>
+<p><b>게시 템플릿 (블로그 실측 분석)</b> — <code>운동</code> 카테고리(categoryNo=150)의 일일 기록 글:</p>
+<table>
+<thead><tr><th>요소</th><th>형식</th><th>예시</th></tr></thead>
+<tbody>
+<tr><td>제목</td><td><code>YY.MM.DD - X.XKM</code> (날짜 + 거리)</td><td><code>26.07.28 - 3.2KM</code></td></tr>
+<tr><td>본문</td><td>러닝 앱 캡쳐 이미지 <b>1장</b> (텍스트 없음)</td><td>—</td></tr>
+<tr><td>카테고리</td><td>운동 (<code>categoryNo=150</code>)</td><td>—</td></tr>
+</tbody>
+</table>
+<p>→ 제목·본문 모두 앱이 이미 가진 데이터(<code>date</code>, <code>distance_km</code>, IndexedDB 캡쳐)로 <b>100% 자동 생성 가능</b>.</p>
+<p><b>게시 수단 비교</b> — 네이버 블로그 글쓰기 공식 API(<code>writePost.json</code>)는 스팸 남용으로 <b>2020-05-06 종료</b>. 현재 외부 프로그램의 공식 게시 경로는 없다.</p>
+<table>
+<thead><tr><th>수단</th><th>상태</th><th>판단</th></tr></thead>
+<tbody>
+<tr><td>공식 글쓰기 API</td><td>2020-05 종료</td><td>불가</td></tr>
+<tr><td>MetaWeblog/XML-RPC</td><td>종료</td><td>불가</td></tr>
+<tr><td>브라우저 자동화 (Playwright)</td><td>가능</td><td>약관 회색지대 · 계정 제재 리스크 → <b>관리자 전용 소량 사용</b></td></tr>
+<tr><td>글감 완성 + 글쓰기 창 오픈 (반자동)</td><td>가능</td><td>리스크 없음 → <b>일반 사용자 기본 경로</b></td></tr>
+</tbody>
+</table>
+
+<h2>3. 방식 결정</h2>
+<table>
+<thead><tr><th>항목</th><th>결정</th><th>근거</th></tr></thead>
+<tbody>
+<tr><td>구조</td><td><b>2트랙</b> — 트랙 A(반자동, 앱 내) + 트랙 B(완전자동, 로컬 스크립트)</td><td>공식 API 부재. 일반 사용자에게 자동화 리스크를 지우지 않고, 관리자는 본인 책임 하에 완전 자동</td></tr>
+<tr><td>제목 규칙</td><td><code>YY.MM.DD - X.XKM</code> (거리 소수 1자리 고정)</td><td>기존 게시글 제목 형식 표준화 (표기 편차 정규화)</td></tr>
+<tr><td>이미지 전달</td><td>클립보드 복사(PC, PNG 변환) / Web Share(모바일) / 다운로드(폴백)</td><td>스마트에디터는 본문 붙여넣기·공유 첨부를 지원. 파일을 서버에 올리지 않음(제로-DB)</td></tr>
+<tr><td>글쓰기 진입</td><td><code>blog.naver.com/{blogId}?Redirect=Write&amp;categoryNo={n}</code></td><td>실측 검증 — 비로그인 시에도 로그인 후 해당 주소로 복귀하며 categoryNo가 보존됨</td></tr>
+<tr><td>발행 상태 추적</td><td>레코드에 <code>blog_posted_at</code>(ISO, nullable) 추가</td><td>미발행 목록·중복 발행 방지의 기준. 내보내기→가져오기 왕복에서 보존(스키마 v2.0 유지)</td></tr>
+<tr><td>설정 저장</td><td><code>run.blog.v1</code> → blogId·categoryNo·autoOpen (localStorage)</td><td>드라이브 설정과 같은 패턴. 코드에 하드코딩하지 않음</td></tr>
+<tr><td>트랙 B 로그인</td><td>Playwright persistent context 재사용 — <b>자동 로그인 코드 없음</b></td><td>최초 1회 수동 로그인 후 세션만 재사용. 캡차·보안 차단 회피, 자격증명 저장·입력 금지</td></tr>
+</tbody>
+</table>
+
+<h2>4. 트랙 A: 반자동 발행 흐름 (M1)</h2>
+<pre>[기록 저장 (단건 · 신규)]
+  → 글감 모달 자동 오픈 (blogId 설정 + autoOpen 켜짐일 때)
+       제목: 26.07.28 - 3.2KM  [📋 제목 복사]
+       캡쳐 미리보기
+       [🖼 이미지 복사]  (모바일: [📤 이미지·제목 공유])
+       [✍ 네이버 글쓰기 열기]  ← 새 창, categoryNo 지정
+  → 에디터에서: 본문 Ctrl+V(이미지) → 제목 붙여넣기 → 발행
+  → 앱으로 돌아와 [✅ 발행 완료로 표시] → blog_posted_at 기록
+  → 데이터 뷰: 발행 배지 · 미발행 글감 목록에서 언제든 재발행</pre>
+<ul>
+<li><b>드라이브 큐 진행 중에는 방해하지 않는다</b> — 큐 소진 후 미발행 목록을 한 번에 안내.</li>
+<li><b>기록 수정 저장은 자동 오픈하지 않는다</b> — 신규 저장만.</li>
+<li>이미지 복사와 글쓰기 창 열기는 <b>버튼을 분리</b> — 팝업 차단·클립보드 포커스 제약 회피(붙여넣을 것을 먼저 복사).</li>
+</ul>
+
+<h2>5. 트랙 B: 완전 자동 발행 흐름 (M2 · 관리자 전용)</h2>
+<pre>[앱: 정본 내보내기 running_records.json]
+  → node scripts/blog-auto-post.mjs --json running_records.json --images 기록/
+       (--login: 최초 1회 헤드풀 수동 로그인 — 세션만 저장)
+  → 대상 선별: blog_posted_at 없음 + 캡쳐 파일 매칭
+  → 글쓰기 진입 → 제목 입력(동일 규칙) → 이미지 첨부 → 카테고리 150
+  → 기본 dry-run: 발행 직전 정지 + 스크린샷 (--publish 시에만 실제 발행)
+  → 발행 확인(PostView URL) → JSON에 blog_posted_at 기록(.bak 백업 후 건별 저장)
+  → 앱 'JSON 가져오기'로 불러오면 발행 배지 반영 (앱 코드 변경 불필요)</pre>
+<p><b>안전장치</b>: dry-run 기본 · <code>--limit</code> 기본 1(상한 5) · 건당 5~10초 대기 · 실패 시 즉시 전체 중단(중복 발행 방지) · 캡차/보안 페이지 감지 시 중단 · 로그인 리다이렉트 감지 시 <code>--login</code> 안내 후 종료.</p>
+
+<h2>6. 보안 · 리스크</h2>
+<ul>
+<li><b>자동화 약관 리스크(트랙 B)</b>: 브라우저 자동화는 네이버 이용약관상 회색지대이며, 대량 사용 시 계정 제재(저품질·정지) 사례가 있다. <b>본인 계정 · 1일 1건 수준 소량 · 관리자 전용</b>으로 한정하고, 일반 사용자 경로는 트랙 A로 분리한다.</li>
+<li>트랙 B 세션(<code>scripts/.naver-profile/</code>)은 로컬에만 존재 — git·Vercel 배포에서 제외. 자격증명은 코드 어디에도 저장·입력하지 않는다.</li>
+<li>트랙 A는 클립보드·공유·새 창뿐 — 외부 전송 없음, 제로-DB 유지. <code>blogId</code>는 공개 값이라 localStorage 저장으로 충분.</li>
+<li>스마트에디터 DOM은 예고 없이 변경될 수 있다 — 셀렉터를 상수 1곳에 모으고 dry-run 스크린샷으로 회귀를 감지.</li>
+</ul>
+
+<h2>7. 사전 준비</h2>
+<ol class="steps">
+<li>앱의 <b>데이터 · 내보내기 → 네이버 블로그 ⚙ 설정</b>에 블로그 ID(예: <code>nevertheless-jos</code>)와 카테고리 번호(예: <code>150</code>) 입력 — 카테고리 번호는 블로그 카테고리 링크의 <code>categoryNo=</code> 값.</li>
+<li>(트랙 B, 관리자만) Node.js 설치 → <code>cd scripts &amp;&amp; npm install</code> → <code>node blog-auto-post.mjs --login</code>으로 최초 1회 수동 로그인.</li>
+</ol>
+<div class="note">ℹ️ 설정값은 이 브라우저의 localStorage에만 저장되며 서버로 전송되지 않습니다.</div>
+
+<h2>8. 마일스톤</h2>
+<ul>
+<li><b>M1 (이번 구현)</b>: 글감 모달(제목·이미지 복사/공유/글쓰기 창) · 저장 직후 자동 오픈 · <code>blog_posted_at</code> 추적 · 미발행 목록 · 설정 UI</li>
+<li><b>M2 (이번 구현 · 관리자)</b>: Playwright 완전 자동 발행 스크립트 (dry-run 기본 · 셀렉터는 첫 실행 때 보정)</li>
+<li><b>M3</b>: 주간 리포트 자동발행(주간 집계 카드 이미지 생성 → 글감) · 모바일 글쓰기 딥링크 개선</li>
+</ul>
+
+<h2>9. 한계 (M1)</h2>
+<ul>
+<li>트랙 A의 최종 '발행' 클릭은 사용자 몫 — 공식 API가 없는 한 브라우저에서 무인 발행은 불가.</li>
+<li>클립보드 이미지 복사는 HTTPS + 최신 브라우저 필요(미지원 시 이미지 저장 폴백). 모바일 공유는 네이버 블로그 앱이 설치된 경우에 매끄럽다.</li>
+<li>PC 에디터의 카테고리 자동 선택은 URL 파라미터에 의존 — 에디터 개편 시 수동 선택이 필요할 수 있다.</li>
+<li>발행 완료 표시는 자기 신고 방식 — 실제 게시 여부를 앱이 검증하지는 않는다(트랙 B는 PostView URL로 확인).</li>
+</ul>
+</main>
+<script>
+const root=document.documentElement;
+document.getElementById('themeBtn').addEventListener('click',()=>{root.setAttribute('data-theme',root.getAttribute('data-theme')==='dark'?'light':'dark');});
+</script>
+</body>
+</html>
