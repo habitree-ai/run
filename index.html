@@ -1165,6 +1165,33 @@ function betaStreak(){ /* β(주간 횟수) 연속 달성 주 수 — 이번 주
   return streak;
 }
 function streakHTML(){const n=betaStreak();return n?`<div style="font-size:12px;margin-top:7px">🔥 <b>β 연속 ${n}주</b> 달성 중</div>`:'';}
+function drawHeatmap(){ /* 꾸준함 잔디 — 최근 20주 요일×주 격자, 거리 농도(단일 색상 명암) · 벤치마킹: Runalyze·Smashrun 캘린더 히트맵 */
+  const el=$('#ch-heat');if(!el)return;
+  const weeks=20,cell=12,gap=3,left=26,top=16;
+  const byDate={};state.records.forEach(r=>{if(r.date)byDate[r.date]=(byDate[r.date]||0)+(r.distance_km||0);});
+  const today=todayISO();
+  const monday=new Date(isoWeekKey(today)+'T00:00:00');
+  let s='';
+  ['월','','수','','금','','일'].forEach((n,i)=>{if(n)s+=`<text class="tick" x="${left-6}" y="${top+i*(cell+gap)+cell-2}" text-anchor="end">${n}</text>`;});
+  const seenMonth={};
+  for(let w=0;w<weeks;w++){
+    const wStart=new Date(monday);wStart.setDate(wStart.getDate()-7*(weeks-1-w));
+    for(let d=0;d<7;d++){
+      const day=new Date(wStart);day.setDate(day.getDate()+d);
+      const key=day.getFullYear()+'-'+pad(day.getMonth()+1)+'-'+pad(day.getDate());
+      if(key>today)continue;
+      const v=byDate[key]||0;
+      const fill=v?(v>=6?'var(--seq-550)':(v>=3?'var(--series-1)':'var(--series-1-soft)')):'var(--grid)';
+      const x=left+w*(cell+gap),yy=top+d*(cell+gap);
+      s+=`<rect x="${x}" y="${yy}" width="${cell}" height="${cell}" rx="3" fill="${fill}"${key===today?' stroke="var(--text-primary)" stroke-width="1.5"':''} data-t="${key}${v?' · <b>'+v.toFixed(1)+'km</b>':' · 휴식'}"/>`;
+      if(d===0&&day.getDate()<=7&&!seenMonth[day.getMonth()]){seenMonth[day.getMonth()]=1;
+        s+=`<text class="tick" x="${x}" y="${top-5}">${day.getMonth()+1}월</text>`;}
+    }
+  }
+  const W=left+weeks*(cell+gap)+8,H=top+7*(cell+gap)+4;
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="display:block">${s}</svg>`;
+  bindHover(el);
+}
 function drawCumulative(){ /* 올해 누적 거리 vs β·α 페이스라인 — 시작점 기준 (기준선은 연간값의 시작일 환산) */
   const el=$('#ch-cum');if(!el)return;
   const y=+todayISO().slice(0,4),g=state.goals;
@@ -1246,9 +1273,20 @@ function renderDashboard(){
   const p=goalProgress(), g=state.goals;
   $('#stage').innerHTML=`
     <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
-      <div style="flex:1;min-width:200px"><h2 class="vh">대시보드</h2><p class="vsub">누적 ${a.n}회 · 브라우저 저장(localStorage + IndexedDB)</p></div>
+      <div style="flex:1;min-width:200px"><h2 class="vh">대시보드</h2><p class="vsub">누적 ${a.n}회 · ${a.d.toFixed(1)}km · 브라우저 저장(localStorage + IndexedDB)</p></div>
       <button class="btn" onclick="show('add')">＋ 기록 추가</button>
     </div>
+    <div class="sect" style="margin-top:8px">계획 β · 목표 α 달성도 <a href="#" onclick="show('goals');return false" style="font-size:12px;font-weight:600;margin-left:6px">설정 →</a>
+      <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:6px">링·막대 채움=현재 · 눈금=β(반드시) · 전체=α(도전)</span></div>
+    <div class="goalcards">${ringCard('이번 주',g.plan.weekly,g.target.weekly,p.weekly,weekDotsHTML()+streakHTML())}${ringCard('이번 달',g.plan.monthly,g.target.monthly,p.monthly)}${ringCard('올해',proratedYearly(g.plan.yearly),proratedYearly(g.target.yearly),p.yearly,startCaption())}${paceCard()}</div>
+    <div class="chart-card" style="margin-top:14px"><h3>꾸준함 (최근 20주)</h3>
+      <div class="cs">하루 한 칸 — 진할수록 먼 거리 · <span style="display:inline-flex;gap:2px;vertical-align:-2px"><span style="width:9px;height:9px;border-radius:2px;background:var(--grid)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--series-1-soft)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--series-1)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--seq-550)"></span></span> · 테두리=오늘</div>
+      <div id="ch-heat" style="overflow-x:auto"></div></div>
+    <div class="chart-card" style="margin-top:14px"><h3>올해 누적 거리 — 계획 대비</h3>
+      <div class="cs"><span style="color:var(--series-1);font-weight:700">— 실적</span> · <span style="color:var(--guide-beta);font-weight:700">╌ β 계획</span> · <span style="color:var(--guide-alpha);font-weight:700">╌ α 목표</span> <span id="cumStart" style="font-weight:400"></span></div>
+      <div id="cumNudge" style="font-size:13px;margin:2px 0 6px"></div>
+      <div id="ch-cum"></div></div>
+    <div class="sect">누적 통계</div>
     <div class="cards">
       <div class="card kpi"><div class="label">총 러닝</div><div class="val">${a.n}<small>회</small></div></div>
       <div class="card kpi"><div class="label">총 거리</div><div class="val">${a.d.toFixed(2)}<small>km</small></div></div>
@@ -1256,20 +1294,13 @@ function renderDashboard(){
       <div class="card kpi"><div class="label">평균 페이스</div><div class="val">${paceTxt(a.avgPace?Math.round(a.avgPace):null)}<small>/km</small></div></div>
       <div class="card kpi"><div class="label">최장 거리 (PR)</div><div class="val">${a.longest?a.longest.distance_km.toFixed(2):'—'}<small>km</small></div><div class="foot">${a.fastest?'최고 '+paceTxt(a.fastest.avg_pace_sec_per_km)+'/km':''}</div></div>
     </div>
-    <div class="sect">계획 β · 목표 α 달성도 <a href="#" onclick="show('goals');return false" style="font-size:12px;font-weight:600;margin-left:6px">설정 →</a>
-      <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:6px">링·막대 채움=현재 · 눈금=β(반드시) · 전체=α(도전)</span></div>
-    <div class="goalcards">${ringCard('이번 주',g.plan.weekly,g.target.weekly,p.weekly,weekDotsHTML()+streakHTML())}${ringCard('이번 달',g.plan.monthly,g.target.monthly,p.monthly)}${ringCard('올해',proratedYearly(g.plan.yearly),proratedYearly(g.target.yearly),p.yearly,startCaption())}${paceCard()}</div>
-    <div class="chart-card" style="margin-top:14px"><h3>올해 누적 거리 — 계획 대비</h3>
-      <div class="cs"><span style="color:var(--series-1);font-weight:700">— 실적</span> · <span style="color:var(--guide-beta);font-weight:700">╌ β 계획</span> · <span style="color:var(--guide-alpha);font-weight:700">╌ α 목표</span> <span id="cumStart" style="font-weight:400"></span></div>
-      <div id="cumNudge" style="font-size:13px;margin:2px 0 6px"></div>
-      <div id="ch-cum"></div></div>
     <div class="charts2">
       <div class="chart-card"><h3>주간 거리</h3><div class="cs">주별 합계 · km · 기준선 <span style="color:var(--guide-beta);font-weight:700">β</span>·<span style="color:var(--guide-alpha);font-weight:700">α</span></div><div id="ch-week"></div></div>
       <div class="chart-card"><h3>페이스 추이</h3><div class="cs">기록 순 · 낮을수록 빠름</div><div id="ch-pace"></div></div>
     </div>
     <div class="chart-card" style="margin-top:14px"><h3>최근 러닝</h3><div class="cs">최신순</div>
       <div id="recentList" style="margin-top:8px"></div></div>`;
-  drawWeekly();drawPace();drawCumulative();drawRecent();hydrateThumbs();
+  drawHeatmap();drawWeekly();drawPace();drawCumulative();drawRecent();hydrateThumbs();
 }
 function drawWeekly(){
   const map={};state.records.forEach(r=>{if(!r.date)return;const k=isoWeekKey(r.date);map[k]=(map[k]||0)+(r.distance_km||0);});
