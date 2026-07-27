@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>드라이브 연동 vs Supabase(BaaS) · 매뉴얼</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏃</text></svg>">
+<style>
+  :root{color-scheme:light;
+    --surface-1:#fcfcfb;--plane:#f9f9f7;--text-primary:#0b0b0b;--text-secondary:#52514e;--muted:#898781;
+    --border:rgba(11,11,11,0.10);--series-1:#2a78d6;--series-1-soft:#cde2fb;--seq-700:#0d366b;
+    --good:#0ca30c;--warn:#b26a00;--warn-soft:#fdecc8;
+    --radius:14px;--shadow:0 1px 2px rgba(11,11,11,.04),0 4px 16px rgba(11,11,11,.05);
+    --font:system-ui,-apple-system,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Consolas,monospace;}
+  :root[data-theme="dark"]{color-scheme:dark;
+    --surface-1:#1a1a19;--plane:#0d0d0d;--text-primary:#fff;--text-secondary:#c3c2b7;--muted:#898781;
+    --border:rgba(255,255,255,0.10);--series-1:#3987e5;--series-1-soft:#184f95;--seq-700:#b7d3f6;
+    --warn:#fab219;--warn-soft:#3a2f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+    --surface-1:#1a1a19;--plane:#0d0d0d;--text-primary:#fff;--text-secondary:#c3c2b7;--muted:#898781;
+    --border:rgba(255,255,255,0.10);--series-1:#3987e5;--series-1-soft:#184f95;--seq-700:#b7d3f6;
+    --warn:#fab219;--warn-soft:#3a2f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);}}
+  *{box-sizing:border-box}html,body{margin:0}
+  body{background:var(--plane);color:var(--text-primary);font-family:var(--font);line-height:1.65;-webkit-font-smoothing:antialiased}
+  a{color:var(--series-1);text-decoration:none}a:hover{text-decoration:underline}
+  header.top{border-bottom:1px solid var(--border);background:var(--surface-1);position:sticky;top:0;z-index:30}
+  .top-inner{display:flex;align-items:center;gap:14px;padding:11px 20px;flex-wrap:wrap;max-width:960px;margin:0 auto}
+  .brand h1{font-size:15.5px;margin:0}
+  .spacer{flex:1}
+  .tabs{display:flex;gap:2px}
+  .tabs a{padding:6px 10px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text-secondary)}
+  .tabs a.active{background:var(--series-1-soft);color:var(--seq-700)}
+  :root[data-theme="dark"] .tabs a.active{color:#fff}
+  .toggle{border:1px solid var(--border);background:transparent;color:var(--text-secondary);width:34px;height:34px;border-radius:9px;cursor:pointer}
+  main{max-width:760px;margin:0 auto;padding:32px 22px 80px}
+  h1.doc{font-size:24px;letter-spacing:-.01em;margin:0 0 4px}
+  .doc-sub{color:var(--muted);font-size:13px;margin:0 0 28px}
+  h2{font-size:18px;margin:34px 0 10px;letter-spacing:-.01em}
+  p,li{font-size:14px;color:var(--text-secondary)}
+  b,strong{color:var(--text-primary)}
+  table{border-collapse:collapse;width:100%;font-size:13px;background:var(--surface-1);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  th{background:var(--series-1-soft);color:var(--seq-700);text-align:left;padding:9px 11px;font-size:11.5px;white-space:nowrap}
+  :root[data-theme="dark"] th{color:#dbe9ff;background:#17324f}
+  td{padding:9px 11px;border-top:1px solid var(--border);vertical-align:top}
+  code{font-family:var(--mono);font-size:.92em;background:var(--series-1-soft);padding:1px 5px;border-radius:5px;color:var(--seq-700)}
+  :root[data-theme="dark"] code{color:#dbe9ff}
+  .note{font-size:13px;color:var(--text-secondary);background:var(--series-1-soft);border-radius:10px;padding:12px 14px;margin:14px 0}
+  :root[data-theme="dark"] .note{background:rgba(57,135,229,.12)}
+  .qa{border-left:3px solid var(--series-1);padding:2px 0 2px 14px;margin:14px 0;font-size:14px;color:var(--text-primary);font-weight:600}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-inner">
+  <div class="brand"><h1>드라이브 연동 vs Supabase(BaaS)</h1></div>
+  <div class="spacer"></div>
+  <nav class="tabs"><a href="../index.html">대시보드</a><a href="../drive.html">드라이브</a><a href="index.html">매뉴얼</a></nav>
+  <button class="toggle" id="themeBtn" aria-label="테마 전환">◐</button>
+</div></header>
+<main>
+<h1 class="doc">사용자별 데이터 = 드라이브 연결 방식? Supabase와 비슷한가?</h1>
+<p class="doc-sub">2026-07-27 · 개념 Q&amp;A</p>
+
+<div class="qa">Q. 현재 사용자별 데이터는 구글드라이브를 연결해서 적용하는 방식이라고 보면 되나? Supabase 데이터 연결하는 것과 비슷한 방식인가?</div>
+<p><b>A. 절반은 맞다.</b> "사용자별 데이터를 드라이브 연결로 적용한다"는 정확하고, 로그인하면 내 데이터가 계정을 따라다니는 <b>사용자 경험은 Supabase를 붙인 것과 동일</b>하다. 하지만 <b>구조는 정반대</b>다 — 중앙 DB가 아니라 각 사용자 소유의 저장소를 쓰는 <b>BYO 스토리지 · 제로-DB</b> 모델이다.</p>
+
+<h2>구조 비교</h2>
+<table>
+<thead><tr><th></th><th>Supabase 방식 (중앙 DB · BaaS)</th><th>현재 방식 (BYO 스토리지 · 제로-DB)</th></tr></thead>
+<tbody>
+<tr><td><b>데이터 위치</b></td><td><b>운영자의</b> Postgres 프로젝트 한곳에 전체 사용자 데이터가 모임</td><td><b>각 사용자의</b> 구글드라이브에 자기 데이터만 존재</td></tr>
+<tr><td><b>운영자 열람</b></td><td>가능 (관리 권한)</td><td><b>불가능</b> — 서버·DB 없음, 토큰은 사용자 브라우저에만</td></tr>
+<tr><td><b>운영 책임·비용</b></td><td>운영자 부담 (DB 요금·백업·보안·RLS)</td><td><b>0원</b> — 사용자 자신의 드라이브 용량 사용</td></tr>
+<tr><td><b>데이터 형태</b></td><td>진짜 DB — 쿼리·인덱스·관계·서버 로직·실시간 push</td><td>JSON 파일 1개를 통째로 읽고 쓰는 파일 동기화 (쿼리 없음 · push 대신 폴링)</td></tr>
+<tr><td><b>사용자 격리</b></td><td>운영자가 RLS 정책으로 <b>구현해야</b> 함</td><td>계정 격리가 <b>구조적으로 자동</b> — 남의 드라이브 접근 자체가 불가</td></tr>
+</tbody>
+</table>
+
+<div class="note">💡 비유 — <b>Supabase는 "은행 금고"</b>: 모두의 데이터를 운영자 금고에 넣고 칸막이(RLS)로 나눈다. <b>현재 방식은 "각자 집 금고"</b>: 앱은 금고 여는 방법만 제공하고, 데이터는 처음부터 각자 집에만 있다.</div>
+
+<h2>어느 쪽이 맞는 선택인가</h2>
+<ul>
+<li><b>지금 서비스에는 현재 방식이 의도된 설계</b> — 개인 러닝 기록(1인 데이터·소량·기기 간 동기화)에 충분하고, 운영 비용과 개인정보 리스크가 0. <a href="../platform.html">플랫폼 문서</a>에 "제로-DB 플랫폼" 원칙으로 문서화되어 있다.</li>
+<li><b>중앙 DB(Supabase 등)가 필요해지는 시점</b> — 사용자 간 상호작용이 생기는 순간: 랭킹·피드 공유, 크루 기능, 운영자 통계 대시보드 등. 각자의 드라이브만으로는 남의 데이터를 볼 수 없으므로 불가능한 기능들이다.</li>
+<li><b>공존 가능</b> — 개인 정본은 드라이브에 유지하고, 공유용 집계만 중앙 DB에 올리는 하이브리드도 자연스러운 진화 경로다.</li>
+</ul>
+
+<div class="note">ℹ️ 관련 문서: <a href="multi-device-sync.html">PC·모바일 간 데이터 연계</a> · <a href="oauth-concepts.html">OAuth 개념 — 관리자 자격과 사용자 계정</a> · <a href="../drive.html">드라이브 연동 설계 v2</a></div>
+</main>
+<script>
+const root=document.documentElement;
+document.getElementById('themeBtn').addEventListener('click',()=>{root.setAttribute('data-theme',root.getAttribute('data-theme')==='dark'?'light':'dark');});
+</script>
+</body>
+</html>
