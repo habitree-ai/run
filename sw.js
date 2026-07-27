@@ -1,6 +1,6 @@
 /* 러닝 누적기록 서비스워커 — 오프라인 조회 + 홈 화면 설치.
    페이지(HTML)는 network-first(배포 즉시 반영), 정적 자산은 cache-first. */
-const VER='run-v1';
+const VER='run-v2'; /* 모바일 개편 — 구 캐시(구 index.html 오프라인 폴백) 폐기 */
 const CORE=['./','index.html','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png'];
 
 self.addEventListener('install',e=>{

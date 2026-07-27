@@ -3,12 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <script>try{var _t=localStorage.getItem('run.theme.v1');if(_t)document.documentElement.setAttribute('data-theme',_t);}catch(e){}</script>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>러닝 누적기록 · 집계 대시보드</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏃</text></svg>">
 <meta name="theme-color" content="#f9f9f7" id="metaTheme">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="러닝기록">
@@ -116,7 +117,8 @@
   .btn.sec{background:transparent;color:var(--text-secondary);border-color:var(--border)}
   .btn:disabled{opacity:.45;cursor:not-allowed}
   .btn.sm{padding:6px 11px;font-size:12px}
-  label.btn{display:inline-block}
+  label.btn,a.btn{display:inline-block}
+  a.btn,a.btn:hover{text-decoration:none}
   /* forms */
   .form{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);max-width:640px}
   .fg{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -201,19 +203,91 @@
   .filterbar input{flex:1;min-width:150px;max-width:260px}
   table.data th.sortable{cursor:pointer;user-select:none}
   table.data th.sortable:hover{text-decoration:underline}
-  /* 모바일 편의 */
+  /* 기록 카드 리스트 — 좁은 화면에서 13열 표를 대체 (설계: planning/mobile-ux.html) */
+  .sortsel{display:none}
+  .reclist{display:flex;flex-direction:column;gap:10px}
+  .reccard{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px 13px 6px}
+  .rc-top{display:flex;gap:11px;align-items:flex-start}
+  .rc-h{min-width:0;flex:1}
+  .rc-d{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .rc-t{font-size:14.5px;font-weight:700;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rc-m{display:flex;gap:18px;margin:11px 0 2px;font-variant-numeric:tabular-nums;flex-wrap:wrap}
+  .rc-m i{display:block;font-style:normal;font-size:10.5px;font-weight:600;color:var(--muted)}
+  .rc-m b{display:block;font-size:16px;font-weight:750;color:var(--text-primary);letter-spacing:-.02em;line-height:1.3}
+  .rc-a{display:flex;gap:4px;border-top:1px solid var(--border);margin-top:10px;padding-top:3px}
+  .rc-btn{flex:1;min-height:42px;border:none;background:transparent;color:var(--text-secondary);
+    font-family:inherit;font-size:12.5px;font-weight:600;border-radius:9px;cursor:pointer}
+  .rc-btn:active{background:var(--plane)}
+  .rc-btn.danger{color:#d03b3b}
+  .rc-btn[disabled]{opacity:.4;cursor:default}
+  @media(max-width:620px){.sortsel{display:block}}
+  /* ===== 모바일 (설계: planning/mobile-ux.html) ===== */
+  .tabbar{display:none}
   @media(max-width:820px){
-    .top-inner{padding:9px 12px;gap:8px 10px}
-    .brand .sub{display:none}
-    .docnav{order:5;width:100%;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-    .docnav::-webkit-scrollbar{display:none}
-    .docnav a{white-space:nowrap}
-    main.stage{padding:18px 14px 70px}
+    html{-webkit-text-size-adjust:100%}
+    body{overscroll-behavior-y:contain;-webkit-tap-highlight-color:transparent}
+    button,a,label,select,input{touch-action:manipulation}
+    /* 헤더 1행 압축 — 문서 내비·테마는 '더보기' 시트로 이동 */
+    .top-inner{padding:9px 12px;gap:8px 10px;
+      padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}
+    .brand{min-width:0}
+    .brand h1{font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .brand .sub,.draft-badge,.docnav,#themeBtn{display:none}
+    .storage-pill{padding:4px 10px;font-size:11.5px;flex:none}
+    #storageLabel{display:none} /* 건수만 남겨 헤더를 1행으로 유지 */
+    .profile .pf-name{max-width:74px}
+    .hide-mobile{display:none!important} /* 하단 탭바와 중복되는 진입점 */
+    /* 주 내비게이션은 하단 탭바로 — 화면 최상단 가로 스크롤 레일을 대체 */
+    nav.rail{display:none}
+    .shell{min-height:auto}
+    main.stage{padding:16px 14px calc(72px + env(safe-area-inset-bottom));
+      padding-left:max(14px,env(safe-area-inset-left));padding-right:max(14px,env(safe-area-inset-right))}
+    /* iOS 자동 확대 차단 — 16px 미만 입력에 포커스하면 사파리가 페이지를 확대하고 되돌리지 않는다 */
+    input,select,textarea,.field input,.field select,.filterbar input,.filterbar select{font-size:16px}
+    .field .hint{font-size:12px}
+    .form{padding:16px}
+    .form-actions .btn{flex:1;min-width:120px}
+    .btn{min-height:44px}.btn.sm{min-height:40px} /* 터치 타깃 — pointer 미디어에 기대지 않고 폭 기준으로도 보장 */
+    /* 모달 → 바텀시트 */
+    .modal-bg{padding:0;place-items:end center}
+    .modal{max-width:none;border-radius:18px 18px 0 0;max-height:88vh;
+      padding:16px 16px calc(18px + env(safe-area-inset-bottom));animation:sheetUp .22s ease-out}
+    .modal::before{content:'';display:block;width:38px;height:4px;border-radius:999px;background:var(--border);margin:0 auto 12px}
+    .toast{bottom:calc(80px + env(safe-area-inset-bottom))}
+    /* 이력 표 — 달성률 열의 줄바꿈을 허용해 5열이 한 화면에 들어오게 */
+    table.data th,table.data td{padding:8px 7px}
+    table.data.hist td:nth-child(n+4){white-space:normal;min-width:76px;word-break:keep-all} /* '목표'가 쪼개지지 않게 */
   }
-  @media(pointer:coarse){ /* 터치 타깃 확대 */
-    .btn.sm{padding:9px 14px}
-    .edit,.del{font-size:16px;padding:5px 7px}
+  @keyframes sheetUp{from{transform:translateY(26px)}to{transform:translateY(0)}}
+  @media(prefers-reduced-motion:reduce){.modal{animation:none}}
+  /* 하단 고정 탭바 */
+  @media(max-width:820px){
+    .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--surface-1);
+      border-top:1px solid var(--border);box-shadow:0 -1px 12px rgba(11,11,11,.05);
+      padding-bottom:env(safe-area-inset-bottom);
+      padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+    :root[data-theme="dark"] .tabbar{box-shadow:0 -1px 12px rgba(0,0,0,.35)}
+    .tabbar button{flex:1;min-width:0;min-height:54px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      gap:3px;border:none;background:transparent;color:var(--muted);font-family:inherit;font-size:10.5px;
+      font-weight:700;cursor:pointer;padding:7px 2px 6px;letter-spacing:-.01em}
+    .tabbar button svg{width:21px;height:21px;flex:none}
+    .tabbar button.active{color:var(--series-1)}
+    .tabbar button:active{background:var(--plane)}
+  }
+  /* 통계 스트립 — 좁은 화면에서 2열 격자 (flex 줄바꿈 시 구분선이 어긋나는 문제 해결) */
+  @media(max-width:560px){
+    .statrow{display:grid;grid-template-columns:1fr 1fr;padding:0}
+    .statrow .st{min-width:0;border-left:1px solid var(--border);border-top:1px solid var(--border);padding:12px 8px}
+    .statrow .st:nth-child(odd){border-left:none}
+    .statrow .st:first-child,.statrow .st:nth-child(2){border-top:none}
+    .statrow .val{font-size:19px}
+  }
+  @media(pointer:coarse){ /* 터치 타깃 — Apple HIG / Material 최소 44px */
+    .btn{min-height:44px}
+    .btn.sm{padding:10px 14px;min-height:40px}
+    .edit,.del{font-size:17px;min-width:40px;min-height:40px}
     nav.rail button{padding:11px 12px}
+    .storage-pill,.profile,.toggle{min-height:36px}
   }
 </style>
 </head>
@@ -226,7 +300,7 @@
     </div>
     <div class="spacer"></div>
     <span id="authArea"></span>
-    <button class="storage-pill" id="storagePill"><span class="d"></span><span id="storageText">불러오는 중…</span></button>
+    <button class="storage-pill" id="storagePill"><span class="d"></span><span id="storageLabel"></span><span id="storageCount">불러오는 중…</span></button>
     <nav class="docnav">
       <a href="index.html" class="active">대시보드</a><a href="guide.html">사용법</a><a href="drive.html">드라이브</a><a href="blog.html">블로그</a>
       <a href="plan.html">기획서</a><a href="platform.html">플랫폼</a><a href="spec.html">설계</a>
@@ -247,6 +321,15 @@
 
   <main class="stage" id="stage"></main>
 </div>
+
+<!-- 모바일 주 내비게이션 — 좁은 화면에서만 표시 (설계: planning/mobile-ux.html) -->
+<nav class="tabbar" id="tabbar" aria-label="주 메뉴">
+  <button data-view="dashboard" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg>홈</button>
+  <button data-view="add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>기록 추가</button>
+  <button data-view="goals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>목표</button>
+  <button data-view="data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="18" height="4" rx="1"/></svg>데이터</button>
+  <button id="moreTab" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="5" cy="12" r=".6" fill="currentColor"/><circle cx="12" cy="12" r=".6" fill="currentColor"/><circle cx="19" cy="12" r=".6" fill="currentColor"/></svg>더보기</button>
+</nav>
 
 <div class="modal-bg" id="modalBg"><div class="modal" id="modalBox" role="dialog" aria-modal="true" tabindex="-1"></div></div>
 <div class="toast" id="toast"></div>
@@ -394,6 +477,11 @@ const PLATFORM_GOOGLE={
   clientId:'801630845002-ec3j0lpjeac4ej230qi2fciac66cp2s3.apps.googleusercontent.com',
   apiKey:'AIzaSyB6vZsmP3FO27w3GxTLZ-xECQKoKybeBjU',
   appId:'801630845002'};
+/* Google Cloud Console의 OAuth 클라이언트 '승인된 JavaScript 원본'과 같아야 하는 목록.
+   여기 없는 주소로 접속하면 구글이 로그인을 400 origin_mismatch로 차단한다 —
+   진단 안내에만 쓰고 차단은 하지 않는다(콘솔이 앞서 갱신됐을 수 있으므로). */
+const APPROVED_ORIGINS=['https://run.habitree.io','https://run-murex-theta.vercel.app','http://localhost:8000'];
+function originApproved(){return APPROVED_ORIGINS.includes(location.origin);}
 const DRIVE_SETTINGS_KEY='run.drive.v1'; // {clientId, apiKey, appId, jsonFileId, connected, connectedEmail, folderId, folderName} — 이 브라우저에만 저장
 function driveSettings(){try{return JSON.parse(localStorage.getItem(DRIVE_SETTINGS_KEY))||{};}catch(e){return {};}}
 function saveDriveSettings(s){try{localStorage.setItem(DRIVE_SETTINGS_KEY,JSON.stringify(s));}catch(e){toast('설정 저장 실패');}}
@@ -749,7 +837,30 @@ async function connectDrive(){ /* 사용자 제스처에서 호출 — 최초 1�
     toast('구글 계정이 연결되었습니다'+(s.connectedEmail?' · '+s.connectedEmail:''));
     setPill();if(current==='data')renderData();
     await syncFromDrive(true);
-  }catch(e){toast('연결 실패: '+((e&&e.message)||e));}
+  }catch(e){
+    if(!originApproved()&&!driveSettings().clientId){openOriginHelp(e);return;} /* 미승인 주소 — 원인 안내 */
+    toast('연결 실패: '+((e&&e.message)||e));
+  }
+}
+function openOriginHelp(e){ /* 400 origin_mismatch 진단 — 이 주소가 구글에 등록돼 있지 않을 때 */
+  openModal(`<h3>이 주소에서는 구글 로그인이 막혀 있습니다</h3>
+    <p style="font-size:13px;margin:0 0 10px">구글은 <b>미리 등록된 주소</b>에서만 로그인을 허용합니다. 지금 접속한 주소가 등록돼 있지 않아
+      <code>400 origin_mismatch</code>로 차단됐습니다${e&&e.message?` (<span style="color:var(--muted)">${esc(e.message)}</span>)`:''}.</p>
+    <div class="note" style="margin-bottom:12px">지금 접속한 주소<br><b style="font-family:var(--mono);word-break:break-all">${esc(location.origin)}</b></div>
+    <p style="font-size:13px;margin:0 0 6px"><b>바로 쓰려면</b> — 이미 등록된 아래 주소로 접속하세요.</p>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+      ${APPROVED_ORIGINS.filter(o=>!o.startsWith('http://localhost')).map(o=>
+        `<a href="${esc(o)}" style="font-family:var(--mono);font-size:12.5px;word-break:break-all">${esc(o)} →</a>`).join('')}</div>
+    <p style="font-size:13px;margin:0 0 6px"><b>이 주소를 계속 쓰려면</b> — Google Cloud Console에서 두 곳에 등록해야 합니다.</p>
+    <ol style="font-size:12.5px;color:var(--text-secondary);line-height:1.7;padding-left:20px;margin:0">
+      <li>OAuth 클라이언트 → <b>승인된 JavaScript 원본</b>에 위 주소 추가</li>
+      <li>Picker API 키 → <b>애플리케이션 제한사항(웹사이트)</b>에 <code>${esc(location.origin)}/*</code> 추가</li>
+      <li>저장 후 최대 몇 분 반영 대기 → 다시 로그인</li>
+    </ol>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:16px">
+      <button class="btn sm sec" onclick="closeModal();openDriveSetup()">⚙ 자체 자격 입력</button>
+      <a class="btn sm sec" href="manual/google-cloud-setup.html" target="_blank" rel="noopener">설정 문서</a>
+      <button class="btn sm" onclick="closeModal()">닫기</button></div>`);
 }
 function disconnectDrive(){
   const s=driveSettings();
@@ -857,6 +968,7 @@ function openDriveSetup(){
     <div class="field" style="margin-bottom:10px"><label>API Key (Picker) *</label><input id="dv_key" placeholder="AIza…" value="${esc(s.apiKey||'')}"></div>
     <div class="field"><label>프로젝트 번호 (선택)</label><input id="dv_app" placeholder="1234567890" value="${esc(s.appId||'')}"></div>
     ${s.folderId?`<p style="font-size:12px;color:var(--muted);margin:10px 0 0">기본 폴더: <b>${esc(s.folderName||s.folderId)}</b> · <a href="#" onclick="clearDriveFolder();return false">해제</a></p>`:''}
+    <p style="font-size:11.5px;color:var(--muted);margin:12px 0 0">현재 주소 <b style="font-family:var(--mono);word-break:break-all">${esc(location.origin)}</b>${originApproved()?' · 구글 승인 목록에 있음':' · <span style="color:var(--warn)">구글 승인 목록에 없음</span> — <a href="#" onclick="closeModal();openOriginHelp();return false">확인</a>'}</p>
     <div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end">
       <button class="btn sec" onclick="closeModal()">닫기</button>
       <button class="btn" onclick="saveDriveSetupForm()">저장</button></div>`);
@@ -1318,18 +1430,41 @@ function show(v){
     state.pendingDrive=null;state.driveQueue=null;state.driveTotal=0;state.pendingAnchor=null;
     if(state.batch){(state.batch.items||[]).forEach(it=>{if(it.thumbUrl)URL.revokeObjectURL(it.thumbUrl);});state.batch=null;} /* 일괄 검토 이탈 시 폐기(중단 자유) */
     if(_prevUrl){URL.revokeObjectURL(_prevUrl);_prevUrl=null;}}
-  current=v;document.querySelectorAll('nav.rail button').forEach(b=>b.classList.toggle('active',b.dataset.view===v));views[v]();
+  current=v;document.querySelectorAll('nav.rail button,.tabbar button[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));views[v]();
+  scrollTo(0,0); /* 모바일: 탭 전환 시 이전 화면의 스크롤 위치가 남지 않도록 */
 }
-document.querySelectorAll('nav.rail button').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));
+document.querySelectorAll('nav.rail button,.tabbar button[data-view]').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));
+$('#moreTab').addEventListener('click',openMoreSheet);
+const DOC_LINKS=[['guide.html','사용법','📖'],['drive.html','드라이브','▲'],['blog.html','블로그','📝'],
+  ['plan.html','기획서','🗂'],['platform.html','플랫폼','🏗'],['spec.html','설계','📐'],
+  ['planning/index.html','기획 아카이브','🧭'],['manual/index.html','매뉴얼','🔧']];
+function openMoreSheet(){ /* 모바일에서 헤더가 감당하지 못하는 것들 — 문서 내비·테마·계정 */
+  const dark=effTheme()==='dark', conn=driveConnected(), s=driveSettings();
+  openModal(`<h3 style="margin-bottom:14px">더보기</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+      ${DOC_LINKS.map(([h,t,i])=>`<a href="${h}" style="display:flex;align-items:center;gap:9px;min-height:46px;padding:0 12px;
+        border:1px solid var(--border);border-radius:11px;background:var(--plane);font-size:13.5px;font-weight:600;
+        color:var(--text-primary)"><span style="font-size:15px">${i}</span>${t}</a>`).join('')}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn sec" onclick="closeModal();toggleTheme()">${dark?'☀️ 밝은 테마로':'🌙 어두운 테마로'}</button>
+      ${conn
+        ?`<button class="btn sec" onclick="closeModal();resyncNow()">🔄 지금 동기화 · ${esc(s.connectedEmail||'연결됨')}</button>
+          <button class="btn sec" onclick="closeModal();disconnectDrive()">로그아웃</button>`
+        :`<button class="btn" onclick="closeModal();connectDrive()">🔗 구글 계정 연결</button>`}
+    </div>
+    <div style="margin-top:14px;text-align:center"><button class="btn sec" style="width:100%" onclick="closeModal()">닫기</button></div>`);
+}
 function setPill(){
   const pill=$('#storagePill'),n=state.records.length;
+  $('#storageCount').textContent=n+'건'; /* 라벨은 좁은 화면에서 숨고 건수만 남는다 */
   if(driveConnected()){
     const s=driveSettings();
-    $('#storageText').textContent=(_pendingBackup?'드라이브 동기화 대기':'드라이브 동기화')+' · '+n+'건';
+    $('#storageLabel').textContent=(_pendingBackup?'드라이브 동기화 대기':'드라이브 동기화')+' · ';
     pill.title=(s.connectedEmail||'구글 계정 연결됨')+' — 클릭하면 지금 동기화';
     pill.classList.toggle('connected',!_pendingBackup);
   }else{
-    $('#storageText').textContent='브라우저 저장 · '+n+'건';
+    $('#storageLabel').textContent='브라우저 저장 · ';
     pill.title='데이터 · 내보내기로 이동';pill.classList.add('connected');
   }
   renderAuth();
@@ -1371,7 +1506,7 @@ function renderDashboard(){
   $('#stage').innerHTML=`
     <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
       <div style="flex:1;min-width:200px"><h2 class="vh">대시보드</h2><p class="vsub">${(d=>d.getMonth()+1+'월 '+d.getDate()+'일 ('+WD[d.getDay()]+')')(new Date(todayISO()+'T00:00:00'))} · 누적 <b>${a.n}회</b> · <b>${a.d.toFixed(1)}km</b></p></div>
-      <button class="btn" onclick="show('add')">＋ 기록 추가</button>
+      <button class="btn hide-mobile" onclick="show('add')">＋ 기록 추가</button>
     </div>
     <div class="sect" style="margin-top:8px">달성도 <a href="#" onclick="show('goals');return false" style="font-size:12px;font-weight:600;margin-left:6px">설정 →</a>
       <span style="font-weight:400;margin-left:6px"><span class="chipB">계획 · 반드시 지킬 선 = 눈금</span> <span class="chipA">목표 · 도전할 선 = 전체</span></span></div>
@@ -1624,10 +1759,10 @@ function renderGoals(){
     <div class="sect">현재 달성 현황 <span style="font-size:11.5px;color:var(--muted);font-weight:400">눈금 = 계획 위치 · 막대 전체 = 목표${yearFraction()<0.999?' · 올해는 시작 '+(+startPoint().slice(5,7))+'/'+(+startPoint().slice(8,10))+' 기준 환산':''}</span></div>
     <div class="goalcards">${goalCard('이번 주',g.plan.weekly,g.target.weekly,p.weekly)}${goalCard('이번 달',g.plan.monthly,g.target.monthly,p.monthly)}${goalCard('올해',proratedYearly(g.plan.yearly),proratedYearly(g.target.yearly),p.yearly)}${paceCard()}</div>
     <div class="sect">주간 이력 (최근 8주)</div>
-    <div style="overflow:auto"><table class="data"><thead><tr><th>주 (월요일 시작)</th><th>횟수</th><th>거리</th><th>횟수 달성률</th><th>거리 달성률</th></tr></thead>
+    <div style="overflow:auto"><table class="data hist"><thead><tr><th>주 (월요일 시작)</th><th>횟수</th><th>거리</th><th>횟수 달성률</th><th>거리 달성률</th></tr></thead>
       <tbody>${historyRows(wkKeys,isoWeekKey,g.plan.weekly,g.target.weekly,k=>k.slice(5).replace('-','/')+' 주')}</tbody></table></div>
     <div class="sect">월간 이력 (최근 6개월)</div>
-    <div style="overflow:auto"><table class="data"><thead><tr><th>월</th><th>횟수</th><th>거리</th><th>횟수 달성률</th><th>거리 달성률</th></tr></thead>
+    <div style="overflow:auto"><table class="data hist"><thead><tr><th>월</th><th>횟수</th><th>거리</th><th>횟수 달성률</th><th>거리 달성률</th></tr></thead>
       <tbody>${historyRows(moKeys,monthKey,g.plan.monthly,g.target.monthly,k=>k.replace('-','년 ')+'월')}</tbody></table></div>
     <p style="font-size:11.5px;color:var(--muted);margin-top:8px">이력 달성률은 현재 설정된 기준(계획·목표)을 과거 기간에도 동일하게 적용해 계산합니다.</p>`;
 }
@@ -1695,10 +1830,44 @@ function dataTableHTML(list){
         <td><button class="edit" title="수정" onclick="editRec('${esc(x.record_id)}')">✎</button></td>
         <td><button class="del" title="삭제" onclick="delRec('${esc(x.record_id)}')">✕</button></td></tr>`).join('')}</tbody></table></div>`;
 }
-function updateDataTable(){ /* 표만 부분 재렌더 — 검색 입력 포커스 유지 */
+const SORT_OPTS=[['date-desc','최신순'],['date-asc','오래된순'],['dist-desc','거리 많은순'],['dist-asc','거리 적은순'],
+  ['pace-asc','페이스 빠른순'],['dur-desc','시간 긴순']];
+function sortKey(){return _dsort.k+(_dsort.d===1?'-asc':'-desc');}
+function setDataSortSel(v){const i=v.lastIndexOf('-');_dsort={k:v.slice(0,i),d:v.slice(i+1)==='asc'?1:-1};updateDataTable();}
+const mqCards=matchMedia('(max-width:620px)'); /* 표 대신 카드 리스트를 쓰는 폭 */
+function dataCardsHTML(list){ /* 한 기록 = 한 카드 · 핵심 3지표를 앞에, 부가 지표는 수정 화면으로 */
+  if(!list.length)return '<div class="empty">조건에 맞는 기록이 없습니다.</div>';
+  return '<div class="reclist">'+list.map(x=>{
+    const img=x.has_image||x.image_url, id=esc(x.record_id);
+    return `<div class="reccard">
+      <div class="rc-top">
+        ${img?`<span class="thumbwrap"><img class="thumb" data-rid="${id}" alt="" onclick="showImageModal('${id}')"></span>`:''}
+        <div class="rc-h">
+          <div class="rc-d">${esc(x.date)}${x.weekday?' ('+esc(x.weekday)+')':''}
+            <span class="src ${esc(x.source||'manual')}">${esc((x.source||'manual').toUpperCase())}</span>
+            ${x.blog_posted_at?'<span class="src posted" title="블로그 발행됨">✓ 발행</span>':''}</div>
+          <div class="rc-t">${esc(x.title||'러닝')}</div>
+        </div>
+      </div>
+      <div class="rc-m">
+        <span><i>거리</i><b>${(x.distance_km||0).toFixed(2)}km</b></span>
+        <span><i>페이스</i><b>${paceTxt(x.avg_pace_sec_per_km)}</b></span>
+        <span><i>시간</i><b>${clock(x.duration_sec)}</b></span>
+      </div>
+      <div class="rc-a">
+        ${x.blog_posted_at
+          ?`<button class="rc-btn" onclick="if(confirm('발행 표시를 해제할까요?'))unmarkBlogPosted('${id}')">✓ 발행 해제</button>`
+          :`<button class="rc-btn"${img?'':' disabled'} onclick="openBlogDraft('${id}')">📝 글감</button>`}
+        <button class="rc-btn" onclick="editRec('${id}')">✎ 수정</button>
+        <button class="rc-btn danger" onclick="delRec('${id}')">✕ 삭제</button>
+      </div></div>`;}).join('')+'</div>';
+}
+function updateDataTable(){ /* 표/카드만 부분 재렌더 — 검색 입력 포커스 유지 */
   const wrap=$('#dataWrap');if(!wrap)return;
   const list=dataFiltered();
-  wrap.innerHTML=dataTableHTML(list);
+  wrap.innerHTML=mqCards.matches?dataCardsHTML(list):dataTableHTML(list);
+  const ss=$('#dsort'),sk=sortKey();
+  if(ss&&[...ss.options].some(o=>o.value===sk))ss.value=sk; /* 표 헤더 정렬엔 없는 조합도 있어 있을 때만 반영 */
   const c=$('#dcount');if(c)c.textContent=list.length+'건'+(list.length!==state.records.length?' / 전체 '+state.records.length+'건':'');
   const rs=$('#dreset');if(rs)rs.classList.toggle('hide',!(_dq.q||_dq.ym||_dq.src));
   hydrateThumbs();
@@ -1716,7 +1885,7 @@ function renderData(){
       <button class="btn" onclick="exportJSON()">⬇ 정본 내보내기 (JSON)</button>
       <button class="btn sec" onclick="exportCSV()">⬇ CSV (엑셀)</button>
       <label class="btn sec" for="impFile">📁 JSON 가져오기<input id="impFile" type="file" accept="application/json,.json" class="hide"></label>
-      <button class="btn sec" onclick="show('add')">＋ 기록 추가</button>
+      <button class="btn sec hide-mobile" onclick="show('add')">＋ 기록 추가</button>
       ${r.length?`<button class="btn sec" onclick="clearAll()">전체 비우기</button>`:''}
       <span style="flex:1"></span><span style="align-self:center;font-size:12px;color:var(--muted)">스키마 v2.0 · ${r.length}건</span>
     </div>
@@ -1724,6 +1893,7 @@ function renderData(){
       <input id="dq" placeholder="🔍 제목·위치·날짜 검색" value="${esc(_dq.q)}">
       <select id="dym"><option value="">전체 기간</option>${months.map(m=>`<option value="${m}"${_dq.ym===m?' selected':''}>${m.replace('-','년 ')}월</option>`).join('')}</select>
       ${srcs.length>1?`<select id="dsrc"><option value="">모든 출처</option>${srcs.map(s0=>`<option value="${esc(s0)}"${_dq.src===s0?' selected':''}>${esc(s0.toUpperCase())}</option>`).join('')}</select>`:''}
+      <select id="dsort" class="sortsel">${SORT_OPTS.map(([v,t])=>`<option value="${v}">${t}</option>`).join('')}</select>
       <span id="dcount"></span><a href="#" id="dreset" class="hide" onclick="clearDataFilter();return false">초기화</a>
     </div>
     <div id="dataWrap"></div>`
@@ -1735,6 +1905,7 @@ function renderData(){
       ${(()=>{const c=driveCreds(),s=driveSettings(),conn=driveConnected();
         return `<div class="be"><span class="tag ${conn?'rec':'soon'}">${conn?'연결됨':(c?'로그인만 하면 끝':'설정 필요')}</span>
         <div class="be-h"><span class="be-ic">▲</span>구글드라이브</div>
+        ${(!conn&&!s.clientId&&!originApproved())?`<div class="note warn" style="font-size:12px">이 주소(<b style="word-break:break-all">${esc(location.origin)}</b>)는 구글에 등록돼 있지 않아 로그인이 차단됩니다. <a href="#" onclick="openOriginHelp();return false">해결 방법 →</a></div>`:''}
         <p>${conn
           ?`<b>${esc(s.connectedEmail||'구글 계정')}</b>과 자동 동기화 중 — 기록을 저장·삭제하면 몇 초 안에 내 드라이브의 정본(running_records.json)에 반영되고, 다른 기기의 변경도 이 브라우저로 들어옵니다.${c.byo&&s.folderName?` 기본 폴더 <b>${esc(s.folderName)}</b>.`:''}`
           :(c?'구글 계정으로 <b>연결 한 번</b>이면 별도 설정 없이 기록이 내 드라이브와 자동 동기화됩니다(백업·복원·기기 간 병합). 드라이브 캡쳐 가져오기(중복 스킵 · OCR 프리필)도 바로 사용할 수 있어요.'
@@ -1762,6 +1933,7 @@ function renderData(){
     $('#dq').oninput=e=>{_dq.q=e.target.value;updateDataTable();};
     $('#dym').onchange=e=>{_dq.ym=e.target.value;updateDataTable();};
     const ds=$('#dsrc');if(ds)ds.onchange=e=>{_dq.src=e.target.value;updateDataTable();};
+    $('#dsort').onchange=e=>setDataSortSel(e.target.value);
     updateDataTable();
   }
 }
@@ -1882,12 +2054,13 @@ $('#modalBg').addEventListener('click',e=>{if(e.target===$('#modalBg'))closeModa
 const LS_THEME='run.theme.v1'; /* 문서 페이지들과 공유 — 어디서 바꿔도 전 페이지 유지 */
 function effTheme(){return root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');}
 function syncThemeMeta(){const m=$('#metaTheme');if(m)m.content=effTheme()==='dark'?'#0d0d0d':'#f9f9f7';}
-$('#themeBtn').addEventListener('click',()=>{
+function toggleTheme(){ /* 헤더 버튼(PC) · 더보기 시트(모바일) 공용 */
   const t=effTheme()==='dark'?'light':'dark';
   root.setAttribute('data-theme',t);
   try{localStorage.setItem(LS_THEME,t);}catch(e){}
   syncThemeMeta();
-});
+}
+$('#themeBtn').addEventListener('click',toggleTheme);
 matchMedia('(prefers-color-scheme:dark)').addEventListener('change',syncThemeMeta);
 /* 차트·UI 색상은 전부 CSS 변수 기반이라 테마 전환 시 재렌더 불필요 (입력 중 폼 보존) */
 ['dragover','drop'].forEach(ev=>window.addEventListener(ev,e=>e.preventDefault()));
@@ -1906,6 +2079,7 @@ document.addEventListener('paste',e=>{ /* 캡쳐 붙여넣기(Ctrl+V) — 어느
   state.pendingDrive=null;
   handleFile(f);
 });
+mqCards.addEventListener('change',()=>{if(current==='data')renderData();}); /* 표 ↔ 카드 전환 */
 let _rzT=null,_rzW=innerWidth;
 window.addEventListener('resize',()=>{ /* 창 크기·회전 변경 시 차트 폭 재계산 */
   clearTimeout(_rzT);_rzT=setTimeout(()=>{
