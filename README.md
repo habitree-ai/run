@@ -14,6 +14,7 @@
 | `platform.html` | 플랫폼 아키텍처 — 멀티유저·BYO 스토리지·제로-DB 모델 |
 | `spec.html` | Track A MVP 설계 — 화면·어댑터·추출·마일스톤 |
 | `plan_v1.md` · `platform_v1.md` · `spec_v1.md` | 각 문서 마크다운 원본 |
+| `manual/` | **매뉴얼 · Q&A 아카이브** — 운영 문의·설정 절차를 HTML로 축적 (목차: `manual/index.html`) |
 | `sample_records.json` | 스키마 v2.0 샘플 데이터 |
 | `images/` | 서빙용 캡쳐 자산 (시드 기록의 원본 사진) |
 | `기록/` | 로컬 캡쳐 인박스 (git 미추적 — 구글드라이브 연동 전 임시 소스) |

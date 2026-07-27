@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Google Cloud 자격 발급 절차 · 매뉴얼</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏃</text></svg>">
+<style>
+  :root{color-scheme:light;
+    --surface-1:#fcfcfb;--plane:#f9f9f7;--text-primary:#0b0b0b;--text-secondary:#52514e;--muted:#898781;
+    --border:rgba(11,11,11,0.10);--series-1:#2a78d6;--series-1-soft:#cde2fb;--seq-700:#0d366b;
+    --good:#0ca30c;--warn:#b26a00;--warn-soft:#fdecc8;
+    --radius:14px;--shadow:0 1px 2px rgba(11,11,11,.04),0 4px 16px rgba(11,11,11,.05);
+    --font:system-ui,-apple-system,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Consolas,monospace;}
+  :root[data-theme="dark"]{color-scheme:dark;
+    --surface-1:#1a1a19;--plane:#0d0d0d;--text-primary:#fff;--text-secondary:#c3c2b7;--muted:#898781;
+    --border:rgba(255,255,255,0.10);--series-1:#3987e5;--series-1-soft:#184f95;--seq-700:#b7d3f6;
+    --warn:#fab219;--warn-soft:#3a2f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+    --surface-1:#1a1a19;--plane:#0d0d0d;--text-primary:#fff;--text-secondary:#c3c2b7;--muted:#898781;
+    --border:rgba(255,255,255,0.10);--series-1:#3987e5;--series-1-soft:#184f95;--seq-700:#b7d3f6;
+    --warn:#fab219;--warn-soft:#3a2f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);}}
+  *{box-sizing:border-box}html,body{margin:0}
+  body{background:var(--plane);color:var(--text-primary);font-family:var(--font);line-height:1.65;-webkit-font-smoothing:antialiased}
+  a{color:var(--series-1);text-decoration:none}a:hover{text-decoration:underline}
+  header.top{border-bottom:1px solid var(--border);background:var(--surface-1);position:sticky;top:0;z-index:30}
+  .top-inner{display:flex;align-items:center;gap:14px;padding:11px 20px;flex-wrap:wrap;max-width:960px;margin:0 auto}
+  .brand h1{font-size:15.5px;margin:0}
+  .spacer{flex:1}
+  .tabs{display:flex;gap:2px}
+  .tabs a{padding:6px 10px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text-secondary)}
+  .tabs a.active{background:var(--series-1-soft);color:var(--seq-700)}
+  :root[data-theme="dark"] .tabs a.active{color:#fff}
+  .toggle{border:1px solid var(--border);background:transparent;color:var(--text-secondary);width:34px;height:34px;border-radius:9px;cursor:pointer}
+  main{max-width:760px;margin:0 auto;padding:32px 22px 80px}
+  h1.doc{font-size:24px;letter-spacing:-.01em;margin:0 0 4px}
+  .doc-sub{color:var(--muted);font-size:13px;margin:0 0 28px}
+  h2{font-size:18px;margin:34px 0 10px;letter-spacing:-.01em}
+  p,li{font-size:14px;color:var(--text-secondary)}
+  b,strong{color:var(--text-primary)}
+  table{border-collapse:collapse;width:100%;font-size:13px;background:var(--surface-1);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  th{background:var(--series-1-soft);color:var(--seq-700);text-align:left;padding:9px 11px;font-size:11.5px;white-space:nowrap}
+  :root[data-theme="dark"] th{color:#dbe9ff;background:#17324f}
+  td{padding:9px 11px;border-top:1px solid var(--border);vertical-align:top}
+  code{font-family:var(--mono);font-size:.92em;background:var(--series-1-soft);padding:1px 5px;border-radius:5px;color:var(--seq-700)}
+  :root[data-theme="dark"] code{color:#dbe9ff}
+  .note{font-size:13px;color:var(--text-secondary);background:var(--series-1-soft);border-radius:10px;padding:12px 14px;margin:14px 0}
+  :root[data-theme="dark"] .note{background:rgba(57,135,229,.12)}
+  .note.warn{background:var(--warn-soft);color:var(--warn)}
+  ol.steps li{margin-bottom:8px}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-inner">
+  <div class="brand"><h1>Google Cloud 자격 발급 절차</h1></div>
+  <div class="spacer"></div>
+  <nav class="tabs"><a href="../index.html">대시보드</a><a href="../drive.html">드라이브</a><a href="index.html">매뉴얼</a></nav>
+  <button class="toggle" id="themeBtn" aria-label="테마 전환">◐</button>
+</div></header>
+<main>
+<h1 class="doc">Google Cloud 자격 발급 절차 — Client ID · API Key</h1>
+<p class="doc-sub">2026-07-27 · 관리자용 · 소요 시간 약 10~15분 · 완료하면 사용자는 로그인만으로 드라이브 동기화</p>
+
+<div class="note">🎯 <b>목적</b>: 플랫폼 공용 자격을 한 번 발급해 <code>index.html</code>의 <code>PLATFORM_GOOGLE</code>에 심는다. Client ID·API Key·프로젝트 번호는 모두 <b>공개 가능한 값</b>(도메인 제한)이다 — 관리자 계정의 권한과는 무관하다(개념: <a href="oauth-concepts.html">OAuth 개념 문서</a>).</div>
+
+<h2>사전 준비</h2>
+<p><a href="https://console.cloud.google.com" target="_blank" rel="noopener">console.cloud.google.com</a>에 <b>관리자 계정</b>으로 로그인 → 상단 프로젝트 선택기에서 <b>새 프로젝트</b> 생성 (이름 예: <code>habitree-run</code>). 기존 프로젝트가 있으면 그대로 사용해도 된다.</p>
+
+<h2>1단계 — API 2개 사용 설정</h2>
+<p>좌측 메뉴 <b>API 및 서비스 → 라이브러리</b>에서 검색해 각각 <b>사용(Enable)</b>:</p>
+<ol class="steps">
+<li><code>Google Drive API</code></li>
+<li><code>Google Picker API</code></li>
+</ol>
+
+<h2>2단계 — OAuth 동의 화면 구성 (Google Auth Platform)</h2>
+<p>좌측 메뉴 <b>Google Auth Platform</b>으로 이동 ("API 및 서비스 → OAuth 동의 화면"으로 들어가도 자동 연결). 처음이면 "시작하기" 마법사가 뜬다.</p>
+<table>
+<thead><tr><th>섹션</th><th>설정값</th></tr></thead>
+<tbody>
+<tr><td><b>브랜딩 (Branding)</b></td><td>앱 이름: <code>러닝 누적기록</code> (사용자 동의 화면에 표시) · 지원 이메일: 관리자 Gmail</td></tr>
+<tr><td><b>대상 (Audience)</b></td><td>사용자 유형: <b>외부(External)</b></td></tr>
+<tr><td><b>데이터 액세스 (Data Access)</b></td><td>"범위 추가 또는 삭제"에서 다음 <b>2개만</b> 추가:<br><code>.../auth/drive.file</code> · <code>.../auth/userinfo.email</code></td></tr>
+</tbody>
+</table>
+<div class="note warn">⚠️ <b>이 2개 스코프만 넣을 것.</b> <code>drive.readonly</code> 등 다른 Drive 스코프를 추가하는 순간 민감/제한 범위로 분류되어 <b>Google 보안 심사 대상</b>이 된다. 위 2개는 비민감이라 심사가 없다.</div>
+<p>마지막으로 <b>대상(Audience) 페이지의 "앱 게시(Publish app)" 버튼</b>을 눌러 게시 상태를 <b>프로덕션</b>으로 전환한다. 심사 관련 경고 팝업이 떠도 비민감 스코프만 쓰므로 별도 제출 없이 완료된다. <b>이걸 안 하면 등록된 테스트 사용자만 로그인할 수 있다.</b></p>
+
+<h2>3단계 — OAuth 클라이언트 ID 발급</h2>
+<p><b>Google Auth Platform → 클라이언트(Clients) → + 클라이언트 만들기</b>:</p>
+<ul>
+<li>애플리케이션 유형: <b>웹 애플리케이션</b> · 이름: 예) <code>run-web</code></li>
+<li><b>승인된 자바스크립트 원본</b> 2개 추가:<br><code>https://run-murex-theta.vercel.app</code><br><code>http://localhost:8000</code></li>
+<li>리디렉션 URI는 <b>비워둔다</b> (팝업 방식이라 불필요)</li>
+</ul>
+<p>만들기를 누르면 <code>xxxx.apps.googleusercontent.com</code> 형식의 <b>Client ID</b>가 표시된다 → 복사.</p>
+
+<h2>4단계 — API 키 발급 (Picker용)</h2>
+<p><b>API 및 서비스 → 사용자 인증 정보 → + 사용자 인증 정보 만들기 → API 키</b> 생성 후, 키 이름을 클릭해 제한 설정:</p>
+<ul>
+<li><b>애플리케이션 제한사항</b>: 웹사이트 → <code>https://run-murex-theta.vercel.app/*</code> 와 <code>http://localhost:8000/*</code> 추가</li>
+<li><b>API 제한사항</b>: "키 제한" 선택 → <b>Google Picker API</b>만 체크</li>
+</ul>
+<p><code>AIza…</code> 형식의 <b>API Key</b>를 복사.</p>
+
+<h2>5단계 — 프로젝트 번호 확인 (권장)</h2>
+<p>콘솔 대시보드 또는 <b>⚙ 프로젝트 설정</b>에서 숫자로만 된 <b>프로젝트 번호(Project number)</b>를 복사. Picker가 <code>drive.file</code> 권한 부여를 정확히 처리하는 데 쓰인다.</p>
+
+<h2>완료 후 — 코드 반영</h2>
+<p>발급된 <b>① Client ID ② API Key ③ 프로젝트 번호</b>를 <code>index.html</code>의 <code>PLATFORM_GOOGLE</code> 상수에 입력하고 배포한다:</p>
+<table>
+<thead><tr><th>필드</th><th>값</th></tr></thead>
+<tbody>
+<tr><td><code>clientId</code></td><td>①  <code>xxxx.apps.googleusercontent.com</code></td></tr>
+<tr><td><code>apiKey</code></td><td>②  <code>AIza…</code></td></tr>
+<tr><td><code>appId</code></td><td>③  프로젝트 번호 (숫자)</td></tr>
+</tbody>
+</table>
+<div class="note">⏱ 원본(origin) 설정 변경은 즉시 반영되지 않고 <b>5분~수 시간</b> 걸릴 수 있다. 설정 직후 로그인 테스트에서 <code>origin_mismatch</code> 오류가 나면 잠시 후 재시도.</div>
+
+<h2>참고 자료</h2>
+<ul>
+<li><a href="https://support.google.com/cloud/answer/15544987" target="_blank" rel="noopener">Google Auth Platform 시작하기</a></li>
+<li><a href="https://support.google.com/cloud/answer/15549945" target="_blank" rel="noopener">앱 대상(Audience) 관리 · 게시</a></li>
+<li><a href="https://developers.google.com/workspace/guides/configure-oauth-consent" target="_blank" rel="noopener">OAuth 동의 화면 · 스코프 구성</a></li>
+<li><a href="https://developers.google.com/workspace/drive/api/guides/api-specific-auth" target="_blank" rel="noopener">Drive API 스코프 등급표</a></li>
+</ul>
+</main>
+<script>
+const root=document.documentElement;
+document.getElementById('themeBtn').addEventListener('click',()=>{root.setAttribute('data-theme',root.getAttribute('data-theme')==='dark'?'light':'dark');});
+</script>
+</body>
+</html>

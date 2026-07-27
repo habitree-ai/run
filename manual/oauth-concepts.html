@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OAuth 개념 — 관리자 Client ID와 사용자 계정 · 매뉴얼</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏃</text></svg>">
+<style>
+  :root{color-scheme:light;
+    --surface-1:#fcfcfb;--plane:#f9f9f7;--text-primary:#0b0b0b;--text-secondary:#52514e;--muted:#898781;
+    --border:rgba(11,11,11,0.10);--series-1:#2a78d6;--series-1-soft:#cde2fb;--seq-700:#0d366b;
+    --good:#0ca30c;--warn:#b26a00;--warn-soft:#fdecc8;
+    --radius:14px;--shadow:0 1px 2px rgba(11,11,11,.04),0 4px 16px rgba(11,11,11,.05);
+    --font:system-ui,-apple-system,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Consolas,monospace;}
+  :root[data-theme="dark"]{color-scheme:dark;
+    --surface-1:#1a1a19;--plane:#0d0d0d;--text-primary:#fff;--text-secondary:#c3c2b7;--muted:#898781;
+    --border:rgba(255,255,255,0.10);--series-1:#3987e5;--series-1-soft:#184f95;--seq-700:#b7d3f6;
+    --warn:#fab219;--warn-soft:#3a2f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+    --surface-1:#1a1a19;--plane:#0d0d0d;--text-primary:#fff;--text-secondary:#c3c2b7;--muted:#898781;
+    --border:rgba(255,255,255,0.10);--series-1:#3987e5;--series-1-soft:#184f95;--seq-700:#b7d3f6;
+    --warn:#fab219;--warn-soft:#3a2f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);}}
+  *{box-sizing:border-box}html,body{margin:0}
+  body{background:var(--plane);color:var(--text-primary);font-family:var(--font);line-height:1.65;-webkit-font-smoothing:antialiased}
+  a{color:var(--series-1);text-decoration:none}a:hover{text-decoration:underline}
+  header.top{border-bottom:1px solid var(--border);background:var(--surface-1);position:sticky;top:0;z-index:30}
+  .top-inner{display:flex;align-items:center;gap:14px;padding:11px 20px;flex-wrap:wrap;max-width:960px;margin:0 auto}
+  .brand h1{font-size:15.5px;margin:0}
+  .spacer{flex:1}
+  .tabs{display:flex;gap:2px}
+  .tabs a{padding:6px 10px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text-secondary)}
+  .tabs a.active{background:var(--series-1-soft);color:var(--seq-700)}
+  :root[data-theme="dark"] .tabs a.active{color:#fff}
+  .toggle{border:1px solid var(--border);background:transparent;color:var(--text-secondary);width:34px;height:34px;border-radius:9px;cursor:pointer}
+  main{max-width:760px;margin:0 auto;padding:32px 22px 80px}
+  h1.doc{font-size:24px;letter-spacing:-.01em;margin:0 0 4px}
+  .doc-sub{color:var(--muted);font-size:13px;margin:0 0 28px}
+  h2{font-size:18px;margin:34px 0 10px;letter-spacing:-.01em}
+  p,li{font-size:14px;color:var(--text-secondary)}
+  b,strong{color:var(--text-primary)}
+  table{border-collapse:collapse;width:100%;font-size:13px;background:var(--surface-1);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  th{background:var(--series-1-soft);color:var(--seq-700);text-align:left;padding:9px 11px;font-size:11.5px;white-space:nowrap}
+  :root[data-theme="dark"] th{color:#dbe9ff;background:#17324f}
+  td{padding:9px 11px;border-top:1px solid var(--border);vertical-align:top}
+  pre{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:16px;font-family:var(--mono);font-size:12px;line-height:1.6;overflow:auto;color:var(--text-secondary);box-shadow:var(--shadow)}
+  code{font-family:var(--mono);font-size:.92em;background:var(--series-1-soft);padding:1px 5px;border-radius:5px;color:var(--seq-700)}
+  :root[data-theme="dark"] code{color:#dbe9ff}
+  .note{font-size:13px;color:var(--text-secondary);background:var(--series-1-soft);border-radius:10px;padding:12px 14px;margin:14px 0}
+  :root[data-theme="dark"] .note{background:rgba(57,135,229,.12)}
+  .qa{border-left:3px solid var(--series-1);padding:2px 0 2px 14px;margin:14px 0;font-size:14px;color:var(--text-primary);font-weight:600}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-inner">
+  <div class="brand"><h1>OAuth 개념 Q&amp;A</h1></div>
+  <div class="spacer"></div>
+  <nav class="tabs"><a href="../index.html">대시보드</a><a href="../drive.html">드라이브</a><a href="index.html">매뉴얼</a></nav>
+  <button class="toggle" id="themeBtn" aria-label="테마 전환">◐</button>
+</div></header>
+<main>
+<h1 class="doc">관리자의 Client ID로 다른 사용자 계정이 로그인해도 되는 이유</h1>
+<p class="doc-sub">2026-07-27 · 개념 Q&amp;A</p>
+
+<div class="qa">Q. 코드에 심어놓은 Client ID·API Key는 관리자 것인데, 사용자들의 계정은 다르다 — 문제 없나? 관리자 계정과 사용자 계정의 관계와 무관하게 적용 가능한가?</div>
+<p><b>A. 문제 없다. 관리자 계정과 사용자 계정 사이에 아무 관계가 없어도 되고, 오히려 그렇게 설계된 표준 구조다.</b> 아래 개념 순서대로 이해하면 된다.</p>
+
+<h2>1. Client ID는 "계정의 열쇠"가 아니라 "앱의 신분증"</h2>
+<p>OAuth에는 세 주체가 있다:</p>
+<table>
+<thead><tr><th>주체</th><th>이 프로젝트에서</th><th>가진 것</th></tr></thead>
+<tbody>
+<tr><td><b>앱 (클라이언트)</b></td><td>러닝 누적기록 웹앱</td><td>Client ID = "저는 이 앱입니다"라는 신분증</td></tr>
+<tr><td><b>사용자 (리소스 소유자)</b></td><td>각 사용자</td><td>자기 구글 계정 · 자기 드라이브</td></tr>
+<tr><td><b>Google (인증 서버)</b></td><td>—</td><td>동의 화면을 띄우고 토큰을 발급</td></tr>
+</tbody>
+</table>
+<p>Client ID가 관리자의 Google Cloud 프로젝트에서 발급된 것은 맞지만, 이 값에는 <b>관리자 계정의 어떤 권한도 들어있지 않다.</b> 관리자의 드라이브·이메일·비밀번호와 완전히 무관하며, "이 앱이 어느 앱인지"를 Google에 알려주는 라벨일 뿐이다. 그래서 공개해도 안전한 값이고 코드에 심어도 되는 것이다.</p>
+
+<h2>2. 실제 권한은 "사용자별 토큰"이 담는다</h2>
+<p>사용자 A가 로그인 버튼을 누르면:</p>
+<pre>A의 브라우저 → Google : "Client ID ○○인 앱이, 지금 로그인한 A의
+                          drive.file 권한을 요청합니다"
+Google → A에게 동의 화면 : "러닝 누적기록 앱이 회원님의 드라이브 파일에
+                          접근하려 합니다. 허용?"
+A가 허용 → Google이 "A 전용 액세스 토큰"을 A의 브라우저에만 발급</pre>
+<ul>
+<li>이 토큰으로 접근되는 드라이브는 <b>A 자신의 드라이브뿐</b>이다. 사용자 B가 로그인하면 B 전용 토큰이 나오고 B의 드라이브에만 접근한다.</li>
+<li>토큰은 각 사용자의 브라우저 메모리에만 있고 관리자에게 전송되지 않는다(서버 자체가 없으니 전송될 곳도 없다).</li>
+<li>따라서 <b>관리자는 사용자들의 데이터를 볼 수 없고, 사용자끼리도 서로 볼 수 없다.</b> 각자의 <code>running_records.json</code>은 각자의 드라이브에 생긴다.</li>
+</ul>
+<div class="note">💡 비유: Client ID는 "○○은행 앱"이라는 앱 서명이고, 로그인은 각자 자기 계좌에 자기 지문으로 접속하는 것. 앱을 만든 사람이 은행 앱을 배포했다고 해서 고객 계좌에 들어갈 수 없는 것과 같다.</div>
+
+<h2>3. 관리자 프로젝트가 "책임"지는 것</h2>
+<p>관리자 계정과 사용자 계정의 유일한 연결고리는 다음 3가지 — 전부 데이터 접근과는 무관하다:</p>
+<ol>
+<li><b>동의 화면의 얼굴</b> — 사용자가 보는 앱 이름·로고는 관리자가 동의 화면에 설정한 값.</li>
+<li><b>게시 상태</b> — 프로젝트가 '테스트' 상태면 등록된 테스트 사용자만 로그인 가능. <b>'프로덕션' 게시</b>여야 아무 구글 계정이나 로그인 가능(비민감 스코프만 쓰므로 심사 없이 전환 가능).</li>
+<li><b>API 할당량(quota) 공유</b> — API 호출 한도는 프로젝트 단위로 집계된다. Drive API 기본 할당량은 분당 수천~수만 건 수준이라 이 앱의 패턴(저장 시 업로드 1건 · 60초 폴링)으로는 걱정할 수준이 아니며, 초과해도 과금이 아니라 일시적 속도 제한이 걸릴 뿐이다.</li>
+</ol>
+
+<h2>4. API Key는 뭔가</h2>
+<p>API Key는 OAuth와 별개로, Picker(파일 선택창) 위젯을 로드할 때 "이 호출이 어느 프로젝트 소속인지" 식별하는 용도다. <b>이 키로는 누구의 데이터에도 접근할 수 없다.</b> 도메인 제한(승인된 웹사이트에서만 동작)을 걸어두면 다른 사이트의 도용도 막힌다.</p>
+
+<h2>5. 결론</h2>
+<ul>
+<li><b>"관리자의 Client ID·API Key인데 사용자 계정이 달라도 문제없나?"</b> → 문제없다. 그게 OAuth의 설계 목적이다. 전 세계 모든 "Google로 로그인" 서비스가 정확히 이 구조다.</li>
+<li><b>"관리자 계정과 사용자 계정의 관계와 무관하게 적용 가능한가?"</b> → 그렇다. 같은 조직일 필요도, 서로 알 필요도, 공유 설정도 필요 없다. 조건은 단 하나 — 동의 화면이 <b>프로덕션 게시 상태</b>여야 모든 사용자가 로그인할 수 있다는 것뿐(절차: <a href="google-cloud-setup.html">자격 발급 문서</a>).</li>
+</ul>
+</main>
+<script>
+const root=document.documentElement;
+document.getElementById('themeBtn').addEventListener('click',()=>{root.setAttribute('data-theme',root.getAttribute('data-theme')==='dark'?'light':'dark');});
+</script>
+</body>
+</html>

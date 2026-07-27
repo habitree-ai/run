@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>매뉴얼 · 러닝 누적기록</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏃</text></svg>">
+<style>
+  :root{color-scheme:light;
+    --surface-1:#fcfcfb;--plane:#f9f9f7;--text-primary:#0b0b0b;--text-secondary:#52514e;--muted:#898781;
+    --border:rgba(11,11,11,0.10);--series-1:#2a78d6;--series-1-soft:#cde2fb;--seq-700:#0d366b;
+    --good:#0ca30c;--warn:#b26a00;--warn-soft:#fdecc8;
+    --radius:14px;--shadow:0 1px 2px rgba(11,11,11,.04),0 4px 16px rgba(11,11,11,.05);
+    --font:system-ui,-apple-system,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Consolas,monospace;}
+  :root[data-theme="dark"]{color-scheme:dark;
+    --surface-1:#1a1a19;--plane:#0d0d0d;--text-primary:#fff;--text-secondary:#c3c2b7;--muted:#898781;
+    --border:rgba(255,255,255,0.10);--series-1:#3987e5;--series-1-soft:#184f95;--seq-700:#b7d3f6;
+    --warn:#fab219;--warn-soft:#3a2f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+    --surface-1:#1a1a19;--plane:#0d0d0d;--text-primary:#fff;--text-secondary:#c3c2b7;--muted:#898781;
+    --border:rgba(255,255,255,0.10);--series-1:#3987e5;--series-1-soft:#184f95;--seq-700:#b7d3f6;
+    --warn:#fab219;--warn-soft:#3a2f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);}}
+  *{box-sizing:border-box}html,body{margin:0}
+  body{background:var(--plane);color:var(--text-primary);font-family:var(--font);line-height:1.65;-webkit-font-smoothing:antialiased}
+  a{color:var(--series-1);text-decoration:none}a:hover{text-decoration:underline}
+  header.top{border-bottom:1px solid var(--border);background:var(--surface-1);position:sticky;top:0;z-index:30}
+  .top-inner{display:flex;align-items:center;gap:14px;padding:11px 20px;flex-wrap:wrap;max-width:960px;margin:0 auto}
+  .brand h1{font-size:15.5px;margin:0}
+  .spacer{flex:1}
+  .tabs{display:flex;gap:2px}
+  .tabs a{padding:6px 10px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text-secondary)}
+  .tabs a.active{background:var(--series-1-soft);color:var(--seq-700)}
+  :root[data-theme="dark"] .tabs a.active{color:#fff}
+  .toggle{border:1px solid var(--border);background:transparent;color:var(--text-secondary);width:34px;height:34px;border-radius:9px;cursor:pointer}
+  main{max-width:760px;margin:0 auto;padding:32px 22px 80px}
+  h1.doc{font-size:24px;letter-spacing:-.01em;margin:0 0 4px}
+  .doc-sub{color:var(--muted);font-size:13px;margin:0 0 28px}
+  p,li{font-size:14px;color:var(--text-secondary)}
+  b,strong{color:var(--text-primary)}
+  .entry{display:block;background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow);margin-bottom:14px}
+  .entry:hover{border-color:var(--series-1);text-decoration:none}
+  .entry .e-t{font-size:15.5px;font-weight:700;color:var(--text-primary);margin:0 0 4px}
+  .entry .e-d{font-size:13px;color:var(--text-secondary);margin:0}
+  .entry .e-m{font-size:11.5px;color:var(--muted);margin-top:8px}
+  .badge{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--series-1-soft);color:var(--seq-700);margin-right:6px;vertical-align:1px}
+  :root[data-theme="dark"] .badge{color:#dbe9ff}
+  .note{font-size:13px;color:var(--text-secondary);background:var(--series-1-soft);border-radius:10px;padding:12px 14px;margin:14px 0}
+  :root[data-theme="dark"] .note{background:rgba(57,135,229,.12)}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-inner">
+  <div class="brand"><h1>매뉴얼</h1></div>
+  <div class="spacer"></div>
+  <nav class="tabs"><a href="../index.html">대시보드</a><a href="../guide.html">사용법</a><a href="../drive.html">드라이브</a><a href="index.html" class="active">매뉴얼</a></nav>
+  <button class="toggle" id="themeBtn" aria-label="테마 전환">◐</button>
+</div></header>
+<main>
+<h1 class="doc">매뉴얼 · Q&amp;A 아카이브</h1>
+<p class="doc-sub">운영 중 나온 질문과 설정 절차를 문서로 축적합니다 — 최신 문서가 위</p>
+
+<a class="entry" href="google-cloud-setup.html">
+  <p class="e-t"><span class="badge">설정</span>Google Cloud 자격 발급 절차 — Client ID · API Key</p>
+  <p class="e-d">플랫폼 공용 자격 발급 5단계: API 사용 설정 → OAuth 동의 화면(비민감 스코프·프로덕션 게시) → 클라이언트 ID → API 키 → 프로젝트 번호. 발급 후 <code>PLATFORM_GOOGLE</code>에 반영하면 사용자는 로그인만으로 드라이브 동기화.</p>
+  <p class="e-m">2026-07-27 · 관리자용</p>
+</a>
+
+<a class="entry" href="oauth-concepts.html">
+  <p class="e-t"><span class="badge">개념</span>관리자의 Client ID로 다른 사용자 계정이 로그인해도 되는 이유</p>
+  <p class="e-d">OAuth 3주체 모델 — Client ID는 "앱의 신분증"이지 계정 열쇠가 아니다. 실제 권한은 사용자별 토큰이 담으며, 관리자 계정과 사용자 계정 사이에는 아무 관계가 필요 없다. 관리자 프로젝트가 책임지는 것은 브랜딩·게시 상태·할당량뿐.</p>
+  <p class="e-m">2026-07-27 · 개념 Q&amp;A</p>
+</a>
+
+<div class="note">ℹ️ 새 문의·답변이 생길 때마다 이 폴더에 HTML 문서가 추가되고 이 목차가 갱신됩니다.</div>
+</main>
+<script>
+const root=document.documentElement;
+document.getElementById('themeBtn').addEventListener('click',()=>{root.setAttribute('data-theme',root.getAttribute('data-theme')==='dark'?'light':'dark');});
+</script>
+</body>
+</html>
