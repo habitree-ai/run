@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
+<script>try{var _t=localStorage.getItem('run.theme.v1');if(_t)document.documentElement.setAttribute('data-theme',_t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>사용법 · 다음 단계 (v1)</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏃</text></svg>">
@@ -94,10 +95,10 @@
 <table>
 <thead><tr><th>화면</th><th>할 수 있는 일</th></tr></thead>
 <tbody>
-<tr><td><b>대시보드</b></td><td>누적 거리·평균 페이스·최장/최속 기록, 주간 거리 막대·페이스 추이 차트</td></tr>
-<tr><td><b>기록 추가</b></td><td>캡쳐 업로드(끌어다 놓기 가능) → OCR 프리필 → 확인·저장. 사진 없이 직접 입력도 가능</td></tr>
-<tr><td><b>목표 · 달성도</b></td><td>주/월/연 목표(횟수·거리) 설정과 달성률. 기본값은 <b>주 3 · 월 15 · 연 180회</b></td></tr>
-<tr><td><b>데이터 · 내보내기</b></td><td>기록 표(수정·삭제·블로그 글감), JSON 내보내기/가져오기, 드라이브 연동, 블로그 설정</td></tr>
+<tr><td><b>대시보드</b></td><td>링 게이지 달성도·꾸준함 잔디·주간 거리·계획 대비 누적·페이스 추이·최근 러닝</td></tr>
+<tr><td><b>기록 추가</b></td><td>캡쳐 업로드(끌어다 놓기 · <b>붙여넣기 Ctrl+V</b> 가능) → OCR 프리필 → 확인·저장. 사진 없이 직접 입력도 가능(오늘 날짜 자동 입력)</td></tr>
+<tr><td><b>목표 · 달성도</b></td><td>계획·목표 2중 기준(횟수·거리·페이스) 설정과 달성률·이력. 기본값은 <b>주 3 · 월 15 · 연 180회</b></td></tr>
+<tr><td><b>데이터 · 내보내기</b></td><td>기록 표(<b>검색·월/출처 필터·컬럼 정렬</b> · 수정·삭제·블로그 글감), JSON/CSV 내보내기, JSON 가져오기(<b>병합/교체 선택</b>), 드라이브 연동, 블로그 설정</td></tr>
 </tbody>
 </table>
 
@@ -132,10 +133,19 @@
 <ul>
 <li><b>데이터 · 내보내기 → ⬇ 정본 내보내기(JSON)</b> — 주기적으로 파일로 저장 (사진은 미포함)</li>
 <li><b>구글 계정 연결</b> — 연결해 두면 저장할 때마다 <code>running_records.json</code>이 내 드라이브에 자동 갱신</li>
-<li>복원은 <b>📁 JSON 가져오기</b> 한 번이면 끝입니다.</li>
+<li>복원은 <b>📁 JSON 가져오기</b> 한 번이면 끝 — <b>병합(권장)</b>은 겹치지 않는 기록만 추가하고, <b>전체 교체</b>는 파일 내용으로 덮어씁니다.</li>
+<li><b>⬇ CSV(엑셀)</b>는 스프레드시트 분석용입니다 — 백업 정본은 JSON입니다.</li>
 </ul>
 
-<h2>5. 관리자: 완전 자동 발행 (선택 · 트랙 B)</h2>
+<h2>5. 홈 화면에 설치 (모바일 앱처럼)</h2>
+<p>이 앱은 PWA입니다 — 설치하면 아이콘으로 바로 열리고, 오프라인에서도 기록 조회가 됩니다(데이터가 기기에 있으므로).</p>
+<ul>
+<li><b>안드로이드 Chrome</b>: 메뉴(⋮) → <b>홈 화면에 추가</b> (또는 주소창의 설치 아이콘)</li>
+<li><b>아이폰 Safari</b>: 공유(□↑) → <b>홈 화면에 추가</b></li>
+<li>테마(라이트/다크)는 한 번 바꾸면 모든 페이지·재방문에 유지됩니다. 기본은 시스템 설정을 따릅니다.</li>
+</ul>
+
+<h2>6. 관리자: 완전 자동 발행 (선택 · 트랙 B)</h2>
 <p>본인 PC에서 스크립트가 스마트에디터를 직접 조작해 <b>발행까지</b> 자동으로 처리합니다. 브라우저 자동화는 네이버 약관상 회색지대이므로 <b>본인 계정 · 소량</b>으로만 쓰세요. 자세한 리스크는 <a href="blog.html">블로그 문서 §6</a>.</p>
 <pre>cd scripts
 npm install
@@ -148,17 +158,17 @@ node blog-auto-post.mjs --json ../running_records.json --images ../기록 --blog
 node blog-auto-post.mjs ... --publish     # 확인 후 실제 발행 (기본 1건)</pre>
 <div class="note warn">⚠️ 첫 실행에서는 스마트에디터 화면 구조가 스크립트의 셀렉터와 다를 수 있습니다. dry-run 스크린샷을 보고 <code>blog-auto-post.mjs</code> 상단의 <code>SEL</code> 값을 맞춘 뒤 <code>--publish</code>를 쓰세요. 발행에 성공하면 JSON에 발행 시각이 기록되고, 그 JSON을 앱으로 가져오면 배지가 반영됩니다.</div>
 
-<h2>6. 다음 단계</h2>
+<h2>7. 다음 단계</h2>
 <ul class="todo">
 <li><span class="k now">지금</span><span class="t"><b>블로그 설정 입력</b>데이터 · 내보내기 → 네이버 블로그 → ⚙ 설정에 블로그 ID와 카테고리 번호를 넣습니다. 이걸 해야 글감 자동 열기가 켜집니다.</span></li>
 <li><span class="k now">지금</span><span class="t"><b>실제 1건으로 왕복 확인</b>오늘 러닝 캡쳐로 저장 → 이미지 복사 → 글쓰기 창 → 붙여넣기 → 발행 → 발행 완료 표시까지 한 바퀴 돌려보고, 어색한 지점을 알려주세요.</span></li>
 <li><span class="k next">다음</span><span class="t"><b>모바일에서 공유 흐름 확인</b>휴대폰으로 앱을 열어 저장하면 <code>📤 공유</code> 버튼이 뜹니다. 네이버 블로그 앱으로 이미지가 잘 넘어가는지 확인이 필요합니다.</span></li>
-<li><span class="k next">다음</span><span class="t"><b>관리자 자동 발행 셋업(선택)</b>위 5번 절차대로 dry-run까지 돌려 셀렉터를 한 번 맞춰두면, 이후에는 명령 한 줄로 발행됩니다.</span></li>
+<li><span class="k next">다음</span><span class="t"><b>관리자 자동 발행 셋업(선택)</b>위 6번 절차대로 dry-run까지 돌려 셀렉터를 한 번 맞춰두면, 이후에는 명령 한 줄로 발행됩니다.</span></li>
 <li><span class="k later">이후</span><span class="t"><b>M2 · 드라이브 폴더 자동 스캔</b>Picker로 고르지 않아도 새 캡쳐를 감지해 가져오기 — <a href="drive.html">드라이브 문서 §7</a></span></li>
 <li><span class="k later">이후</span><span class="t"><b>M3 · 주간 리포트 자동발행</b>주간 집계를 카드 이미지로 만들어 블로그 글감으로 — <a href="blog.html">블로그 문서 §8</a></span></li>
 </ul>
 
-<h2>7. 문제가 생기면</h2>
+<h2>8. 문제가 생기면</h2>
 <table>
 <thead><tr><th>증상</th><th>해결</th></tr></thead>
 <tbody>
@@ -173,7 +183,7 @@ node blog-auto-post.mjs ... --publish     # 확인 후 실제 발행 (기본 1�
 </main>
 <script>
 const root=document.documentElement;
-document.getElementById('themeBtn').addEventListener('click',()=>{root.setAttribute('data-theme',root.getAttribute('data-theme')==='dark'?'light':'dark');});
+document.getElementById('themeBtn').addEventListener('click',()=>{const t=(root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'))==='dark'?'light':'dark';root.setAttribute('data-theme',t);try{localStorage.setItem('run.theme.v1',t);}catch(e){}});
 </script>
 </body>
 </html>

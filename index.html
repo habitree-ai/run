@@ -1,10 +1,17 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
+<script>try{var _t=localStorage.getItem('run.theme.v1');if(_t)document.documentElement.setAttribute('data-theme',_t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>러닝 누적기록 · 집계 대시보드</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏃</text></svg>">
+<meta name="theme-color" content="#f9f9f7" id="metaTheme">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="러닝기록">
 <style>
   :root{color-scheme:light;
     --surface-1:#fcfcfb;--plane:#f9f9f7;--text-primary:#0b0b0b;--text-secondary:#52514e;--muted:#898781;
@@ -39,7 +46,7 @@
   .brand .sub{font-size:11.5px;color:var(--muted)}
   .draft-badge{font-size:10.5px;font-weight:700;color:#fff;background:var(--series-1);padding:2px 8px;border-radius:999px;margin-left:2px}
   .spacer{flex:1}
-  .storage-pill{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-secondary);
+  .storage-pill{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-secondary);font-family:inherit;
     border:1px solid var(--border);border-radius:999px;padding:4px 11px;background:var(--plane);cursor:pointer}
   .storage-pill .d{width:8px;height:8px;border-radius:50%;background:var(--warn)}
   .storage-pill.connected .d{background:var(--good)}
@@ -60,7 +67,8 @@
   .shell{display:grid;grid-template-columns:210px 1fr;gap:0;min-height:calc(100vh - 58px)}
   @media(max-width:820px){.shell{grid-template-columns:1fr}}
   nav.rail{border-right:1px solid var(--border);background:var(--surface-1);padding:16px 12px}
-  @media(max-width:820px){nav.rail{border-right:none;border-bottom:1px solid var(--border);display:flex;gap:6px;overflow:auto}}
+  @media(max-width:820px){nav.rail{border-right:none;border-bottom:1px solid var(--border);display:flex;gap:6px;overflow:auto}
+    nav.rail .rail-h{display:none}}
   nav.rail button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:none;background:transparent;
     color:var(--text-secondary);font-size:13.5px;font-weight:600;padding:10px 12px;border-radius:10px;cursor:pointer;white-space:nowrap}
   nav.rail button:hover{background:var(--plane)}
@@ -185,6 +193,28 @@
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   .tooltip{position:fixed;pointer-events:none;z-index:70;background:var(--text-primary);color:var(--surface-1);font-size:12px;padding:6px 9px;border-radius:8px;opacity:0;transition:opacity .1s;white-space:nowrap;font-variant-numeric:tabular-nums}
   .hide{display:none!important}
+  /* 데이터 검색·필터 */
+  .filterbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;font-size:12.5px;color:var(--muted)}
+  .filterbar input,.filterbar select{border:1px solid var(--border);border-radius:9px;padding:7px 10px;font-size:12.5px;
+    background:var(--surface-1);color:var(--text-primary);font-family:inherit}
+  .filterbar input:focus,.filterbar select:focus{outline:2px solid var(--series-1-soft);border-color:var(--series-1)}
+  .filterbar input{flex:1;min-width:150px;max-width:260px}
+  table.data th.sortable{cursor:pointer;user-select:none}
+  table.data th.sortable:hover{text-decoration:underline}
+  /* 모바일 편의 */
+  @media(max-width:820px){
+    .top-inner{padding:9px 12px;gap:8px 10px}
+    .brand .sub{display:none}
+    .docnav{order:5;width:100%;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+    .docnav::-webkit-scrollbar{display:none}
+    .docnav a{white-space:nowrap}
+    main.stage{padding:18px 14px 70px}
+  }
+  @media(pointer:coarse){ /* 터치 타깃 확대 */
+    .btn.sm{padding:9px 14px}
+    .edit,.del{font-size:16px;padding:5px 7px}
+    nav.rail button{padding:11px 12px}
+  }
 </style>
 </head>
 <body>
@@ -196,7 +226,7 @@
     </div>
     <div class="spacer"></div>
     <span id="authArea"></span>
-    <div class="storage-pill" id="storagePill"><span class="d"></span><span id="storageText">불러오는 중…</span></div>
+    <button class="storage-pill" id="storagePill"><span class="d"></span><span id="storageText">불러오는 중…</span></button>
     <nav class="docnav">
       <a href="index.html" class="active">대시보드</a><a href="guide.html">사용법</a><a href="drive.html">드라이브</a><a href="blog.html">블로그</a>
       <a href="plan.html">기획서</a><a href="platform.html">플랫폼</a><a href="spec.html">설계</a>
@@ -767,7 +797,7 @@ async function syncFromDrive(force){ /* 원격 정본과 병합 — force는 제
   }catch(e){/* 조용히 실패 — 다음 폴링·제스처에서 재시도 */}
   finally{_syncBusy=false;setPill();}
 }
-function mergeRemote(j){ /* record_id 합집합 병합 + 삭제 표 반영 — 같은 id 충돌은 updated_at 최신 우선(없으면 로컬 유지) */
+function mergeRemote(j,label){ /* record_id 합집합 병합 + 삭제 표 반영 — 같은 id 충돌은 updated_at 최신 우선(없으면 로컬 유지) · JSON 가져오기 병합과 공용 */
   const remote=normalizeRecords(Array.isArray(j&&j.records)?j.records:[]);
   (Array.isArray(j&&j.deleted_ids)?j.deleted_ids:[]).forEach(id=>{id=String(id);if(!state.deletedIds.includes(id))state.deletedIds.push(id);});
   const dead=new Set(state.deletedIds);
@@ -789,13 +819,14 @@ function mergeRemote(j){ /* record_id 합집합 병합 + 삭제 표 반영 — �
     saveDeleted();saveRecords();setPill();
     if(current!=='add')views[current](); /* 입력 중인 폼은 건드리지 않음 */
     const parts=[];if(fresh.length)parts.push('+'+fresh.length+'건');if(updated)parts.push('갱신 '+updated+'건');if(gone.length)parts.push('−'+gone.length+'건');
-    toast('드라이브 동기화 '+parts.join(' · '));
+    toast((label||'드라이브 동기화')+' '+parts.join(' · '));
   }else{
     const rById=new Map(remote.map(r=>[r.record_id,r]));
     const localOnly=state.records.some(r=>{const rr=rById.get(r.record_id);
       return !rr||(r.updated_at&&(!rr.updated_at||r.updated_at>rr.updated_at));}); /* 로컬 신규·로컬이 더 최근 수정 */
     if(localOnly||state.deletedIds.some(id=>rById.has(id)))scheduleAutoBackup(); /* 로컬에만 있는 변경 → 업로드 */
   }
+  return {fresh:fresh.length,updated,gone:gone.length};
 }
 async function resyncNow(){ /* 수동 동기화 — 사용자 제스처라 토큰 재발급 가능 */
   if(!driveConnected()){show('data');return;}
@@ -1404,13 +1435,13 @@ function renderAdd(){
     <h2 class="vh">${editing?'기록 수정':'기록 추가'}</h2>
     <p class="vsub">러닝 앱 캡쳐 <b>사진 업로드가 기본</b>입니다 — 브라우저 OCR이 값을 읽어 채우면 확인·수정 후 저장하세요. 사진은 기기(IndexedDB)에 함께 저장됩니다.</p>
     <div class="addwrap">
-      <label class="drop" for="photoFile" id="dropzone">📷 여기에 캡쳐 이미지를 선택하거나 끌어다 놓으세요<br><span style="font-size:11px">PNG · JPG · 추출은 전부 브라우저 안에서 실행됩니다</span>
+      <label class="drop" for="photoFile" id="dropzone">📷 여기에 캡쳐 이미지를 선택하거나 끌어다 놓으세요<br><span style="font-size:11px">PNG · JPG · 붙여넣기(Ctrl+V) 가능 · 추출은 전부 브라우저 안에서 실행됩니다</span>
         <input id="photoFile" type="file" accept="image/*" class="hide"></label>
       <div id="ocrStatus" style="font-size:13px;color:var(--muted)"></div>
       <div id="queueCtl" class="hide" style="font-size:12.5px;color:var(--muted)"></div>
       <div id="photoPrev"></div>
       <div id="formArea"></div>
-      <div id="manualLink"><a href="#" onclick="showForm({});document.getElementById('manualLink').classList.add('hide');return false">사진 없이 직접 입력 →</a></div>
+      <div id="manualLink"><a href="#" onclick="showForm({date:todayISO()});document.getElementById('manualLink').classList.add('hide');return false">사진 없이 직접 입력 →</a></div>
     </div>`;
   const dz=$('#dropzone');
   $('#photoFile').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f){state.pendingDrive=null;handleFile(f);}};
@@ -1635,21 +1666,25 @@ function saveGoalsForm(){
 }
 
 /* ============ 데이터 뷰 ============ */
-function renderData(){
-  const r=state.records;
-  $('#stage').innerHTML=`
-    <h2 class="vh">데이터 · 내보내기</h2>
-    <p class="vsub">브라우저(localStorage + IndexedDB)에 저장된 정본입니다. <b>JSON 내보내기</b>로 백업하세요 — 사진은 내보내기에 포함되지 않습니다.</p>
-    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-      <button class="btn" onclick="exportJSON()">⬇ 정본 내보내기 (JSON)</button>
-      <label class="btn sec" for="impFile">📁 JSON 가져오기<input id="impFile" type="file" accept="application/json,.json" class="hide"></label>
-      <button class="btn sec" onclick="show('add')">＋ 기록 추가</button>
-      ${r.length?`<button class="btn sec" onclick="clearAll()">전체 비우기</button>`:''}
-      <span style="flex:1"></span><span style="align-self:center;font-size:12px;color:var(--muted)">스키마 v2.0 · ${r.length}건</span>
-    </div>
-    ${r.length?`<div style="overflow:auto"><table class="data"><thead><tr>
-      <th>사진</th><th>날짜</th><th>제목</th><th>거리</th><th>페이스</th><th>시간</th><th>고도</th><th>케이던스</th><th>심박</th><th>출처</th><th>블로그</th><th></th><th></th></tr></thead>
-      <tbody>${r.slice().reverse().map(x=>`<tr>
+let _dq={q:'',ym:'',src:''},_dsort={k:'date',d:-1}; /* 검색·정렬 상태 — 세션 내 유지 */
+function dataFiltered(){
+  const q=_dq.q.trim().toLowerCase();
+  const list=state.records.filter(x=>
+    (!q||[x.title,x.location,x.date,x.original_filename].some(v=>v&&String(v).toLowerCase().includes(q)))
+    &&(!_dq.ym||String(x.date).slice(0,7)===_dq.ym)
+    &&(!_dq.src||(x.source||'manual')===_dq.src));
+  const k=_dsort.k,d=_dsort.d,miss=d===1?Infinity:-Infinity; /* 값 없는 기록은 항상 아래로 */
+  const val=x=>k==='dist'?(x.distance_km??miss):k==='pace'?(x.avg_pace_sec_per_km??miss):k==='dur'?(x.duration_sec??miss):x.date;
+  return list.sort((a,b)=>{const u=val(a),v=val(b);return u<v?-d:u>v?d:0;});
+}
+function setDataSort(k){_dsort=_dsort.k===k?{k,d:-_dsort.d}:{k,d:k==='pace'?1:-1};updateDataTable();} /* 페이스는 빠른 순이 기본 */
+function clearDataFilter(){_dq={q:'',ym:'',src:''};renderData();}
+function sortArr(k){return _dsort.k===k?(_dsort.d===1?' ▲':' ▼'):'';}
+function dataTableHTML(list){
+  if(!list.length)return '<div class="empty">조건에 맞는 기록이 없습니다.</div>';
+  return `<div style="overflow:auto"><table class="data"><thead><tr>
+      <th>사진</th><th class="sortable" onclick="setDataSort('date')">날짜${sortArr('date')}</th><th>제목</th><th class="sortable" onclick="setDataSort('dist')">거리${sortArr('dist')}</th><th class="sortable" onclick="setDataSort('pace')">페이스${sortArr('pace')}</th><th class="sortable" onclick="setDataSort('dur')">시간${sortArr('dur')}</th><th>고도</th><th>케이던스</th><th>심박</th><th>출처</th><th>블로그</th><th></th><th></th></tr></thead>
+      <tbody>${list.map(x=>`<tr>
         <td>${(x.has_image||x.image_url)?`<span class="thumbwrap"><img class="thumb sm" data-rid="${esc(x.record_id)}" alt="" onclick="showImageModal('${esc(x.record_id)}')"></span>`:'—'}</td>
         <td>${esc(x.date)} ${x.weekday?'('+esc(x.weekday)+')':''}</td><td>${esc(x.title||'러닝')}</td>
         <td>${(x.distance_km||0).toFixed(2)}</td><td>${paceTxt(x.avg_pace_sec_per_km)}</td><td>${clock(x.duration_sec)}</td>
@@ -1658,7 +1693,40 @@ function renderData(){
         <td>${x.blog_posted_at?`<span class="src posted" title="발행 ${esc(String(x.blog_posted_at).slice(0,16).replace('T',' '))} · 클릭하여 해제" onclick="if(confirm('발행 표시를 해제할까요?'))unmarkBlogPosted('${esc(x.record_id)}')">✓ 발행</span>`
           :((x.has_image||x.image_url)?`<button class="edit" title="블로그 글감" onclick="openBlogDraft('${esc(x.record_id)}')">📝</button>`:'—')}</td>
         <td><button class="edit" title="수정" onclick="editRec('${esc(x.record_id)}')">✎</button></td>
-        <td><button class="del" title="삭제" onclick="delRec('${esc(x.record_id)}')">✕</button></td></tr>`).join('')}</tbody></table></div>`
+        <td><button class="del" title="삭제" onclick="delRec('${esc(x.record_id)}')">✕</button></td></tr>`).join('')}</tbody></table></div>`;
+}
+function updateDataTable(){ /* 표만 부분 재렌더 — 검색 입력 포커스 유지 */
+  const wrap=$('#dataWrap');if(!wrap)return;
+  const list=dataFiltered();
+  wrap.innerHTML=dataTableHTML(list);
+  const c=$('#dcount');if(c)c.textContent=list.length+'건'+(list.length!==state.records.length?' / 전체 '+state.records.length+'건':'');
+  const rs=$('#dreset');if(rs)rs.classList.toggle('hide',!(_dq.q||_dq.ym||_dq.src));
+  hydrateThumbs();
+}
+function renderData(){
+  const r=state.records;
+  const months=[...new Set(r.map(x=>String(x.date).slice(0,7)))].sort().reverse();
+  const srcs=[...new Set(r.map(x=>x.source||'manual'))];
+  if(_dq.ym&&!months.includes(_dq.ym))_dq.ym='';
+  if(_dq.src&&!srcs.includes(_dq.src))_dq.src='';
+  $('#stage').innerHTML=`
+    <h2 class="vh">데이터 · 내보내기</h2>
+    <p class="vsub">브라우저(localStorage + IndexedDB)에 저장된 정본입니다. <b>JSON 내보내기</b>로 백업하세요 — 사진은 내보내기에 포함되지 않습니다.</p>
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <button class="btn" onclick="exportJSON()">⬇ 정본 내보내기 (JSON)</button>
+      <button class="btn sec" onclick="exportCSV()">⬇ CSV (엑셀)</button>
+      <label class="btn sec" for="impFile">📁 JSON 가져오기<input id="impFile" type="file" accept="application/json,.json" class="hide"></label>
+      <button class="btn sec" onclick="show('add')">＋ 기록 추가</button>
+      ${r.length?`<button class="btn sec" onclick="clearAll()">전체 비우기</button>`:''}
+      <span style="flex:1"></span><span style="align-self:center;font-size:12px;color:var(--muted)">스키마 v2.0 · ${r.length}건</span>
+    </div>
+    ${r.length?`<div class="filterbar">
+      <input id="dq" placeholder="🔍 제목·위치·날짜 검색" value="${esc(_dq.q)}">
+      <select id="dym"><option value="">전체 기간</option>${months.map(m=>`<option value="${m}"${_dq.ym===m?' selected':''}>${m.replace('-','년 ')}월</option>`).join('')}</select>
+      ${srcs.length>1?`<select id="dsrc"><option value="">모든 출처</option>${srcs.map(s0=>`<option value="${esc(s0)}"${_dq.src===s0?' selected':''}>${esc(s0.toUpperCase())}</option>`).join('')}</select>`:''}
+      <span id="dcount"></span><a href="#" id="dreset" class="hide" onclick="clearDataFilter();return false">초기화</a>
+    </div>
+    <div id="dataWrap"></div>`
       :`<div class="empty">기록이 없습니다.</div>`}
     <div class="backends" style="margin-top:22px">
       <div class="be"><span class="tag rec" style="background:var(--series-1)">현재</span>
@@ -1690,32 +1758,69 @@ function renderData(){
         </div></div>
     </div>`;
   $('#impFile').onchange=importJSON;
-  hydrateThumbs();
+  if(r.length){
+    $('#dq').oninput=e=>{_dq.q=e.target.value;updateDataTable();};
+    $('#dym').onchange=e=>{_dq.ym=e.target.value;updateDataTable();};
+    const ds=$('#dsrc');if(ds)ds.onchange=e=>{_dq.src=e.target.value;updateDataTable();};
+    updateDataTable();
+  }
 }
+function exportCSV(){ /* 엑셀·스프레드시트용 — BOM 포함 · 전체 기록 */
+  if(!state.records.length){toast('내보낼 기록이 없습니다');return;}
+  const head=['날짜','요일','시작','제목','위치','거리(km)','페이스','시간','고도(m)','케이던스(spm)','심박(bpm)','출처','블로그 발행'];
+  const rows=state.records.map(x=>[x.date,x.weekday||'',x.start_time||'',x.title||'러닝',x.location||'',
+    x.distance_km??'',x.avg_pace_sec_per_km?paceTxt(x.avg_pace_sec_per_km):'',x.duration_sec?clock(x.duration_sec):'',
+    x.elevation_gain_m??'',x.cadence_spm||'',x.avg_heart_rate_bpm||'',x.source||'manual',
+    x.blog_posted_at?String(x.blog_posted_at).slice(0,10):'']);
+  const cell=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  const csv='\uFEFF'+[head,...rows].map(rw=>rw.map(cell).join(',')).join('\r\n'); /* BOM — 엑셀 한글 인코딩 */
+  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  const a=document.createElement('a');a.href=url;a.download='running_records.csv';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+  toast('CSV를 내보냈습니다 ('+state.records.length+'건)');
+}
+let _importPending=null;
 function importJSON(e){
   const f=e.target.files[0];if(!f)return;
   const rd=new FileReader();
   rd.onerror=()=>{toast('파일을 읽지 못했습니다');e.target.value='';};
   rd.onload=()=>{
+    e.target.value='';
     try{
       const j=JSON.parse(rd.result);
       const recs=normalizeRecords(Array.isArray(j)?j:(Array.isArray(j.records)?j.records:[]));
-      if(!recs.length){toast('가져올 기록이 없습니다 — 파일 형식을 확인하세요');e.target.value='';return;}
-      if(!confirm('현재 기록 '+state.records.length+'건을 불러온 데이터 '+recs.length+'건으로 교체합니다. 계속할까요?')){e.target.value='';return;}
+      if(!recs.length){toast('가져올 기록이 없습니다 — 파일 형식을 확인하세요');return;}
       recs.forEach(x=>{if(!x.source||x.source==='demo')x.source='import';});
-      const newIds=new Set(recs.map(x=>x.record_id));
-      state.records.forEach(x=>{if(!newIds.has(x.record_id)){ /* 교체로 사라지는 레코드: 사진 정리 + 삭제 표 */
-        if(!state.deletedIds.includes(x.record_id))state.deletedIds.push(x.record_id);
-        revokeImg(x.record_id);imgDel(x.record_id).catch(()=>{});}});
-      (Array.isArray(j.deleted_ids)?j.deleted_ids:[]).forEach(id=>{id=String(id);if(!state.deletedIds.includes(id))state.deletedIds.push(id);});
-      state.deletedIds=state.deletedIds.filter(id=>!newIds.has(id));saveDeleted(); /* 가져온 기록은 부활 처리 */
-      state.records=recs.sort((a,b)=>a.date<b.date?-1:1);
-      if(j.goals){state.goals=sanitizeGoals(j.goals);state.goals.updated_at=new Date().toISOString();saveGoals();}
-      saveRecords();setPill();toast('불러왔습니다 · '+recs.length+'건');renderData();
+      _importPending={j:Array.isArray(j)?{records:recs}:j,recs};
+      openModal(`<h3>JSON 가져오기</h3>
+        <p style="margin:0 0 10px">불러온 파일 <b>${recs.length}건</b> · 현재 브라우저 <b>${state.records.length}건</b></p>
+        <p style="font-size:12.5px;margin:0 0 4px"><b>병합</b> — 겹치지 않는 기록은 추가하고, 같은 기록(record_id)은 더 최근 수정본을 남깁니다. 파일의 삭제 이력도 반영됩니다.</p>
+        <p style="font-size:12.5px;margin:0"><b>전체 교체</b> — 현재 기록을 모두 지우고 파일 내용으로 바꿉니다.</p>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap">
+          <button class="btn sec" onclick="_importPending=null;closeModal()">취소</button>
+          <button class="btn sec" onclick="applyImport('replace')">전체 교체</button>
+          <button class="btn" onclick="applyImport('merge')">병합 (권장)</button></div>`);
     }catch(x){toast('JSON을 읽을 수 없습니다');}
-    e.target.value='';
   };
   rd.readAsText(f);
+}
+function applyImport(mode){
+  const p=_importPending;_importPending=null;closeModal();if(!p)return;
+  const j=p.j,recs=p.recs;
+  if(mode==='merge'){
+    const res=mergeRemote({records:recs,deleted_ids:j.deleted_ids,goals:j.goals},'가져오기 병합');
+    if(!res.fresh&&!res.updated&&!res.gone)toast('추가·변경된 기록이 없습니다');
+    renderData();return;
+  }
+  const newIds=new Set(recs.map(x=>x.record_id));
+  state.records.forEach(x=>{if(!newIds.has(x.record_id)){ /* 교체로 사라지는 레코드: 사진 정리 + 삭제 표 */
+    if(!state.deletedIds.includes(x.record_id))state.deletedIds.push(x.record_id);
+    revokeImg(x.record_id);imgDel(x.record_id).catch(()=>{});}});
+  (Array.isArray(j.deleted_ids)?j.deleted_ids:[]).forEach(id=>{id=String(id);if(!state.deletedIds.includes(id))state.deletedIds.push(id);});
+  state.deletedIds=state.deletedIds.filter(id=>!newIds.has(id));saveDeleted(); /* 가져온 기록은 부활 처리 */
+  state.records=recs.sort((a,b)=>a.date<b.date?-1:1);
+  if(j.goals){state.goals=sanitizeGoals(j.goals);state.goals.updated_at=new Date().toISOString();saveGoals();}
+  saveRecords();setPill();toast('교체 완료 · '+recs.length+'건');renderData();
 }
 function delRec(id){
   const r=state.records.find(x=>x.record_id===id);if(!r)return;
@@ -1774,7 +1879,16 @@ let _modalPrevFocus=null;
 function openModal(html){_modalPrevFocus=document.activeElement;$('#modalBox').innerHTML=html;$('#modalBg').classList.add('open');$('#modalBox').focus();}
 function closeModal(){$('#modalBg').classList.remove('open');if(_modalPrevFocus&&_modalPrevFocus.focus){_modalPrevFocus.focus();}_modalPrevFocus=null;}
 $('#modalBg').addEventListener('click',e=>{if(e.target===$('#modalBg'))closeModal();});
-$('#themeBtn').addEventListener('click',()=>{root.setAttribute('data-theme',root.getAttribute('data-theme')==='dark'?'light':'dark');});
+const LS_THEME='run.theme.v1'; /* 문서 페이지들과 공유 — 어디서 바꿔도 전 페이지 유지 */
+function effTheme(){return root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');}
+function syncThemeMeta(){const m=$('#metaTheme');if(m)m.content=effTheme()==='dark'?'#0d0d0d':'#f9f9f7';}
+$('#themeBtn').addEventListener('click',()=>{
+  const t=effTheme()==='dark'?'light':'dark';
+  root.setAttribute('data-theme',t);
+  try{localStorage.setItem(LS_THEME,t);}catch(e){}
+  syncThemeMeta();
+});
+matchMedia('(prefers-color-scheme:dark)').addEventListener('change',syncThemeMeta);
 /* 차트·UI 색상은 전부 CSS 변수 기반이라 테마 전환 시 재렌더 불필요 (입력 중 폼 보존) */
 ['dragover','drop'].forEach(ev=>window.addEventListener(ev,e=>e.preventDefault()));
 window.addEventListener('storage',e=>{ /* 다중 탭 동기화: 다른 탭의 저장을 반영 */
@@ -1783,6 +1897,22 @@ window.addEventListener('storage',e=>{ /* 다중 탭 동기화: 다른 탭의 �
   if(current!=='add')views[current]();
 });
 window.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+document.addEventListener('paste',e=>{ /* 캡쳐 붙여넣기(Ctrl+V) — 어느 화면에서든 바로 기록 추가 */
+  const fs=e.clipboardData&&e.clipboardData.files;if(!fs||!fs.length)return;
+  const f=[...fs].find(x=>x.type&&x.type.startsWith('image/'));if(!f)return;
+  if(state.batch||$('#modalBg').classList.contains('open'))return; /* 일괄 검토·모달 중엔 개입하지 않음 */
+  e.preventDefault();
+  if(current!=='add'){state.editingId=null;show('add');}
+  state.pendingDrive=null;
+  handleFile(f);
+});
+let _rzT=null,_rzW=innerWidth;
+window.addEventListener('resize',()=>{ /* 창 크기·회전 변경 시 차트 폭 재계산 */
+  clearTimeout(_rzT);_rzT=setTimeout(()=>{
+    if(innerWidth===_rzW)return;_rzW=innerWidth;
+    if(current==='dashboard'){drawHeatmap();drawWeekly();drawPace();drawCumulative();}
+  },200);
+});
 
 /* Tesseract 미리 로드 (실패해도 업로드 시 재시도) */
 loadTesseract().catch(()=>{});
@@ -1794,7 +1924,10 @@ state.goals=loadGoals();
 state.deletedIds=loadDeleted();
 saveRecords(); /* v1 → v2 마이그레이션 결과 즉시 반영 (부트 중엔 자동 백업 미발동) */
 setPill();
+syncThemeMeta();
 show('dashboard');
+if('serviceWorker' in navigator&&location.protocol!=='file:') /* PWA — 홈 화면 설치·오프라인 조회 */
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
 _bootDone=true; /* 이후 저장부터 자동 백업 활성 */
 if(driveConnected()) /* 재방문 자동 로그인 — 계정 힌트로 조용히 세션 복구, 팝업 차단 시 첫 클릭에서 폴백 */
   driveToken().then(()=>{if(_pendingBackup)runAutoBackup();syncFromDrive(true);}).catch(()=>{setPill();});
