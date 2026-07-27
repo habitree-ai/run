@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NRC 캡쳐 플로우 고도화 기획 (v1) · 기획</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏃</text></svg>">
+<style>
+  :root{color-scheme:light;
+    --surface-1:#fcfcfb;--plane:#f9f9f7;--text-primary:#0b0b0b;--text-secondary:#52514e;--muted:#898781;
+    --border:rgba(11,11,11,0.10);--series-1:#2a78d6;--series-1-soft:#cde2fb;--seq-700:#0d366b;
+    --good:#0ca30c;--good-text:#006300;--warn:#b26a00;--warn-soft:#fdecc8;
+    --radius:14px;--shadow:0 1px 2px rgba(11,11,11,.04),0 4px 16px rgba(11,11,11,.05);
+    --font:system-ui,-apple-system,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Consolas,monospace;}
+  :root[data-theme="dark"]{color-scheme:dark;
+    --surface-1:#1a1a19;--plane:#0d0d0d;--text-primary:#fff;--text-secondary:#c3c2b7;--muted:#898781;
+    --border:rgba(255,255,255,0.10);--series-1:#3987e5;--series-1-soft:#184f95;--seq-700:#b7d3f6;
+    --good-text:#0ca30c;--warn:#fab219;--warn-soft:#3a2f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+    --surface-1:#1a1a19;--plane:#0d0d0d;--text-primary:#fff;--text-secondary:#c3c2b7;--muted:#898781;
+    --border:rgba(255,255,255,0.10);--series-1:#3987e5;--series-1-soft:#184f95;--seq-700:#b7d3f6;
+    --good-text:#0ca30c;--warn:#fab219;--warn-soft:#3a2f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);}}
+  *{box-sizing:border-box}html,body{margin:0}
+  body{background:var(--plane);color:var(--text-primary);font-family:var(--font);line-height:1.65;-webkit-font-smoothing:antialiased}
+  a{color:var(--series-1);text-decoration:none}a:hover{text-decoration:underline}
+  header.top{border-bottom:1px solid var(--border);background:var(--surface-1);position:sticky;top:0;z-index:30}
+  .top-inner{display:flex;align-items:center;gap:14px;padding:11px 20px;flex-wrap:wrap;max-width:960px;margin:0 auto}
+  .brand h1{font-size:15.5px;margin:0}
+  .spacer{flex:1}
+  .tabs{display:flex;gap:2px}
+  .tabs a{padding:6px 10px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text-secondary)}
+  .tabs a.active{background:var(--series-1-soft);color:var(--seq-700)}
+  :root[data-theme="dark"] .tabs a.active{color:#fff}
+  .toggle{border:1px solid var(--border);background:transparent;color:var(--text-secondary);width:34px;height:34px;border-radius:9px;cursor:pointer}
+  main{max-width:760px;margin:0 auto;padding:32px 22px 80px}
+  h1.doc{font-size:24px;letter-spacing:-.01em;margin:0 0 4px}
+  .doc-sub{color:var(--muted);font-size:13px;margin:0 0 28px}
+  h2{font-size:18px;margin:34px 0 10px;letter-spacing:-.01em}
+  h3{font-size:15px;margin:22px 0 8px}
+  p,li{font-size:14px;color:var(--text-secondary)}
+  b,strong{color:var(--text-primary)}
+  table{border-collapse:collapse;width:100%;font-size:13px;background:var(--surface-1);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  th{background:var(--series-1-soft);color:var(--seq-700);text-align:left;padding:9px 11px;font-size:11.5px;white-space:nowrap}
+  :root[data-theme="dark"] th{color:#dbe9ff;background:#17324f}
+  td{padding:9px 11px;border-top:1px solid var(--border);vertical-align:top}
+  pre{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:16px;font-family:var(--mono);font-size:12px;line-height:1.6;overflow:auto;color:var(--text-secondary);box-shadow:var(--shadow)}
+  code{font-family:var(--mono);font-size:.92em;background:var(--series-1-soft);padding:1px 5px;border-radius:5px;color:var(--seq-700)}
+  :root[data-theme="dark"] code{color:#dbe9ff}
+  .note{font-size:13px;color:var(--text-secondary);background:var(--series-1-soft);border-radius:10px;padding:12px 14px;margin:14px 0}
+  :root[data-theme="dark"] .note{background:rgba(57,135,229,.12)}
+  .note.warn{background:var(--warn-soft);color:var(--warn)}
+  .pri{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--series-1);color:#fff;margin-right:6px;vertical-align:2px}
+  .pri.p2{background:var(--seq-700)}
+  .pri.p3{background:var(--muted)}
+  .pri.p4{background:transparent;color:var(--muted);border:1px solid var(--border)}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-inner">
+  <div class="brand"><h1>NRC 캡쳐 플로우 고도화 기획 <span style="font-size:11px;color:var(--muted)">v1</span></h1></div>
+  <div class="spacer"></div>
+  <nav class="tabs"><a href="../index.html">대시보드</a><a href="../drive.html">드라이브</a><a href="../manual/index.html">매뉴얼</a><a href="index.html" class="active">기획</a></nav>
+  <button class="toggle" id="themeBtn" aria-label="테마 전환">◐</button>
+</div></header>
+<main>
+<h1 class="doc">NRC 캡쳐 중심 플로우 고도화 — 날짜 자동화와 편의 기능</h1>
+<p class="doc-sub">2026-07-27 · 기획 검토 v1 · 대상: 집계 앱 v2 (드라이브 동기화 v2 배포 기준)</p>
+
+<h2>1. 배경 · 목적</h2>
+<p>이 서비스의 기본 데이터 소스는 <b>Nike Run Club(NRC) 앱의 결과 캡쳐</b>다. 표준 흐름은:</p>
+<pre>NRC 러닝 종료 → 결과 화면 캡쳐(폰) → 구글드라이브에 저장(자동 백업 또는 수동)
+→ 앱에서 📥 캡쳐 가져오기(Picker 선택) → OCR 프리필 → 확인·수정 → 저장 → 자동 동기화</pre>
+<p>목적: 이 흐름에서 <b>사용자 손이 가는 지점을 최소화</b>한다. 특히 "날짜 확인·수정"을 자동화하고, 여러 장 처리 시 반복 작업을 줄인다.</p>
+
+<h2>2. 현재 흐름의 손이 가는 지점</h2>
+<table>
+<thead><tr><th>단계</th><th>현재</th><th>손이 가는 정도</th></tr></thead>
+<tbody>
+<tr><td>① 캡쳐 → 드라이브 저장</td><td>폰의 드라이브/구글포토 자동 백업으로 자동화 가능</td><td>낮음 (1회 설정)</td></tr>
+<tr><td>② 새 캡쳐 선택</td><td>Picker에서 직접 선택 (이미 가져온 건 자동 스킵)</td><td>중간 — <code>drive.file</code> 스코프 구조상 선택 자체는 생략 불가(§6)</td></tr>
+<tr><td>③ 날짜 확인·수정</td><td>OCR의 "오늘/어제" 텍스트를 <b>가져오는 날 기준</b>으로 해석 — 지난 캡쳐를 나중에 가져오면 틀림 → 수동 수정 필요</td><td><b>높음 ← 이번 기획의 핵심</b></td></tr>
+<tr><td>④ 값 검증·저장</td><td>1장씩 확인 → 저장 반복</td><td>중간 (장수만큼 반복)</td></tr>
+</tbody>
+</table>
+
+<h2>3. <span class="pri">P1</span>날짜 자동 결정 — 3단 폴백 + 앵커 보정</h2>
+<h3>3.1 기준일 결정 우선순위</h3>
+<table>
+<thead><tr><th>순위</th><th>신호</th><th>정확도·근거</th></tr></thead>
+<tbody>
+<tr><td><b>①</b></td><td><b>파일명 타임스탬프</b><br><code>Screenshot_20260726_081712_...</code> 등</td><td>캡쳐한 정확한 날짜·시각. 갤럭시/안드로이드 캡쳐 파일명에 기본 포함. Picker 응답에 파일명이 포함되어 <b>추가 API 호출 불필요</b>. 주요 패턴: <code>Screenshot_YYYYMMDD_HHMMSS</code> · <code>Screenshot_YYYY-MM-DD-HH-MM-SS</code> · <code>IMG_YYYYMMDD_HHMMSS</code></td></tr>
+<tr><td>②</td><td>EXIF 촬영 시각<br>(드라이브 <code>imageMediaMetadata.time</code>)</td><td>사진(JPG)엔 정확하지만 스크린샷(PNG)엔 대체로 없음 — 보조 신호. 파일 메타 조회 1회로 ③과 함께 획득</td></tr>
+<tr><td>③</td><td><b>드라이브 저장 일자</b><br>(<code>createdTime</code>)</td><td>당일 자동 백업이면 러닝일과 일치. 단 며칠치를 몰아서 올리면 어긋남 → 3순위. iPhone처럼 파일명에 날짜가 없는 기기의 핵심 폴백</td></tr>
+<tr><td>④</td><td>(최후) 빈 칸 유지</td><td>신호가 전혀 없으면 현행처럼 사용자 입력 — 잘못된 자동값보다 빈 칸이 낫다</td></tr>
+</tbody>
+</table>
+<h3>3.2 OCR "오늘/어제" 앵커 보정</h3>
+<p>NRC 캡쳐 상단의 <code>오늘 - 8:17</code> / <code>어제 - 19:03</code> 텍스트를 현재는 <b>가져오는 날</b> 기준으로 해석한다 — 잠재 오류. 개선: 위 3.1의 기준일을 <b>앵커</b>로 삼아 "오늘"=앵커일, "어제"=앵커일−1로 재해석한다. 캡쳐를 며칠 뒤에 가져와도 날짜가 정확해진다.</p>
+<h3>3.3 수정 가능성 · 신뢰 전달 (요구사항 "일자를 수정할 수 있게")</h3>
+<ul>
+<li>자동값은 <b>프리필일 뿐</b> — 기록 추가 폼의 날짜 필드는 저장 전 언제든 수정 가능(현행 구조 유지, 빈 칸만 채우는 원칙).</li>
+<li><b>출처 힌트 표시</b>: 날짜 필드 아래 "파일명 기준 자동 입력" / "드라이브 저장일 기준(러닝일과 다를 수 있음)" 같은 한 줄 안내로 신뢰도를 전달 — 사용자가 확인할지 넘어갈지 즉시 판단 가능.</li>
+<li>시작 시각도 파일명 시각으로 프리필(러닝 직후 캡쳐가 일반적). 오차 가능성이 있으므로 동일하게 수정 가능 + 힌트 표시.</li>
+</ul>
+<div class="note">구현 규모: 파일명 파서 + 메타 조회(<code>fields=name,createdTime,imageMediaMetadata</code>) + 앵커 보정 + 힌트 문구 — 기존 <code>nextDriveItem→handleFile→applyPrefill</code> 경로에 자연스럽게 삽입되는 소규모 변경.</div>
+
+<h2>4. <span class="pri p2">P2</span>일괄 빠른 검토 — 반복 저장의 원버튼화</h2>
+<ul>
+<li>여러 장 가져올 때 각 캡쳐를 <b>요약 카드</b>(날짜 · 거리 · 페이스 · 시간 + 썸네일)로 보여주고, 프리필이 완성된 건은 <b>"확인 → 저장" 원버튼</b>으로 통과.</li>
+<li>인식 실패·의심 필드(거리 없음, 페이스·시간 불일치 등)만 강조 표시해 그 항목만 손대게 한다.</li>
+<li>수정 우선 원칙은 유지 — "무조건 자동 저장"이 아니라 <b>확인 비용을 장당 1클릭으로 압축</b>하는 것.</li>
+</ul>
+
+<h2>5. <span class="pri p3">P3</span>NRC 인식 프리셋 강화</h2>
+<ul>
+<li>거리·페이스·시간 <b>상호 검증</b> 확장: 두 값으로 나머지 하나를 계산해 OCR 값과 어긋나면 의심 표시(현행 <code>calcConsistency</code>의 검증 버전).</li>
+<li>NRC <b>요약 캡쳐 vs 상세 캡쳐</b>(케이던스·심박 격자) 유형 감지 후 유형별 파싱 규칙 적용.</li>
+<li>인식률 낮은 지표(케이던스·심박)는 M3(BYOK 비전 모델)에서 근본 개선 — §7 로드맵.</li>
+</ul>
+
+<h2>6. 제약 — 왜 "폴더 자동 감시"는 기본이 아닌가</h2>
+<p>드라이브 폴더를 통째로 감시해 새 캡쳐를 자동 반영하려면 <code>drive.readonly</code>(제한 등급) 스코프가 필요하다. 이를 플랫폼 공용 자격에 추가하면 <b>Google 보안 심사 대상</b>이 되어 "로그인만으로 연동" 전략(비민감 스코프 · 무심사 프로덕션 게시)이 깨진다. 따라서:</p>
+<ul>
+<li>기본(플랫폼 모드): Picker 선택은 유지하되, <b>선택 이후 전 과정을 자동화</b>(P1·P2)해 체감 수고를 최소화.</li>
+<li>폴더 자동 스캔은 <b>BYO 고급 모드 전용</b> 옵션으로만 검토(자체 자격 사용자는 심사 무관).</li>
+</ul>
+
+<h2>7. <span class="pri p4">P4</span>중장기 아이디어</h2>
+<ul>
+<li><b>PWA 공유 타깃</b> — 폰에서 캡쳐 직후 공유 버튼 → 이 앱 선택 → 바로 OCR·저장(드라이브 경유를 건너뛰는 지름길). 저장된 기록은 기존 동기화로 전 기기 반영. manifest + service worker 필요.</li>
+<li><b>BYOK 비전 모델 OCR(M3)</b> — 사용자 API 키로 비전 모델 호출, 케이던스·심박 등 격자 지표 인식률 근본 개선 (drive_v1.md M3와 동일).</li>
+<li><b>파일명 규칙 가이드</b> — 사용법 문서에 "캡쳐 파일명을 유지한 채 백업하세요(이름에 날짜가 있어 자동 인식)" 안내 추가.</li>
+</ul>
+
+<h2>8. 적용 순서 제안</h2>
+<table>
+<thead><tr><th>순서</th><th>항목</th><th>규모</th><th>효과</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>P1 날짜 3단 자동 결정 + 앵커 보정 + 출처 힌트</td><td>소</td><td>날짜 수동 수정 대부분 제거 · 과거 캡쳐 날짜 오류 해소</td></tr>
+<tr><td>2</td><td>P2 일괄 빠른 검토</td><td>중</td><td>N장 처리 시간을 장당 1클릭 수준으로</td></tr>
+<tr><td>3</td><td>P3 NRC 프리셋 강화</td><td>중</td><td>확인해야 할 필드 자체를 축소</td></tr>
+<tr><td>백로그</td><td>P4 (PWA 공유 타깃 · BYOK 비전 · BYO 폴더 스캔)</td><td>대</td><td>흐름 자체의 단축</td></tr>
+</tbody>
+</table>
+<div class="note">ℹ️ 관련 문서: <a href="../drive.html">드라이브 연동 설계 v2</a> · <a href="../manual/data-storage-structure.html">기록 데이터 저장 구조</a> · <a href="../guide.html">사용법</a></div>
+</main>
+<script>
+const root=document.documentElement;
+document.getElementById('themeBtn').addEventListener('click',()=>{root.setAttribute('data-theme',root.getAttribute('data-theme')==='dark'?'light':'dark');});
+</script>
+</body>
+</html>
