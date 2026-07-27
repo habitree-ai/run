@@ -214,7 +214,7 @@ function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');se
 
 /* ============ 상태 ============ */
 const state={records:[], goals:null, deletedIds:[], backend:'local', pendingImage:null, pendingRawOcr:null, editingId:null,
-  pendingDrive:null, driveQueue:null, driveTotal:0, pendingAnchor:null};
+  pendingDrive:null, driveQueue:null, driveTotal:0, pendingAnchor:null, batch:null};
 
 /* ============ 영속화 (localStorage) ============ */
 const LS_RECORDS='run.records.v2', LS_GOALS='run.goals.v1', LS_DELETED='run.deleted.v1';
@@ -419,11 +419,152 @@ function processDriveFiles(docs){
   const skipped=docs.length-fresh.length;
   if(skipped)toast('이미 가져온 캡쳐 '+skipped+'건은 건너뜁니다');
   if(!fresh.length)return;
+  if(fresh.length>=2){ /* 여러 장은 카드형 일괄 검토 — 정상 인식 건은 ✔ 저장 원클릭 (planning §4) */
+    state.batch={active:true,editIdx:null,
+      items:fresh.map(d=>({id:d.id,name:d.name||'capture.png',status:'loading',parsed:null,warn:null,anchor:null,file:null,thumbUrl:null,raw:null}))};
+    show('add');
+    processBatch();
+    return;
+  }
   show('add');
   _drvSaved=0;_drvSkipped=0;
   state.driveQueue=fresh.slice();
   state.driveTotal=fresh.length;
   nextDriveItem();
+}
+
+/* ---- 일괄 빠른 검토 (드라이브 다중 선택 · planning §4) ---- */
+function batchWarn(p){ /* 원클릭 저장 가능 여부 — 의심 사유 반환 */
+  if(!p.date)return '날짜를 정하지 못했습니다';
+  if(!(p.distance_km>0))return '거리를 읽지 못했습니다';
+  if(paceTimeMismatch(p.distance_km,p.avg_pace_sec_per_km,p.duration_sec))return '거리·페이스·시간 불일치';
+  return null;
+}
+async function processBatch(){
+  const b=state.batch;
+  for(let i=0;i<b.items.length;i++){
+    if(state.batch!==b)return; /* 뷰 이탈로 배치 폐기됨 */
+    const it=b.items[i];
+    try{
+      const [blob,meta]=await Promise.all([downloadDriveFile(it.id),driveFileMeta(it.id)]);
+      if(state.batch!==b)return;
+      it.file=new File([blob],it.name,{type:blob.type||'image/png'});
+      it.thumbUrl=URL.createObjectURL(blob);
+      it.anchor=buildAnchor(it.name,meta,null);
+      updateBatchCard(i);
+      const res=await new Promise(r=>runOCR(it.file,it.anchor,(parsed,err,raw)=>r({parsed,err,raw})));
+      if(state.batch!==b)return;
+      const p=res.parsed||{};
+      if(it.anchor){p.date=p.date||it.anchor.date;p.start_time=p.start_time||it.anchor.time;} /* OCR이 못 채운 칸만 앵커로 */
+      it.parsed=p;it.raw=res.raw||null;
+      it.warn=res.err?'인식 실패 — 수정에서 직접 입력':batchWarn(p);
+      it.status=it.warn?'suspect':'ready';
+      updateBatchCard(i);
+    }catch(e){it.status='error';it.warn='다운로드 실패';updateBatchCard(i);}
+  }
+}
+function batchCardHTML(it,i){
+  const p=it.parsed||{};
+  let body='';
+  if(it.status==='loading')body='<span style="color:var(--muted)">⏳ 다운로드·인식 중…</span>';
+  else if(it.status==='error')body='<span style="color:var(--warn)">'+esc(it.warn||'실패')+'</span>';
+  else{
+    body='날짜 <b>'+(p.date?esc(p.date):'—')+'</b> · 거리 <b>'+(p.distance_km>0?(+p.distance_km).toFixed(2)+'km':'—')+'</b>'
+      +' · 페이스 <b>'+(p.avg_pace_sec_per_km?paceTxt(p.avg_pace_sec_per_km):'—')+'</b> · 시간 <b>'+(p.duration_sec?clock(p.duration_sec):'—')+'</b>'
+      +(it.warn?'<div style="color:var(--warn);font-size:12px;margin-top:3px">⚠ '+esc(it.warn)+'</div>'
+        :(it.anchor?'<div class="hint" style="margin-top:3px">📎 '+esc((ANCHOR_SRC[it.anchor.source]||'').split(' — ')[0])+'</div>':''));
+  }
+  const btns=it.status==='ready'
+      ?`<button class="btn sm" onclick="saveBatchItem(${i})">✔ 저장</button><button class="btn sm sec" onclick="openBatchEdit(${i})">✎ 수정</button><button class="btn sm sec" onclick="skipBatchItem(${i})">건너뛰기</button>`
+    :it.status==='suspect'
+      ?`<button class="btn sm" onclick="openBatchEdit(${i})">✎ 수정 후 저장</button><button class="btn sm sec" onclick="skipBatchItem(${i})">건너뛰기</button>`
+    :it.status==='saved'?'<span class="src posted">✓ 저장됨</span>'
+    :it.status==='skipped'?'<span class="src import">건너뜀</span>'
+    :it.status==='error'?`<button class="btn sm sec" onclick="skipBatchItem(${i})">건너뛰기</button>`:'';
+  return `<div class="card" id="bc${i}" style="display:flex;gap:12px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+    ${it.thumbUrl?`<img class="thumb" src="${esc(it.thumbUrl)}" alt="" style="width:52px;height:52px">`:`<span class="thumb" style="width:52px;height:52px;display:inline-block"></span>`}
+    <div style="flex:1;min-width:200px"><div style="font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(it.name)}</div>
+      <div style="font-size:13px;margin-top:2px">${body}</div></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${btns}</div></div>`;
+}
+function renderBatch(){
+  const b=state.batch;
+  $('#stage').innerHTML=`
+    <h2 class="vh">드라이브 캡쳐 일괄 검토 (${b.items.length}장)</h2>
+    <p class="vsub">인식이 끝난 캡쳐부터 확인하세요 — 정상 인식 건은 <b>✔ 저장</b> 한 번이면 끝, 의심 항목만 <b>✎ 수정</b>에서 고치면 됩니다. 저장된 기록은 즉시 집계·동기화에 반영됩니다.</p>
+    <div id="batchList">${b.items.map((it,i)=>batchCardHTML(it,i)).join('')}</div>
+    <div style="margin-top:14px"><button class="btn" onclick="finishBatch()">완료 — 대시보드로</button></div>`;
+}
+function updateBatchCard(i){
+  if(current!=='add'||!state.batch||state.batch.editIdx!=null)return;
+  const el=document.getElementById('bc'+i);
+  if(el)el.outerHTML=batchCardHTML(state.batch.items[i],i);
+}
+async function saveBatchItem(i){ /* 카드에서 원클릭 저장 */
+  const it=state.batch&&state.batch.items[i];
+  if(!it||it.status!=='ready')return;
+  it.status='saving';
+  const p=it.parsed||{};
+  const fields=calcConsistency({
+    date:p.date, weekday:WD[new Date(p.date+'T00:00:00').getDay()],
+    start_time:p.start_time||null, day_part:p.start_time?(+p.start_time.slice(0,2)<12?'오전':'오후'):null,
+    title:p.title||'러닝', location:p.location||null,
+    distance_km:p.distance_km,
+    avg_pace_sec_per_km:p.avg_pace_sec_per_km||null, duration_sec:p.duration_sec||null,
+    elevation_gain_m:p.elevation_gain_m??null, cadence_spm:p.cadence_spm||null, avg_heart_rate_bpm:p.avg_heart_rate_bpm||null});
+  const rec={record_id:'r'+Date.now()+'_'+i, ...fields, source:'drive', source_file_id:it.id,
+    original_filename:it.name, has_image:false, image_url:null, raw_ocr:it.raw||null,
+    created_at:new Date().toISOString(), updated_at:new Date().toISOString(), schema_version:'2.0'};
+  state.records.push(rec);
+  if(it.file){try{await imgPut(rec.record_id,it.file);revokeImg(rec.record_id);rec.has_image=true;}catch(e){toast('사진 저장 실패 — 기록만 저장됩니다');}}
+  state.records.sort((a,b)=>a.date<b.date?-1:1);
+  saveRecords();setPill();
+  it.status='saved';it.recId=rec.record_id;
+  updateBatchCard(i);
+}
+function skipBatchItem(i){
+  const it=state.batch&&state.batch.items[i];
+  if(!it||it.status==='saved')return;
+  it.status='skipped';updateBatchCard(i);
+}
+function openBatchEdit(i){
+  const it=state.batch&&state.batch.items[i];
+  if(!it||it.status==='saved'||it.status==='loading')return;
+  state.batch.editIdx=i;
+  renderAdd();
+}
+function cancelBatchEdit(){
+  state.batch.editIdx=null;
+  state.pendingDrive=null;state.pendingImage=null;state.pendingRawOcr=null;state.pendingAnchor=null;
+  renderAdd();
+}
+function renderBatchEdit(i){
+  const it=state.batch.items[i];
+  state.pendingDrive={id:it.id,name:it.name};
+  state.pendingAnchor=it.anchor||null;
+  state.pendingImage=it.file||null;
+  state.pendingRawOcr=it.raw||null;
+  $('#stage').innerHTML=`
+    <h2 class="vh">캡쳐 수정 (${i+1}/${state.batch.items.length})</h2>
+    <p class="vsub">${esc(it.name)} — 값을 고쳐 저장하면 목록으로 돌아갑니다.</p>
+    <div class="addwrap">
+      <div id="ocrStatus" style="font-size:13px;color:var(--muted)">${it.warn?'⚠ '+esc(it.warn):''}</div>
+      <div id="photoPrev">${it.thumbUrl?`<img class="imgprev" src="${esc(it.thumbUrl)}" alt="캡쳐">`:''}</div>
+      <div id="formArea"></div>
+      <div style="margin-top:6px"><a href="#" onclick="cancelBatchEdit();return false">← 목록으로 (저장 안 함)</a></div>
+    </div>`;
+  showForm(it.parsed||{});
+  if(it.anchor&&it.parsed&&it.parsed.date===it.anchor.date)setDateHint(it.anchor.source);
+  validatePrefill();
+}
+function finishBatch(){
+  const b=state.batch;state.batch=null;
+  const saved=b?b.items.filter(x=>x.status==='saved').length:0;
+  (b&&b.items||[]).forEach(it=>{if(it.thumbUrl)URL.revokeObjectURL(it.thumbUrl);});
+  show('dashboard');
+  toast('일괄 검토 완료 — 저장 '+saved+'장');
+  const bs=blogSettings();
+  if(saved&&bs.blogId&&bs.autoOpen!==false&&blogUnposted().length)openBlogQueue(); /* 기존 큐 흐름과 동일한 글감 안내 */
 }
 async function nextDriveItem(){
   if(!state.driveQueue||!state.driveQueue.length){
@@ -782,6 +923,10 @@ function calcConsistency(r){
   if(r.distance_km&&r.duration_sec&&!r.avg_pace_sec_per_km) r.avg_pace_sec_per_km=Math.round(r.duration_sec/r.distance_km);
   return r;
 }
+function paceTimeMismatch(dist,pace,dur){ /* 거리×페이스 ≈ 시간 — 60초/7% 초과 어긋나면 true */
+  if(!(dist>0)||!pace||!dur)return false;
+  return Math.abs(dist*pace-dur)>Math.max(60,dur*0.07);
+}
 /* ---- 날짜 앵커: 캡쳐를 며칠 뒤 가져와도 러닝 날짜를 정확히 — 파일명 → EXIF → 드라이브 저장일 (planning/nrc-capture-flow.html §3) ---- */
 function parseNameStamp(name){ /* 캡쳐 파일명의 타임스탬프 (Screenshot_20260726_081712 · Screenshot_2026-07-26-08-17-12 등) */
   const m=String(name||'').match(/(?:^|\D)(20\d{2})[-_.]?([01]\d)[-_.]?([0-3]\d)(?:\D{0,3}([0-2]\d)[-_.h시:]?([0-5]\d))?/);
@@ -886,6 +1031,7 @@ let current='dashboard';
 function show(v){
   if(v!=='add'){state.editingId=null;state.pendingImage=null;state.pendingRawOcr=null;
     state.pendingDrive=null;state.driveQueue=null;state.driveTotal=0;state.pendingAnchor=null;
+    if(state.batch){(state.batch.items||[]).forEach(it=>{if(it.thumbUrl)URL.revokeObjectURL(it.thumbUrl);});state.batch=null;} /* 일괄 검토 이탈 시 폐기(중단 자유) */
     if(_prevUrl){URL.revokeObjectURL(_prevUrl);_prevUrl=null;}}
   current=v;document.querySelectorAll('nav.rail button').forEach(b=>b.classList.toggle('active',b.dataset.view===v));views[v]();
 }
@@ -953,6 +1099,10 @@ function drawRecent(){
 
 /* ============ 기록 추가 뷰 (사진 업로드 우선) ============ */
 function renderAdd(){
+  if(state.batch&&state.batch.active){ /* 일괄 검토 모드 — 카드 목록 또는 개별 수정 */
+    if(state.batch.editIdx!=null)return renderBatchEdit(state.batch.editIdx);
+    return renderBatch();
+  }
   const editing=state.editingId?state.records.find(r=>r.record_id===state.editingId):null;
   $('#stage').innerHTML=`
     <h2 class="vh">${editing?'기록 수정':'기록 추가'}</h2>
@@ -1015,12 +1165,9 @@ function validatePrefill(){ /* 프리필 의심 지점 강조 — 어긋난 칸�
   const dEl=$('#f_dist');if(!dEl)return null;
   const dist=parseFloat(dEl.value),pace=parsePace(($('#f_pace')||{value:''}).value),dur=parseClock(($('#f_dur')||{value:''}).value);
   if(!(dist>0)){dEl.classList.add('warn');return '거리를 읽지 못했습니다 — 직접 입력해주세요.';}
-  if(pace&&dur){
-    const calc=dist*pace; /* 거리×페이스 ≈ 시간이어야 정상 */
-    if(Math.abs(calc-dur)>Math.max(60,dur*0.07)){
-      ['f_dist','f_pace','f_dur'].forEach(id=>{const el=$('#'+id);if(el)el.classList.add('warn');});
-      return '거리·페이스·시간이 서로 맞지 않습니다 — 강조된 칸을 확인해주세요.';
-    }
+  if(paceTimeMismatch(dist,pace,dur)){
+    ['f_dist','f_pace','f_dur'].forEach(id=>{const el=$('#'+id);if(el)el.classList.add('warn');});
+    return '거리·페이스·시간이 서로 맞지 않습니다 — 강조된 칸을 확인해주세요.';
   }
   return null;
 }
@@ -1092,6 +1239,14 @@ async function _saveRecordInner(){
   const wasEdit=!!editing,wasQueue=state.driveTotal>0; /* show()가 driveTotal을 초기화하므로 먼저 캡처 */
   if(wasQueue&&!wasEdit)_drvSaved++;
   state.pendingImage=null;state.pendingRawOcr=null;state.editingId=null;state.pendingDrive=null;state.pendingAnchor=null;
+  if(state.batch&&state.batch.active&&state.batch.editIdx!=null&&!wasEdit){ /* 일괄 검토의 수정 저장 → 목록 복귀 */
+    const bi=state.batch.items[state.batch.editIdx];
+    if(bi){bi.status='saved';bi.recId=rec.record_id;}
+    state.batch.editIdx=null;
+    toast('저장되었습니다 · 총 '+state.records.length+'건');
+    renderAdd();
+    return;
+  }
   toast(wasEdit?'기록이 수정되었습니다':'저장되었습니다 · 총 '+state.records.length+'건');
   if(state.driveQueue&&state.driveQueue.length){show('add');nextDriveItem();} /* 드라이브 큐 이어서 처리 */
   else{
