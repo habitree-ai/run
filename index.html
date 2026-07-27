@@ -155,7 +155,8 @@
   .goal-top{display:flex;justify-content:space-between;gap:4px 8px;font-size:12px;color:var(--text-secondary);margin-bottom:5px;flex-wrap:wrap}
   .goal-top>span{white-space:nowrap}
   .goalcards .card{word-break:keep-all}
-  .goal-top b{font-variant-numeric:tabular-nums;color:var(--text-primary);font-weight:650;white-space:nowrap}
+  .goal-top b{font-variant-numeric:tabular-nums;color:var(--text-primary);font-weight:650;text-align:right}
+  .goal-top b .bB,.goal-top b .bA{white-space:nowrap} /* '계획 10' 묶음 단위로만 줄바꿈 */
   .gbar{height:8px;background:var(--grid);border-radius:999px;overflow:hidden}
   .gfill{height:100%;background:var(--series-1);border-radius:999px;transition:width .3s}
   .gfill.done{background:var(--good)}
@@ -1099,9 +1100,9 @@ function paceLine(label,cur,beta,alpha){
 }
 function paceCard(){
   const g=state.goals,ps=paceStatus();
-  return `<div class="card"><p class="goal-h">페이스 기준 <span style="font-weight:400;color:var(--muted);font-size:11px">/km · 낮을수록 달성</span></p>
-    ${paceLine('안정 (3km↑ 최근 '+(ps.n||0)+'회 평균)',ps.stable,g.plan.pace_stable,g.target.pace_stable)}
-    ${paceLine('기록 (전체 최고)',ps.best,g.plan.pace_record,g.target.pace_record)}</div>`;
+  return `<div class="card"><p style="margin:0 0 6px;font-size:11.5px;font-weight:700;letter-spacing:.03em;color:var(--muted)">페이스 <span style="font-weight:400;letter-spacing:0">/km · 낮을수록 달성</span></p>
+    ${paceLine('안정 · 3km↑ 최근 '+(ps.n||0)+'회',ps.stable,g.plan.pace_stable,g.target.pace_stable)}
+    ${paceLine('기록 · 전체 최고',ps.best,g.plan.pace_record,g.target.pace_record)}</div>`;
 }
 
 /* ---- 동기부여 대시보드 (planning/dashboard-motivation.html) — 링 게이지 · 넛지 · 스트릭 · 누적 진도 ---- */
@@ -1153,11 +1154,12 @@ function goalNudge(actual,beta,alpha,unit,dec){ /* 남은 양 넛지 — 달성 
   return '';
 }
 function ringCard(title,gp,gt,prog,extra){
-  return `<div class="card" style="display:flex;gap:14px;align-items:center">
+  const okB=!!gp.runs&&prog.runs>=gp.runs; /* 계획 달성 카드는 좌측 초록 라인으로 상태 표시 */
+  return `<div class="card" style="display:flex;gap:14px;align-items:center${okB?';border-left:3px solid var(--good)':''}">
     ${ringSVG(prog.runs,gp.runs,gt.runs)}
     <div style="flex:1;min-width:0">
-      <p class="goal-h" style="margin:0">${title}</p>
-      <div style="font-size:12px;margin:2px 0 8px">${goalNudge(prog.runs,gp.runs,gt.runs,'회')}</div>
+      <p style="margin:0;font-size:11.5px;font-weight:700;letter-spacing:.03em;color:var(--muted)">${title}</p>
+      <div style="font-size:13px;margin:3px 0 9px">${goalNudge(prog.runs,gp.runs,gt.runs,'회')}</div>
       ${goalBarHTML('거리',prog.dist,gp.distance_km,gt.distance_km,'km')}
       ${extra||''}
     </div></div>`;
@@ -1206,6 +1208,14 @@ function drawHeatmap(){ /* 꾸준함 잔디 — 최근 20주 요일×주 격자,
   const W=left+weeks*(cell+gap)+8,H=top+7*(cell+gap)+4;
   el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="display:block">${s}</svg>`;
   bindHover(el);
+  const sEl=$('#heatSummary');
+  if(sEl){ /* 카드 하단 요약 — 기간 내 러닝일 수와 주평균 */
+    const from=new Date(monday);from.setDate(from.getDate()-7*(weeks-1));
+    const fromKey=from.getFullYear()+'-'+pad(from.getMonth()+1)+'-'+pad(from.getDate());
+    const runDays=Object.keys(byDate).filter(k=>k>=fromKey&&k<=today&&byDate[k]>0).length;
+    sEl.innerHTML=runDays?`최근 ${weeks}주 동안 <b>${runDays}일</b> 달렸어요 · 주평균 <b>${(runDays/weeks).toFixed(1)}일</b>`
+      :'아직 이 기간의 기록이 없어요 — 오늘 한 칸을 채워볼까요?';
+  }
 }
 function drawCumulative(){ /* 올해 누적 거리 vs β·α 페이스라인 — 시작점 기준 (기준선은 연간값의 시작일 환산) */
   const el=$('#ch-cum');if(!el)return;
@@ -1288,7 +1298,7 @@ function renderDashboard(){
   const p=goalProgress(), g=state.goals;
   $('#stage').innerHTML=`
     <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
-      <div style="flex:1;min-width:200px"><h2 class="vh">대시보드</h2><p class="vsub">누적 ${a.n}회 · ${a.d.toFixed(1)}km · 브라우저 저장(localStorage + IndexedDB)</p></div>
+      <div style="flex:1;min-width:200px"><h2 class="vh">대시보드</h2><p class="vsub">${(d=>d.getMonth()+1+'월 '+d.getDate()+'일 ('+WD[d.getDay()]+')')(new Date(todayISO()+'T00:00:00'))} · 누적 <b>${a.n}회</b> · <b>${a.d.toFixed(1)}km</b></p></div>
       <button class="btn" onclick="show('add')">＋ 기록 추가</button>
     </div>
     <div class="sect" style="margin-top:8px">달성도 <a href="#" onclick="show('goals');return false" style="font-size:12px;font-weight:600;margin-left:6px">설정 →</a>
@@ -1296,8 +1306,9 @@ function renderDashboard(){
     <div class="goalcards">${ringCard('이번 주',g.plan.weekly,g.target.weekly,p.weekly,weekDotsHTML()+streakHTML())}${ringCard('이번 달',g.plan.monthly,g.target.monthly,p.monthly)}${ringCard('올해',proratedYearly(g.plan.yearly),proratedYearly(g.target.yearly),p.yearly,startCaption())}${paceCard()}</div>
     <div class="grid2a">
       <div class="chart-card"><h3>꾸준함 (최근 20주)</h3>
-        <div class="cs">하루 한 칸 — 진할수록 먼 거리 · <span style="display:inline-flex;gap:2px;vertical-align:-2px"><span style="width:9px;height:9px;border-radius:2px;background:var(--grid)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--series-1-soft)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--series-1)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--seq-550)"></span></span> · 테두리=오늘</div>
-        <div id="ch-heat" style="overflow-x:auto"></div></div>
+        <div class="cs">하루 한 칸 · 진할수록 먼 거리 <span style="display:inline-flex;gap:2px;vertical-align:-2px"><span style="width:9px;height:9px;border-radius:2px;background:var(--grid)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--series-1-soft)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--series-1)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--seq-550)"></span></span> · 테두리 = 오늘</div>
+        <div id="ch-heat" style="overflow-x:auto"></div>
+        <div id="heatSummary" style="font-size:12.5px;color:var(--text-secondary);margin-top:10px"></div></div>
       <div class="chart-card"><h3>주간 거리</h3><div class="cs">주별 합계 · km · 기준선 <span class="bB">계획</span>·<span class="bA">목표</span></div><div id="ch-week"></div></div>
     </div>
     <div class="grid2a">
@@ -1315,7 +1326,7 @@ function renderDashboard(){
       <div class="st"><div class="label">평균 페이스</div><div class="val">${paceTxt(a.avgPace?Math.round(a.avgPace):null)}<small>/km</small></div></div>
       <div class="st"><div class="label">최장 거리 (PR)</div><div class="val">${a.longest?a.longest.distance_km.toFixed(2):'—'}<small>km</small></div><div class="foot">${a.fastest?'최고 '+paceTxt(a.fastest.avg_pace_sec_per_km)+'/km':''}</div></div>
     </div>
-    <div class="chart-card" style="margin-top:14px"><h3>최근 러닝</h3><div class="cs">최신순</div>
+    <div class="chart-card" style="margin-top:14px"><h3>최근 러닝</h3><div class="cs">최근 5회 · 전체 목록은 <a href="#" onclick="show('data');return false">데이터</a>에서</div>
       <div id="recentList" style="margin-top:8px"></div></div>`;
   drawHeatmap();drawWeekly();drawPace();drawCumulative();drawRecent();hydrateThumbs();
 }
@@ -1337,7 +1348,7 @@ function drawRecent(){
   $('#recentList').innerHTML=r.map(x=>`<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid var(--border);font-size:13px">
     ${(x.has_image||x.image_url)?`<span class="thumbwrap"><img class="thumb sm" data-rid="${esc(x.record_id)}" alt="" onclick="showImageModal('${esc(x.record_id)}')"></span>`:''}
     <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis"><b>${esc(x.date)}</b> ${x.weekday?'('+esc(x.weekday)+')':''} · ${esc(x.title||'러닝')} <span class="src ${esc(x.source||'manual')}">${esc((x.source||'manual').toUpperCase())}</span></span>
-    <span style="color:var(--text-secondary);font-variant-numeric:tabular-nums;white-space:nowrap">${(x.distance_km||0).toFixed(2)}km · ${paceTxt(x.avg_pace_sec_per_km)} · ${clock(x.duration_sec)}</span>
+    <span style="color:var(--text-secondary);font-variant-numeric:tabular-nums;white-space:nowrap"><b style="color:var(--text-primary)">${(x.distance_km||0).toFixed(2)}km</b> · ${paceTxt(x.avg_pace_sec_per_km)} · ${clock(x.duration_sec)}</span>
     <span style="white-space:nowrap"><button class="edit" title="수정" onclick="editRec('${esc(x.record_id)}')">✎</button><button class="del" title="삭제" onclick="delRec('${esc(x.record_id)}')">✕</button></span></div>`).join('');
 }
 
