@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
+<script>try{var _t=localStorage.getItem('run.theme.v1');if(_t)document.documentElement.setAttribute('data-theme',_t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>러닝기록 자동화 기획서 v1</title>
 <style>
@@ -720,7 +721,7 @@
 </div>
 <script>
   const root=document.documentElement, tb=document.getElementById('themeBtn');
-  tb.addEventListener('click',()=>{root.setAttribute('data-theme', root.getAttribute('data-theme')==='dark'?'light':'dark');});
+  tb.addEventListener('click',()=>{const t=(root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'))==='dark'?'light':'dark';root.setAttribute('data-theme',t);try{localStorage.setItem('run.theme.v1',t);}catch(e){}});
   const links=[...document.querySelectorAll('aside.toc a')];
   const map={};links.forEach(a=>map[a.getAttribute('href').slice(1)]=a);
   const heads=[...document.querySelectorAll('main.doc h2, main.doc h3')];
