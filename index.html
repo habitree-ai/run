@@ -314,7 +314,10 @@ async function hydrateThumbs(){
 /* ============ 구글드라이브 연동 (GIS + Picker · drive.file 최소 스코프) ============ */
 /* 플랫폼 공용 OAuth 자격 — 공개 가능 값(원본 도메인 제한). 값을 채워 배포하면 사용자는
    구글 로그인 1회로 별도 설정 없이 드라이브 자동 동기화를 쓴다 (설계: drive.html v2). */
-const PLATFORM_GOOGLE={clientId:'',apiKey:'',appId:''};
+const PLATFORM_GOOGLE={
+  clientId:'801630845002-ec3j0lpjeac4ej230qi2fciac66cp2s3.apps.googleusercontent.com',
+  apiKey:'AIzaSyB6vZsmP3FO27w3GxTLZ-xECQKoKybeBjU',
+  appId:'801630845002'};
 const DRIVE_SETTINGS_KEY='run.drive.v1'; // {clientId, apiKey, appId, jsonFileId, connected, connectedEmail, folderId, folderName} — 이 브라우저에만 저장
 function driveSettings(){try{return JSON.parse(localStorage.getItem(DRIVE_SETTINGS_KEY))||{};}catch(e){return {};}}
 function saveDriveSettings(s){try{localStorage.setItem(DRIVE_SETTINGS_KEY,JSON.stringify(s));}catch(e){toast('설정 저장 실패');}}

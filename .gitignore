@@ -4,6 +4,10 @@
 # 개인 메모 (공개 repo 제외)
 DOC/
 
+# 환경값 기록 (커밋 금지)
+.env.local
+.env*.local
+
 # Vercel
 .vercel/
 
