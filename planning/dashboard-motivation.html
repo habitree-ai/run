@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>동기부여 대시보드 고도화 · 기획</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏃</text></svg>">
+<style>
+  :root{color-scheme:light;
+    --surface-1:#fcfcfb;--plane:#f9f9f7;--text-primary:#0b0b0b;--text-secondary:#52514e;--muted:#898781;
+    --border:rgba(11,11,11,0.10);--series-1:#2a78d6;--series-1-soft:#cde2fb;--seq-700:#0d366b;
+    --good:#0ca30c;--warn:#b26a00;--warn-soft:#fdecc8;
+    --radius:14px;--shadow:0 1px 2px rgba(11,11,11,.04),0 4px 16px rgba(11,11,11,.05);
+    --font:system-ui,-apple-system,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Consolas,monospace;}
+  :root[data-theme="dark"]{color-scheme:dark;
+    --surface-1:#1a1a19;--plane:#0d0d0d;--text-primary:#fff;--text-secondary:#c3c2b7;--muted:#898781;
+    --border:rgba(255,255,255,0.10);--series-1:#3987e5;--series-1-soft:#184f95;--seq-700:#b7d3f6;
+    --warn:#fab219;--warn-soft:#3a2f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+    --surface-1:#1a1a19;--plane:#0d0d0d;--text-primary:#fff;--text-secondary:#c3c2b7;--muted:#898781;
+    --border:rgba(255,255,255,0.10);--series-1:#3987e5;--series-1-soft:#184f95;--seq-700:#b7d3f6;
+    --warn:#fab219;--warn-soft:#3a2f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);}}
+  *{box-sizing:border-box}html,body{margin:0}
+  body{background:var(--plane);color:var(--text-primary);font-family:var(--font);line-height:1.65;-webkit-font-smoothing:antialiased}
+  a{color:var(--series-1);text-decoration:none}a:hover{text-decoration:underline}
+  header.top{border-bottom:1px solid var(--border);background:var(--surface-1);position:sticky;top:0;z-index:30}
+  .top-inner{display:flex;align-items:center;gap:14px;padding:11px 20px;flex-wrap:wrap;max-width:960px;margin:0 auto}
+  .brand h1{font-size:15.5px;margin:0}
+  .spacer{flex:1}
+  .tabs{display:flex;gap:2px}
+  .tabs a{padding:6px 10px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text-secondary)}
+  .tabs a.active{background:var(--series-1-soft);color:var(--seq-700)}
+  :root[data-theme="dark"] .tabs a.active{color:#fff}
+  .toggle{border:1px solid var(--border);background:transparent;color:var(--text-secondary);width:34px;height:34px;border-radius:9px;cursor:pointer}
+  main{max-width:760px;margin:0 auto;padding:32px 22px 80px}
+  h1.doc{font-size:24px;letter-spacing:-.01em;margin:0 0 4px}
+  .doc-sub{color:var(--muted);font-size:13px;margin:0 0 28px}
+  h2{font-size:18px;margin:34px 0 10px;letter-spacing:-.01em}
+  p,li{font-size:14px;color:var(--text-secondary)}
+  b,strong{color:var(--text-primary)}
+  table{border-collapse:collapse;width:100%;font-size:13px;background:var(--surface-1);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  th{background:var(--series-1-soft);color:var(--seq-700);text-align:left;padding:9px 11px;font-size:11.5px;white-space:nowrap}
+  :root[data-theme="dark"] th{color:#dbe9ff;background:#17324f}
+  td{padding:9px 11px;border-top:1px solid var(--border);vertical-align:top}
+  pre{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:16px;font-family:var(--mono);font-size:12px;line-height:1.6;overflow:auto;color:var(--text-secondary);box-shadow:var(--shadow)}
+  code{font-family:var(--mono);font-size:.92em;background:var(--series-1-soft);padding:1px 5px;border-radius:5px;color:var(--seq-700)}
+  :root[data-theme="dark"] code{color:#dbe9ff}
+  .note{font-size:13px;color:var(--text-secondary);background:var(--series-1-soft);border-radius:10px;padding:12px 14px;margin:14px 0}
+  :root[data-theme="dark"] .note{background:rgba(57,135,229,.12)}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-inner">
+  <div class="brand"><h1>동기부여 대시보드 고도화</h1></div>
+  <div class="spacer"></div>
+  <nav class="tabs"><a href="../index.html">대시보드</a><a href="../drive.html">드라이브</a><a href="../manual/index.html">매뉴얼</a><a href="index.html" class="active">기획</a></nav>
+  <button class="toggle" id="themeBtn" aria-label="테마 전환">◐</button>
+</div></header>
+<main>
+<h1 class="doc">동기부여 대시보드 — 그래프로 달성 욕구를 자극한다</h1>
+<p class="doc-sub">2026-07-27 · 기획 + 적용 완료 · 전제: 2중 목표 관리(<a href="dual-goals.html">계획 β · 목표 α</a>)</p>
+
+<div class="note">✅ <b>적용 완료 (2026-07-27)</b> — 링 게이지 3종(β 눈금·α 만점) · 남은 양 넛지 카피 · 이번 주 요일 도트 · β 연속 주 스트릭 · 올해 누적 거리 vs β·α 페이스라인(앞섬/뒤처짐 콜아웃) · 주간 거리 차트 β·α 기준선 + 이번 주 강조. 색상 조합은 CVD(색각이상) 검증 통과.</div>
+
+<h2>1. 문제 — 막대 나열은 욕구를 만들지 못한다</h2>
+<p>기존 달성도는 기간 카드 안의 수평 막대 2개였다. 정보는 정확하지만 ① 지금 무엇을 하면 되는지(남은 양)를 계산해야 하고 ② 연간 목표(540km)는 너무 멀어서 오늘의 러닝과 연결이 끊기며 ③ 꾸준함(연속성) 자체가 보상받지 못한다.</p>
+
+<h2>2. 설계 — 4가지 동기 장치</h2>
+<table>
+<thead><tr><th>장치</th><th>구현</th><th>동기 원리</th></tr></thead>
+<tbody>
+<tr><td><b>링 게이지</b></td><td>주/월/연 횟수를 링으로 — 채움=현재, 주황 눈금=β, 만점=α. β 달성 시 링이 초록으로</td><td>닫힘 욕구(링을 채우고 싶다) — 워치 링과 같은 문법</td></tr>
+<tr><td><b>넛지 카피</b></td><td>"β까지 2회" → "β 달성 ✓ · α까지 3회" → "α 달성 🎉" 3단계 문구</td><td>남은 양을 계산해서 보여주면 다음 행동이 즉시 정해진다</td></tr>
+<tr><td><b>도트·스트릭</b></td><td>이번 주 월~일 러닝 도트 + "🔥 β 연속 N주 달성 중"</td><td>연속성의 가시화 — 끊기 싫은 사슬 효과</td></tr>
+<tr><td><b>누적 진도 차트</b></td><td>올해 누적 거리(실선) vs β·α 페이스라인(점선) + "지금 계획보다 +12.3km 앞서 있어요 🔥 / −8km 따라잡아요!" 콜아웃</td><td>연간 목표를 '오늘 기준 어디에 있어야 하는가'로 환산 — 멀리 있는 목표를 매일의 경주로 변환</td></tr>
+</tbody>
+</table>
+
+<h2>3. 시각 규칙 (dataviz 방법 적용)</h2>
+<ul>
+<li><b>단일 축</b> — 모든 차트는 y축 1개. 누적 차트의 β·α는 시리즈가 아닌 <b>기준선(점선 + 직접 라벨)</b>.</li>
+<li><b>색 역할 고정</b> — 실적=파랑(<code>--series-1</code>), β=주황(<code>--guide-beta</code>), α=보라(<code>--guide-alpha</code>). 라이트/다크 각각 검증:
+  라이트 <code>#2a78d6·#b26a00·#7c5cd6</code>, 다크 <code>#3987e5·#c27a00·#8668d8</code> — 5개 항목(명도 밴드·채도·CVD 분리·정상 시각 분리·대비) 전부 통과.</li>
+<li><b>색에만 의존하지 않음</b> — 기준선은 점선 패턴 + β/α 텍스트 라벨, 달성은 ✓ 기호 병기.</li>
+<li><b>호버 레이어</b> — 누적 차트 월별 점·주간 막대 모두 툴팁, 링은 title 툴팁.</li>
+<li><b>이번 주 강조</b> — 주간 거리 차트의 현재 주 막대만 진한 파랑(<code>--seq-550</code>).</li>
+</ul>
+
+<h2>4. 배치</h2>
+<pre>KPI 카드(총 러닝·거리·시간·평균 페이스·PR)
+→ 달성도: 링 카드 3종(이번 주 +도트·스트릭 / 이번 달 / 올해) + 페이스 기준 카드
+→ 올해 누적 거리 — 계획 대비 (전면 차트 + 콜아웃)
+→ 주간 거리(β·α 기준선) · 페이스 추이
+→ 최근 러닝</pre>
+
+<h2>5. 백로그</h2>
+<ul>
+<li>월별 캘린더 히트맵(러닝한 날 채움) — 연간 꾸준함의 한눈 보기</li>
+<li>α 페이스라인 대비 콜아웃 토글(현재는 β 기준)</li>
+<li>주간 요약 공유 카드(이미지 내보내기) — 블로그 글감과 연계</li>
+</ul>
+
+<div class="note">ℹ️ 관련: <a href="dual-goals.html">2중 목표 관리</a> · <a href="nrc-capture-flow.html">NRC 캡쳐 플로우 고도화</a></div>
+</main>
+<script>
+const root=document.documentElement;
+document.getElementById('themeBtn').addEventListener('click',()=>{root.setAttribute('data-theme',root.getAttribute('data-theme')==='dark'?'light':'dark');});
+</script>
+</body>
+</html>
