@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>기록 데이터 저장 구조 · 매뉴얼</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏃</text></svg>">
+<style>
+  :root{color-scheme:light;
+    --surface-1:#fcfcfb;--plane:#f9f9f7;--text-primary:#0b0b0b;--text-secondary:#52514e;--muted:#898781;
+    --border:rgba(11,11,11,0.10);--series-1:#2a78d6;--series-1-soft:#cde2fb;--seq-700:#0d366b;
+    --good:#0ca30c;--warn:#b26a00;--warn-soft:#fdecc8;
+    --radius:14px;--shadow:0 1px 2px rgba(11,11,11,.04),0 4px 16px rgba(11,11,11,.05);
+    --font:system-ui,-apple-system,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Consolas,monospace;}
+  :root[data-theme="dark"]{color-scheme:dark;
+    --surface-1:#1a1a19;--plane:#0d0d0d;--text-primary:#fff;--text-secondary:#c3c2b7;--muted:#898781;
+    --border:rgba(255,255,255,0.10);--series-1:#3987e5;--series-1-soft:#184f95;--seq-700:#b7d3f6;
+    --warn:#fab219;--warn-soft:#3a2f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+    --surface-1:#1a1a19;--plane:#0d0d0d;--text-primary:#fff;--text-secondary:#c3c2b7;--muted:#898781;
+    --border:rgba(255,255,255,0.10);--series-1:#3987e5;--series-1-soft:#184f95;--seq-700:#b7d3f6;
+    --warn:#fab219;--warn-soft:#3a2f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);}}
+  *{box-sizing:border-box}html,body{margin:0}
+  body{background:var(--plane);color:var(--text-primary);font-family:var(--font);line-height:1.65;-webkit-font-smoothing:antialiased}
+  a{color:var(--series-1);text-decoration:none}a:hover{text-decoration:underline}
+  header.top{border-bottom:1px solid var(--border);background:var(--surface-1);position:sticky;top:0;z-index:30}
+  .top-inner{display:flex;align-items:center;gap:14px;padding:11px 20px;flex-wrap:wrap;max-width:960px;margin:0 auto}
+  .brand h1{font-size:15.5px;margin:0}
+  .spacer{flex:1}
+  .tabs{display:flex;gap:2px}
+  .tabs a{padding:6px 10px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text-secondary)}
+  .tabs a.active{background:var(--series-1-soft);color:var(--seq-700)}
+  :root[data-theme="dark"] .tabs a.active{color:#fff}
+  .toggle{border:1px solid var(--border);background:transparent;color:var(--text-secondary);width:34px;height:34px;border-radius:9px;cursor:pointer}
+  main{max-width:760px;margin:0 auto;padding:32px 22px 80px}
+  h1.doc{font-size:24px;letter-spacing:-.01em;margin:0 0 4px}
+  .doc-sub{color:var(--muted);font-size:13px;margin:0 0 28px}
+  h2{font-size:18px;margin:34px 0 10px;letter-spacing:-.01em}
+  p,li{font-size:14px;color:var(--text-secondary)}
+  b,strong{color:var(--text-primary)}
+  table{border-collapse:collapse;width:100%;font-size:13px;background:var(--surface-1);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  th{background:var(--series-1-soft);color:var(--seq-700);text-align:left;padding:9px 11px;font-size:11.5px;white-space:nowrap}
+  :root[data-theme="dark"] th{color:#dbe9ff;background:#17324f}
+  td{padding:9px 11px;border-top:1px solid var(--border);vertical-align:top}
+  pre{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:16px;font-family:var(--mono);font-size:12px;line-height:1.6;overflow:auto;color:var(--text-secondary);box-shadow:var(--shadow)}
+  code{font-family:var(--mono);font-size:.92em;background:var(--series-1-soft);padding:1px 5px;border-radius:5px;color:var(--seq-700)}
+  :root[data-theme="dark"] code{color:#dbe9ff}
+  .note{font-size:13px;color:var(--text-secondary);background:var(--series-1-soft);border-radius:10px;padding:12px 14px;margin:14px 0}
+  :root[data-theme="dark"] .note{background:rgba(57,135,229,.12)}
+  .qa{border-left:3px solid var(--series-1);padding:2px 0 2px 14px;margin:14px 0;font-size:14px;color:var(--text-primary);font-weight:600}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-inner">
+  <div class="brand"><h1>기록 데이터 저장 구조</h1></div>
+  <div class="spacer"></div>
+  <nav class="tabs"><a href="../index.html">대시보드</a><a href="../drive.html">드라이브</a><a href="index.html">매뉴얼</a></nav>
+  <button class="toggle" id="themeBtn" aria-label="테마 전환">◐</button>
+</div></header>
+<main>
+<h1 class="doc">사용자의 기록정보는 어떻게 저장되는가</h1>
+<p class="doc-sub">2026-07-27 · 개념 Q&amp;A · 드라이브 동기화 v2 기준</p>
+
+<div class="qa">Q. 사용자가 저장한 데이터와 연결된 정보는 구글드라이브에 저장되는 방식인가? 기록정보가 어떻게 저장되는 거지?</div>
+<p><b>A. 2단계 구조다.</b> 기록은 <b>① 사용자 브라우저에 즉시 저장</b>되고(항상 · 오프라인 동작), 구글 계정을 연결했다면 <b>② 3초 뒤 사용자의 드라이브에 파일 1개(<code>running_records.json</code>)로 자동 업로드</b>된다. 서버·DB는 어디에도 없다.</p>
+
+<h2>1차 저장소 — 사용자 브라우저 (항상 · 즉시)</h2>
+<table>
+<thead><tr><th>데이터</th><th>저장 위치</th></tr></thead>
+<tbody>
+<tr><td>기록 목록 (거리·페이스·시간 등 전체 필드)</td><td>localStorage <code>run.records.v2</code></td></tr>
+<tr><td>목표 (주간/월간/연간)</td><td>localStorage <code>run.goals.v1</code></td></tr>
+<tr><td>삭제 이력 (동기화 부활 방지 tombstone)</td><td>localStorage <code>run.deleted.v1</code></td></tr>
+<tr><td><b>사진 원본</b> (캡쳐 이미지 blob)</td><td><b>IndexedDB</b> — 기록 id를 키로 보관</td></tr>
+<tr><td>설정 (드라이브 연결 상태 · 블로그 설정)</td><td>localStorage</td></tr>
+</tbody>
+</table>
+<p>저장 버튼을 누르는 순간 드라이브 연결 여부와 무관하게 여기 먼저 기록된다 — 그래서 오프라인에서도 앱이 완전히 동작한다.</p>
+
+<h2>2차 저장소 — 사용자의 구글드라이브 (계정 연결 시)</h2>
+<pre>running_records.json  (내 드라이브에 자동 생성 · 사람이 읽을 수 있는 JSON)
+├─ records[]      ← 기록 전체 — 한 건 = 날짜·거리·페이스·시간·고도·
+│                    케이던스·심박·출처(source)·원본 캡쳐 연결(source_file_id)·
+│                    생성/수정 시각(created_at/updated_at) 등
+├─ goals          ← 목표 설정 (updated_at 포함)
+├─ deleted_ids[]  ← 삭제 이력 — 다른 기기에서 부활 방지
+└─ schema_version · count · exported_at 등 메타정보</pre>
+
+<h2>전체 흐름</h2>
+<pre>[기록 저장] → 브라우저에 즉시 저장 (localStorage + 사진은 IndexedDB)
+          → 연결돼 있으면 3초 디바운스 후 running_records.json 자동 업로드(덮어쓰기)
+[다른 기기] → 접속·첫 클릭·60초 폴링·탭 복귀 시 파일 변경(modifiedTime) 감지
+          → 다운로드 → 병합(신규 추가 · 최근 수정본 채택 · 삭제 반영)</pre>
+
+<h2>핵심 포인트</h2>
+<ul>
+<li><b>사진은 드라이브의 JSON에 포함되지 않는다.</b> 사진은 기기별 IndexedDB에만 있다. 단, 드라이브 캡쳐에서 가져온 기록이라면 <b>원본 캡쳐가 이미 사용자 드라이브에 존재</b>하며 기록의 <code>source_file_id</code>가 그 파일을 가리킨다 — "사진의 정본 = 드라이브의 캡쳐 원본, 숫자 데이터의 정본 = running_records.json"으로 역할이 나뉜다.</li>
+<li><b>투명성</b> — 사용자는 자기 드라이브에서 이 파일을 직접 열어볼 수 있다(일반 JSON 텍스트). 실수로 삭제해도 앱이 다음 저장 때 자동으로 새로 만든다(파일 ID 404 감지 → 재생성).</li>
+<li><b>역할 정리</b> — 브라우저 = 1차 정본(즉시성·오프라인), 드라이브 = 2차 정본(백업 + 기기 간 동기화 허브). JSON 내보내기 버튼은 여기에 더한 수동 3중 백업 수단.</li>
+</ul>
+
+<div class="note">ℹ️ 관련 문서: <a href="multi-device-sync.html">PC·모바일 간 데이터 연계</a> · <a href="drive-vs-baas.html">드라이브 연동 vs Supabase(BaaS)</a> · <a href="../drive.html">드라이브 연동 설계 v2</a></div>
+</main>
+<script>
+const root=document.documentElement;
+document.getElementById('themeBtn').addEventListener('click',()=>{root.setAttribute('data-theme',root.getAttribute('data-theme')==='dark'?'light':'dark');});
+</script>
+</body>
+</html>
