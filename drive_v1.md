@@ -11,7 +11,7 @@ v1의 "사용자마다 자격 발급(BYO)"을 **플랫폼 공용 자격 + 로그
 | 항목 | v2 결정 | 근거 |
 |---|---|---|
 | 자격 정보 | 플랫폼 공용 Client ID·API Key를 코드에 내장 (`PLATFORM_GOOGLE`) | Client ID·API Key는 공개 가능 값(승인된 원본 도메인으로 제한). 사용자 발급 절차 제거. 사용자가 자체 자격을 입력하면(BYO) 그것이 우선 |
-| 권한 스코프 | **`drive.file` + `userinfo.email`만** (비민감 등급) | 비민감 스코프만 쓰면 **Google 앱 검증(보안 심사) 없이 프로덕션 게시 가능** → 아무 구글 계정이나 로그인 가능. `drive.readonly`는 **제한(restricted) 등급**이라 유지 시 심사 필요 → BYO 모드 전용으로 격하 |
+| 권한 스코프 | **`drive.file` + `userinfo.email` + `userinfo.profile`만** (전부 비민감 등급 · profile은 로그인 프로필 표시용, 2026-07-27 추가) | 비민감 스코프만 쓰면 **Google 앱 검증(보안 심사) 없이 프로덕션 게시 가능** → 아무 구글 계정이나 로그인 가능. `drive.readonly`는 **제한(restricted) 등급**이라 유지 시 심사 필요 → BYO 모드 전용으로 격하 |
 | 기본 폴더 고정 | BYO 모드 전용 | 폴더 고정 Picker 뷰는 `drive.readonly` 필요(v1에서 403 확인). 플랫폼 모드 Picker는 표준 이미지 뷰 사용 |
 | 동기화 | 자동 (아래 흐름) | v1의 수동 `☁ 정본 백업` 버튼을 대체 |
 

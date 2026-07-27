@@ -83,10 +83,10 @@
 <tbody>
 <tr><td><b>브랜딩 (Branding)</b></td><td>앱 이름: <code>러닝 누적기록</code> (사용자 동의 화면에 표시) · 지원 이메일: 관리자 Gmail</td></tr>
 <tr><td><b>대상 (Audience)</b></td><td>사용자 유형: <b>외부(External)</b></td></tr>
-<tr><td><b>데이터 액세스 (Data Access)</b></td><td>"범위 추가 또는 삭제"에서 다음 <b>2개만</b> 추가:<br><code>.../auth/drive.file</code> · <code>.../auth/userinfo.email</code></td></tr>
+<tr><td><b>데이터 액세스 (Data Access)</b></td><td>"범위 추가 또는 삭제"에서 다음 <b>3개만</b> 추가:<br><code>.../auth/drive.file</code> · <code>.../auth/userinfo.email</code> · <code>.../auth/userinfo.profile</code></td></tr>
 </tbody>
 </table>
-<div class="note warn">⚠️ <b>이 2개 스코프만 넣을 것.</b> <code>drive.readonly</code> 등 다른 Drive 스코프를 추가하는 순간 민감/제한 범위로 분류되어 <b>Google 보안 심사 대상</b>이 된다. 위 2개는 비민감이라 심사가 없다.</div>
+<div class="note warn">⚠️ <b>이 3개 스코프만 넣을 것.</b> <code>drive.readonly</code> 등 다른 Drive 스코프를 추가하는 순간 민감/제한 범위로 분류되어 <b>Google 보안 심사 대상</b>이 된다. 위 3개는 전부 비민감이라 심사가 없다.</div>
 <p>마지막으로 <b>대상(Audience) 페이지의 "앱 게시(Publish app)" 버튼</b>을 눌러 게시 상태를 <b>프로덕션</b>으로 전환한다. 심사 관련 경고 팝업이 떠도 비민감 스코프만 쓰므로 별도 제출 없이 완료된다. <b>이걸 안 하면 등록된 테스트 사용자만 로그인할 수 있다.</b></p>
 
 <h2>3단계 — OAuth 클라이언트 ID 발급</h2>

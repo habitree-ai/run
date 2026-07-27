@@ -70,7 +70,7 @@
 <thead><tr><th>항목</th><th>v2 결정</th><th>근거</th></tr></thead>
 <tbody>
 <tr><td>자격 정보</td><td>플랫폼 공용 Client ID·API Key를 코드에 내장 (<code>PLATFORM_GOOGLE</code>)</td><td>공개 가능 값(원본 도메인 제한). 사용자 발급 절차 제거 — 자체 자격 입력(BYO) 시 그것이 우선</td></tr>
-<tr><td>권한 스코프</td><td><b><code>drive.file</code> + <code>userinfo.email</code>만</b> (비민감)</td><td>비민감 스코프만 쓰면 <b>Google 앱 검증 없이 프로덕션 게시 가능</b> → 누구나 로그인. <code>drive.readonly</code>는 제한 등급(심사 필요) → BYO 전용으로 격하</td></tr>
+<tr><td>권한 스코프</td><td><b><code>drive.file</code> + <code>userinfo.email</code> + <code>userinfo.profile</code>만</b> (전부 비민감 · profile은 로그인 프로필 표시용)</td><td>비민감 스코프만 쓰면 <b>Google 앱 검증 없이 프로덕션 게시 가능</b> → 누구나 로그인. <code>drive.readonly</code>는 제한 등급(심사 필요) → BYO 전용으로 격하</td></tr>
 <tr><td>기본 폴더 고정</td><td>BYO 모드 전용</td><td>폴더 고정 Picker 뷰는 <code>drive.readonly</code> 필요(v1에서 403 확인)</td></tr>
 <tr><td>동기화</td><td>자동 — 아래 흐름</td><td>수동 <code>☁ 정본 백업</code> 버튼 대체</td></tr>
 </tbody>

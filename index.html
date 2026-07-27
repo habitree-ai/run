@@ -43,6 +43,13 @@
     border:1px solid var(--border);border-radius:999px;padding:4px 11px;background:var(--plane);cursor:pointer}
   .storage-pill .d{width:8px;height:8px;border-radius:50%;background:var(--warn)}
   .storage-pill.connected .d{background:var(--good)}
+  /* 로그인 프로필 칩 */
+  .profile{display:flex;align-items:center;gap:7px;border:1px solid var(--border);background:var(--plane);border-radius:999px;
+    padding:3px 11px 3px 4px;cursor:pointer;font-size:12px;color:var(--text-secondary);font-family:inherit}
+  .profile:hover{background:var(--surface-1)}
+  .profile img,.pf-fallback{width:24px;height:24px;border-radius:50%;flex:none}
+  .pf-fallback{display:grid;place-items:center;background:var(--series-1);color:#fff;font-weight:700;font-size:12px}
+  .profile .pf-name{max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
   .docnav{display:flex;gap:2px}
   .docnav a{padding:6px 10px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text-secondary)}
   .docnav a.active{background:var(--series-1-soft);color:var(--seq-700)}
@@ -188,6 +195,7 @@
       <div><h1>러닝 누적기록 <span class="draft-badge">v2</span></h1><div class="sub">사진 한 장 = 기록 한 건 · 데이터는 내 브라우저에</div></div>
     </div>
     <div class="spacer"></div>
+    <span id="authArea"></span>
     <div class="storage-pill" id="storagePill"><span class="d"></span><span id="storageText">불러오는 중…</span></div>
     <nav class="docnav">
       <a href="index.html" class="active">대시보드</a><a href="guide.html">사용법</a><a href="drive.html">드라이브</a><a href="blog.html">블로그</a>
@@ -388,9 +396,9 @@ async function driveToken(fresh){ /* fresh: 만료 전 선제 갱신용 — 캐�
       _tokenClient=google.accounts.oauth2.initTokenClient({
         client_id:c.clientId,
         hint:driveSettings().connectedEmail||undefined, /* 연결 계정 힌트 — 계정 선택창 없이 조용한 재발급 */
-        /* drive.file: 앱 파일 읽기·쓰기(비민감 — 앱 검증 불요) · email: 연결 계정 표시.
+        /* drive.file: 앱 파일 읽기·쓰기 · email/profile: 로그인 프로필 표시 — 전부 비민감(앱 검증 불요).
            drive.readonly(제한 등급 — 기본 폴더 Picker 뷰용)는 BYO 자격일 때만 추가 */
-        scope:'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email'+(c.byo?' https://www.googleapis.com/auth/drive.readonly':''),
+        scope:'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile'+(c.byo?' https://www.googleapis.com/auth/drive.readonly':''),
         callback:t=>{
           if(t&&t.access_token){_gisToken=t.access_token;_gisTokenExp=Date.now()+((+t.expires_in||3600)*1000);_tokenSnooze=0;res(_gisToken);}
           else rej(new Error((t&&t.error)||'토큰 발급 실패'));
@@ -703,7 +711,10 @@ async function connectDrive(){ /* 사용자 제스처에서 호출 — 최초 1�
     const token=await driveToken();
     const s=driveSettings();s.connected=true;
     try{const r=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:'Bearer '+token}});
-      if(r.ok)s.connectedEmail=(await r.json()).email||s.connectedEmail||null;}catch(e){}
+      if(r.ok){const u=await r.json(); /* 프로필 — 헤더 칩 표시용 */
+        s.connectedEmail=u.email||s.connectedEmail||null;
+        s.connectedName=u.name||s.connectedName||null;
+        s.connectedPicture=u.picture||s.connectedPicture||null;}}catch(e){}
     saveDriveSettings(s);
     toast('구글 계정이 연결되었습니다'+(s.connectedEmail?' · '+s.connectedEmail:''));
     setPill();if(current==='data')renderData();
@@ -714,7 +725,8 @@ function disconnectDrive(){
   const s=driveSettings();
   if(_gisToken){try{google.accounts.oauth2.revoke(_gisToken,()=>{});}catch(e){}}
   _gisToken=null;_gisTokenExp=0;_tokenClient=null;_pendingBackup=false;
-  s.connected=false;delete s.connectedEmail;saveDriveSettings(s); /* jsonFileId는 유지 — 재연결 시 같은 정본 사용 */
+  s.connected=false;delete s.connectedEmail;delete s.connectedName;delete s.connectedPicture;
+  saveDriveSettings(s); /* jsonFileId는 유지 — 재연결 시 같은 정본 사용 */
   toast('구글 계정 연결을 해제했습니다');setPill();if(current==='data')renderData();
 }
 function scheduleAutoBackup(){ /* 저장 직후 3초 디바운스 — 드라이브 큐 연속 저장을 1회 업로드로 합침 */
@@ -1289,8 +1301,35 @@ function setPill(){
     $('#storageText').textContent='브라우저 저장 · '+n+'건';
     pill.title='데이터 · 내보내기로 이동';pill.classList.add('connected');
   }
+  renderAuth();
 }
 $('#storagePill').addEventListener('click',()=>{if(driveConnected())resyncNow();else show('data');});
+function renderAuth(){ /* 헤더 로그인 버튼 / 로그인된 프로필 칩 */
+  const el=$('#authArea');if(!el)return;
+  const s=driveSettings();
+  if(driveConnected()){
+    el.innerHTML=`<button class="profile" onclick="openProfileMenu()" title="${esc(s.connectedEmail||'구글 계정')} — 계정 메뉴">
+      ${s.connectedPicture?`<img src="${esc(s.connectedPicture)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">`
+        :`<span class="pf-fallback">${esc((s.connectedName||s.connectedEmail||'?').slice(0,1).toUpperCase())}</span>`}
+      <span class="pf-name">${esc(s.connectedName||s.connectedEmail||'내 계정')}</span></button>`;
+  }else{
+    el.innerHTML=`<button class="btn sm" onclick="connectDrive()">구글 로그인</button>`;
+  }
+}
+function openProfileMenu(){
+  const s=driveSettings();
+  openModal(`<h3>내 계정</h3>
+    <div style="display:flex;gap:12px;align-items:center;margin:8px 0 12px">
+      ${s.connectedPicture?`<img src="${esc(s.connectedPicture)}" alt="" referrerpolicy="no-referrer" style="width:46px;height:46px;border-radius:50%" onerror="this.remove()">`
+        :`<span class="pf-fallback" style="width:46px;height:46px;font-size:19px">${esc((s.connectedName||s.connectedEmail||'?').slice(0,1).toUpperCase())}</span>`}
+      <div><b>${esc(s.connectedName||'구글 계정')}</b><div style="font-size:12.5px;color:var(--muted)">${esc(s.connectedEmail||'')}</div></div></div>
+    <p style="font-size:12.5px;margin:0 0 4px">이 계정의 구글드라이브와 자동 동기화 중입니다 — 기록·목표가 모든 기기에서 이어집니다.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:14px">
+      <button class="btn sm sec" onclick="closeModal();resyncNow()">🔄 지금 동기화</button>
+      <button class="btn sm sec" onclick="closeModal();show('data')">데이터 관리</button>
+      <button class="btn sm sec" onclick="closeModal();disconnectDrive()">로그아웃</button>
+      <button class="btn sm" onclick="closeModal()">닫기</button></div>`);
+}
 
 /* ============ 대시보드 뷰 ============ */
 function renderDashboard(){
