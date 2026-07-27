@@ -5,3 +5,5 @@ scripts/
 .git/
 *.md
 !README.md
+.env.local
+.env*.local
