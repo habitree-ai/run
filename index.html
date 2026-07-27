@@ -377,16 +377,17 @@ async function ensureGoogleLibs(){
     await _pickerP;
   }
 }
-async function driveToken(){
+async function driveToken(fresh){ /* fresh: 만료 전 선제 갱신용 — 캐시 무시 */
   const c=driveCreds();
   if(!c)throw new Error('Client ID 미설정');
-  if(_gisToken&&Date.now()<_gisTokenExp-60000)return _gisToken; /* 토큰은 메모리에만 보관 */
+  if(!fresh&&_gisToken&&Date.now()<_gisTokenExp-60000)return _gisToken; /* 토큰은 메모리에만 보관 */
   if(_tokenP)return _tokenP; /* 동시 호출은 진행 중인 발급을 공유 */
   await ensureGoogleLibs();
   _tokenP=new Promise((res,rej)=>{
     try{
       _tokenClient=google.accounts.oauth2.initTokenClient({
         client_id:c.clientId,
+        hint:driveSettings().connectedEmail||undefined, /* 연결 계정 힌트 — 계정 선택창 없이 조용한 재발급 */
         /* drive.file: 앱 파일 읽기·쓰기(비민감 — 앱 검증 불요) · email: 연결 계정 표시.
            drive.readonly(제한 등급 — 기본 폴더 Picker 뷰용)는 BYO 자격일 때만 추가 */
         scope:'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email'+(c.byo?' https://www.googleapis.com/auth/drive.readonly':''),
@@ -793,9 +794,10 @@ async function resyncNow(){ /* 수동 동기화 — 사용자 제스처라 토�
     toast('동기화 완료 · '+state.records.length+'건');
   }catch(e){toast('동기화 실패: '+((e&&e.message)||e));}
 }
-document.addEventListener('pointerdown',()=>{ /* 토큰 재확보는 사용자 제스처에서만(팝업 차단 회피) — 유효하면 no-op */
-  if(!driveConnected()||tokenAlive()||_syncBusy||Date.now()<_tokenSnooze)return;
-  driveToken().then(()=>{if(_pendingBackup)runAutoBackup();syncFromDrive(true);}).catch(()=>{setPill();});
+document.addEventListener('pointerdown',()=>{ /* 제스처에서 토큰 유지 — 만료 10분 전부터 선제 갱신해 재로그인 공백 제거 */
+  if(!driveConnected()||_syncBusy||Date.now()<_tokenSnooze)return;
+  if(_gisToken&&_gisTokenExp-Date.now()>600000)return; /* 10분 이상 남으면 통과 */
+  driveToken(true).then(()=>{if(_pendingBackup)runAutoBackup();syncFromDrive(true);}).catch(()=>{setPill();});
 },true);
 setInterval(()=>{ /* 60초 폴링 — 유효 토큰이 있을 때만, 팝업 없이 */
   if(!driveConnected()||!tokenAlive())return;
@@ -1754,7 +1756,9 @@ state.deletedIds=loadDeleted();
 saveRecords(); /* v1 → v2 마이그레이션 결과 즉시 반영 (부트 중엔 자동 백업 미발동) */
 setPill();
 show('dashboard');
-_bootDone=true; /* 이후 저장부터 자동 백업 활성 — 재방문 동기화는 첫 사용자 제스처(pointerdown)에서 */
+_bootDone=true; /* 이후 저장부터 자동 백업 활성 */
+if(driveConnected()) /* 재방문 자동 로그인 — 계정 힌트로 조용히 세션 복구, 팝업 차단 시 첫 클릭에서 폴백 */
+  driveToken().then(()=>{if(_pendingBackup)runAutoBackup();syncFromDrive(true);}).catch(()=>{setPill();});
 </script>
 </body>
 </html>
