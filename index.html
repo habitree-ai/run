@@ -1077,7 +1077,7 @@ function goalBarHTML(label,actual,beta,alpha,unit){ /* 2중 게이지 — 채움
   const mark=beta&&alpha&&alpha>beta?Math.min(99,Math.round(beta/alpha*100)):null;
   const at=unit==='km'?(Math.round(actual*100)/100):actual;
   return `<div class="goal-row"><div class="goal-top"><span>${label}</span>
-    <b>${at}${unit} <span class="bB">β${beta??'—'}${okB?'✓':''}</span> <span class="bA">α${alpha??'—'}${okA?'✓':''}</span></b></div>
+    <b>${at}${unit} <span class="bB">계획 ${beta??'—'}${okB?'✓':''}</span> <span class="bA">목표 ${alpha??'—'}${okA?'✓':''}</span></b></div>
     <div class="gbar" style="position:relative">
       ${mark?`<span style="position:absolute;left:${mark}%;top:-2px;height:12px;width:2px;background:var(--guide-beta);border-radius:1px"></span>`:''}
       <div class="gfill${okB?' done':''}" style="width:${okA?100:Math.min(pct,99)}%"></div></div></div>`;
@@ -1095,7 +1095,7 @@ function paceStatus(){ /* 페이스 현재값 — 안정: 최근 5회(3km 이상
 function paceLine(label,cur,beta,alpha){
   const chk=v=>cur&&v&&cur<=v?'✓':'';
   return `<div class="goal-row"><div class="goal-top"><span>${label}</span>
-    <b>${cur?paceTxt(cur):'—'} <span class="bB">β${beta?paceTxt(beta):'—'}${chk(beta)}</span> <span class="bA">α${alpha?paceTxt(alpha):'—'}${chk(alpha)}</span></b></div></div>`;
+    <b>${cur?paceTxt(cur):'—'} <span class="bB">계획 ${beta?paceTxt(beta):'—'}${chk(beta)}</span> <span class="bA">목표 ${alpha?paceTxt(alpha):'—'}${chk(alpha)}</span></b></div></div>`;
 }
 function paceCard(){
   const g=state.goals,ps=paceStatus();
@@ -1126,7 +1126,7 @@ function proratedYearly(tier){ /* 연간 기준을 시작점 기준으로 환산
 function startCaption(){ /* 환산 중일 때만 표시 */
   if(yearFraction()>=0.999)return '';
   const sp=startPoint(),g=state.goals;
-  return `<div style="font-size:11px;color:var(--muted);margin-top:6px">시작 ${+sp.slice(5,7)}/${+sp.slice(8,10)} 기준 환산 · 연간 원기준 β${g.plan.yearly.runs??'—'}·α${g.target.yearly.runs??'—'}회</div>`;
+  return `<div style="font-size:11px;color:var(--muted);margin-top:6px">시작 ${+sp.slice(5,7)}/${+sp.slice(8,10)} 기준 환산 · 연간 원기준 계획 ${g.plan.yearly.runs??'—'} · 목표 ${g.target.yearly.runs??'—'}회</div>`;
 }
 function ringSVG(actual,beta,alpha){ /* 횟수 링 — 채움=현재/α · β 위치 눈금 */
   const R=34,C=2*Math.PI*R,max=alpha||beta||1;
@@ -1136,20 +1136,20 @@ function ringSVG(actual,beta,alpha){ /* 횟수 링 — 채움=현재/α · β �
   if(beta&&alpha&&beta<alpha){const a=(-90+360*beta/alpha)*Math.PI/180;
     tick=`<line x1="${(44+(R-7)*Math.cos(a)).toFixed(1)}" y1="${(44+(R-7)*Math.sin(a)).toFixed(1)}" x2="${(44+(R+7)*Math.cos(a)).toFixed(1)}" y2="${(44+(R+7)*Math.sin(a)).toFixed(1)}" stroke="var(--guide-beta)" stroke-width="2.5" stroke-linecap="round"/>`;}
   return `<svg viewBox="0 0 88 88" width="94" height="94" style="display:block;flex:none">
-    <title>횟수 ${actual} · β${beta??'—'} · α${alpha??'—'}</title>
+    <title>횟수 ${actual} · 계획 ${beta??'—'} · 목표 ${alpha??'—'}</title>
     <circle cx="44" cy="44" r="${R}" fill="none" stroke="var(--grid)" stroke-width="8"/>
     ${frac>0?`<circle cx="44" cy="44" r="${R}" fill="none" stroke="${okB?'var(--good)':'var(--series-1)'}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${(C*frac).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 44 44)"/>`:''}
     ${tick}
     <text x="44" y="42" text-anchor="middle" style="font-size:20px;font-weight:750;fill:var(--text-primary)">${actual}</text>
-    <text x="44" y="57" text-anchor="middle" style="font-size:9.5px;font-weight:700;fill:${alpha?'var(--guide-alpha)':(beta?'var(--guide-beta)':'var(--muted)')}">/ ${alpha?'α'+alpha:(beta?'β'+beta:'—')}회</text>
+    <text x="44" y="57" text-anchor="middle" style="font-size:9px;font-weight:700;fill:${alpha?'var(--guide-alpha)':(beta?'var(--guide-beta)':'var(--muted)')}">/ ${alpha?'목표 '+alpha:(beta?'계획 '+beta:'—')}회</text>
   </svg>`;
 }
 function goalNudge(actual,beta,alpha,unit,dec){ /* 남은 양 넛지 — 달성 욕구의 트리거 */
   const fmt=v=>dec?(Math.round(v*10)/10):Math.ceil(v);
-  if(alpha&&actual>=alpha)return '<b style="color:var(--good-text)">🎉 목표 α 달성!</b>';
-  if(beta&&actual>=beta)return '<b style="color:var(--good-text)">계획 β 달성 ✓</b>'+(alpha?' <span class="bA" style="font-weight:600">α까지 '+fmt(alpha-actual)+unit+'</span>':'');
-  if(beta)return '<b class="bB">β까지 '+fmt(beta-actual)+unit+' 남음</b>';
-  if(alpha)return '<span class="bA">α까지 '+fmt(alpha-actual)+unit+'</span>';
+  if(alpha&&actual>=alpha)return '<b style="color:var(--good-text)">🎉 목표 달성!</b>';
+  if(beta&&actual>=beta)return '<b style="color:var(--good-text)">계획 달성 ✓</b>'+(alpha?' <span class="bA" style="font-weight:600">목표까지 '+fmt(alpha-actual)+unit+'</span>':'');
+  if(beta)return '<b class="bB">계획까지 '+fmt(beta-actual)+unit+' 남음</b>';
+  if(alpha)return '<span class="bA">목표까지 '+fmt(alpha-actual)+unit+'</span>';
   return '';
 }
 function ringCard(title,gp,gt,prog,extra){
@@ -1179,7 +1179,7 @@ function betaStreak(){ /* β(주간 횟수) 연속 달성 주 수 — 이번 주
   while(met(key(d))&&streak<520){streak++;d.setDate(d.getDate()-7);}
   return streak;
 }
-function streakHTML(){const n=betaStreak();return n?`<div style="font-size:12px;margin-top:7px">🔥 <b>β 연속 ${n}주</b> 달성 중</div>`:'';}
+function streakHTML(){const n=betaStreak();return n?`<div style="font-size:12px;margin-top:7px">🔥 <b>계획 연속 ${n}주</b> 달성 중</div>`:'';}
 function drawHeatmap(){ /* 꾸준함 잔디 — 최근 20주 요일×주 격자, 거리 농도(단일 색상 명암) · 벤치마킹: Runalyze·Smashrun 캘린더 히트맵 */
   const el=$('#ch-heat');if(!el)return;
   const weeks=20,cell=12,gap=3,left=26,top=16;
@@ -1227,12 +1227,12 @@ function drawCumulative(){ /* 올해 누적 거리 vs β·α 페이스라인 —
   if(nEl&&bY){ /* 시작점 이후 경과일 기준 β 진도선 대비 */
     const elapsed=Math.max(1,Math.round((new Date(todayISO()+'T00:00:00')-s0)/86400000)+1);
     const d=acc-bY*Math.min(1,elapsed/remainDays);
-    nEl.innerHTML=d>=0?`<b style="color:var(--good-text)">지금 계획(β) 페이스보다 ${d.toFixed(1)}km 앞서 있어요 🔥</b>`
-      :`<b style="color:var(--guide-beta)">계획(β) 페이스까지 ${(-d).toFixed(1)}km — 따라잡아요!</b>`;
+    nEl.innerHTML=d>=0?`<b style="color:var(--good-text)">지금 계획 페이스보다 ${d.toFixed(1)}km 앞서 있어요 🔥</b>`
+      :`<b style="color:var(--guide-beta)">계획 페이스까지 ${(-d).toFixed(1)}km — 따라잡아요!</b>`;
   }
   const sEl=$('#cumStart');
-  if(sEl)sEl.textContent=f<0.999?`· 시작 ${+sp.slice(5,7)}/${+sp.slice(8,10)} — 기준선은 연간 β·α의 시작일 환산`:'';
-  const W=el.clientWidth||940,H=225,P={t:16,r:48,b:24,l:40};
+  if(sEl)sEl.textContent=f<0.999?`· 시작 ${+sp.slice(5,7)}/${+sp.slice(8,10)} — 기준선은 연간 계획·목표의 시작일 환산`:'';
+  const W=el.clientWidth||940,H=225,P={t:16,r:64,b:24,l:40};
   const iw=W-P.l-P.r,ih=H-P.t-P.b;
   const maxV=Math.max(aY||0,bY||0,acc,1)*1.05;
   const xd=d=>P.l+iw*Math.min(1,Math.max(0,(d-s0)/(yEnd-s0)));
@@ -1242,7 +1242,7 @@ function drawCumulative(){ /* 올해 누적 거리 vs β·α 페이스라인 —
   const mStep=(12-sM+1)>8?2:1;
   for(let m=sM;m<=12;m+=mStep)s+=`<text class="tick" x="${xd(new Date(y,m-1,15)).toFixed(1)}" y="${H-7}" text-anchor="middle">${m}월</text>`;
   const guide=(v,c,lb)=>v?`<line x1="${P.l}" y1="${yv(0)}" x2="${(P.l+iw).toFixed(1)}" y2="${yv(v)}" stroke="${c}" stroke-width="2" stroke-dasharray="6 5"/><text x="${(P.l+iw+4).toFixed(1)}" y="${yv(v)+3}" style="font-size:10px;font-weight:700;fill:${c}">${lb}</text>`:'';
-  s+=guide(aY,'var(--guide-alpha)','α'+aY)+guide(bY,'var(--guide-beta)','β'+bY);
+  s+=guide(aY,'var(--guide-alpha)','목표 '+aY)+guide(bY,'var(--guide-beta)','계획 '+bY);
   const today=new Date(todayISO()+'T00:00:00');
   const pts=cum.map(e=>[xd(e.m===nowM?today:new Date(y,e.m,0)),yv(e.v),e]);
   if(pts.length){
@@ -1292,17 +1292,17 @@ function renderDashboard(){
       <button class="btn" onclick="show('add')">＋ 기록 추가</button>
     </div>
     <div class="sect" style="margin-top:8px">달성도 <a href="#" onclick="show('goals');return false" style="font-size:12px;font-weight:600;margin-left:6px">설정 →</a>
-      <span style="font-weight:400;margin-left:6px"><span class="chipB">β 계획 · 반드시 = 눈금</span> <span class="chipA">α 목표 · 도전 = 전체</span></span></div>
+      <span style="font-weight:400;margin-left:6px"><span class="chipB">계획 · 반드시 지킬 선 = 눈금</span> <span class="chipA">목표 · 도전할 선 = 전체</span></span></div>
     <div class="goalcards">${ringCard('이번 주',g.plan.weekly,g.target.weekly,p.weekly,weekDotsHTML()+streakHTML())}${ringCard('이번 달',g.plan.monthly,g.target.monthly,p.monthly)}${ringCard('올해',proratedYearly(g.plan.yearly),proratedYearly(g.target.yearly),p.yearly,startCaption())}${paceCard()}</div>
     <div class="grid2a">
       <div class="chart-card"><h3>꾸준함 (최근 20주)</h3>
         <div class="cs">하루 한 칸 — 진할수록 먼 거리 · <span style="display:inline-flex;gap:2px;vertical-align:-2px"><span style="width:9px;height:9px;border-radius:2px;background:var(--grid)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--series-1-soft)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--series-1)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--seq-550)"></span></span> · 테두리=오늘</div>
         <div id="ch-heat" style="overflow-x:auto"></div></div>
-      <div class="chart-card"><h3>주간 거리</h3><div class="cs">주별 합계 · km · 기준선 <span class="bB">β</span>·<span class="bA">α</span></div><div id="ch-week"></div></div>
+      <div class="chart-card"><h3>주간 거리</h3><div class="cs">주별 합계 · km · 기준선 <span class="bB">계획</span>·<span class="bA">목표</span></div><div id="ch-week"></div></div>
     </div>
     <div class="grid2a">
       <div class="chart-card"><h3>올해 누적 거리 — 계획 대비</h3>
-        <div class="cs"><span style="color:var(--series-1);font-weight:700">— 실적</span> · <span class="bB">╌ β 계획</span> · <span class="bA">╌ α 목표</span> <span id="cumStart" style="font-weight:400"></span></div>
+        <div class="cs"><span style="color:var(--series-1);font-weight:700">— 실적</span> · <span class="bB">╌ 계획</span> · <span class="bA">╌ 목표</span> <span id="cumStart" style="font-weight:400"></span></div>
         <div id="cumNudge" style="font-size:13px;margin:2px 0 6px"></div>
         <div id="ch-cum"></div></div>
       <div class="chart-card"><h3>페이스 추이</h3><div class="cs">기록 순 · 낮을수록 빠름</div><div id="ch-pace"></div></div>
@@ -1324,8 +1324,8 @@ function drawWeekly(){
   const keys=lastWeeks(8).reverse(); /* 달력 기준 연속 8주 — 기록 없는 주는 0 */
   const data=keys.map(k=>({w:k.slice(5).replace('-','/'),v:map[k]||0}));
   const gw=state.goals;const guides=[];
-  if(gw.target.weekly.distance_km)guides.push({v:gw.target.weekly.distance_km,color:'var(--guide-alpha)',label:'α'+gw.target.weekly.distance_km});
-  if(gw.plan.weekly.distance_km)guides.push({v:gw.plan.weekly.distance_km,color:'var(--guide-beta)',label:'β'+gw.plan.weekly.distance_km});
+  if(gw.target.weekly.distance_km)guides.push({v:gw.target.weekly.distance_km,color:'var(--guide-alpha)',label:'목표 '+gw.target.weekly.distance_km});
+  if(gw.plan.weekly.distance_km)guides.push({v:gw.plan.weekly.distance_km,color:'var(--guide-beta)',label:'계획 '+gw.plan.weekly.distance_km});
   barChart($('#ch-week'),data,{guides,hi:data.length-1});
 }
 function drawPace(){
@@ -1525,20 +1525,20 @@ function renderGoals(){
   const wkKeys=lastWeeks(8),moKeys=lastMonths(6);
   $('#stage').innerHTML=`
     <h2 class="vh">목표 · 달성도</h2>
-    <p class="vsub"><b>27년까지 2중 관리</b> — <span class="chipB">β 계획</span> 반드시 지킬 최소 기준 · <span class="chipA">α 목표</span> 꾸준히 지켜내며 도달할 도전 기준. 빈 칸은 기준 없음.</p>
+    <p class="vsub"><b>27년까지 2중 관리</b> — <span class="chipB">계획</span> 반드시 지킬 최소 기준 · <span class="chipA">목표</span> 꾸준히 지켜내며 도달할 도전 기준. 빈 칸은 기준 없음.</p>
     <div class="form" style="max-width:760px">
       <div class="field" style="max-width:230px;margin-bottom:16px"><label>시작점 (계획 시작일)</label>
         <input id="g_start" type="date" value="${esc(g.start_date||'')}">
         <div class="hint">비우면 올해 첫 기록일 자동 적용 — 올해 링·계획 대비 차트가 이 날부터 계산됩니다</div></div>
-      <p class="goal-h" style="margin:0 0 10px"><span class="chipB">β 계획</span> 반드시 지킬 기준</p>
+      <p class="goal-h" style="margin:0 0 10px"><span class="chipB">계획</span> 반드시 지킬 기준</p>
       <div class="fg" style="grid-template-columns:repeat(3,1fr)">${tierInputs('p')}</div>
       <div class="fg" style="margin-top:12px">${paceInputs('p')}</div>
       <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
-      <p class="goal-h" style="margin:0 0 10px"><span class="chipA">α 목표</span> 도전할 기준</p>
+      <p class="goal-h" style="margin:0 0 10px"><span class="chipA">목표</span> 도전할 기준</p>
       <div class="fg" style="grid-template-columns:repeat(3,1fr)">${tierInputs('t')}</div>
       <div class="fg" style="margin-top:12px">${paceInputs('t')}</div>
       <div class="form-actions"><button class="btn" onclick="saveGoalsForm()">기준 저장</button></div></div>
-    <div class="sect">현재 달성 현황 <span style="font-size:11.5px;color:var(--muted);font-weight:400">눈금 = β 위치 · 막대 전체 = α${yearFraction()<0.999?' · 올해는 시작 '+(+startPoint().slice(5,7))+'/'+(+startPoint().slice(8,10))+' 기준 환산':''}</span></div>
+    <div class="sect">현재 달성 현황 <span style="font-size:11.5px;color:var(--muted);font-weight:400">눈금 = 계획 위치 · 막대 전체 = 목표${yearFraction()<0.999?' · 올해는 시작 '+(+startPoint().slice(5,7))+'/'+(+startPoint().slice(8,10))+' 기준 환산':''}</span></div>
     <div class="goalcards">${goalCard('이번 주',g.plan.weekly,g.target.weekly,p.weekly)}${goalCard('이번 달',g.plan.monthly,g.target.monthly,p.monthly)}${goalCard('올해',proratedYearly(g.plan.yearly),proratedYearly(g.target.yearly),p.yearly)}${paceCard()}</div>
     <div class="sect">주간 이력 (최근 8주)</div>
     <div style="overflow:auto"><table class="data"><thead><tr><th>주 (월요일 시작)</th><th>횟수</th><th>거리</th><th>횟수 달성률</th><th>거리 달성률</th></tr></thead>
@@ -1546,7 +1546,7 @@ function renderGoals(){
     <div class="sect">월간 이력 (최근 6개월)</div>
     <div style="overflow:auto"><table class="data"><thead><tr><th>월</th><th>횟수</th><th>거리</th><th>횟수 달성률</th><th>거리 달성률</th></tr></thead>
       <tbody>${historyRows(moKeys,monthKey,g.plan.monthly,g.target.monthly,k=>k.replace('-','년 ')+'월')}</tbody></table></div>
-    <p style="font-size:11.5px;color:var(--muted);margin-top:8px">이력 달성률은 현재 설정된 기준(β·α)을 과거 기간에도 동일하게 적용해 계산합니다.</p>`;
+    <p style="font-size:11.5px;color:var(--muted);margin-top:8px">이력 달성률은 현재 설정된 기준(계획·목표)을 과거 기간에도 동일하게 적용해 계산합니다.</p>`;
 }
 function lastWeeks(n){
   const out=[];const cur=new Date(isoWeekKey(todayISO())+'T00:00:00');
@@ -1564,7 +1564,7 @@ function historyRows(keys,keyFn,gp,gt,labelFn){
     const cell=(actual,b,a)=>{
       if(!b&&!a)return '<td>—</td>';
       const okB=b&&actual>=b,okA=a&&actual>=a; /* 원값 비교 */
-      const s=(b?'<span class="bB">β'+Math.round(actual/b*100)+'%'+(okB?'✓':'')+'</span>':'')+(b&&a?' ':'')+(a?'<span class="bA">α'+Math.round(actual/a*100)+'%'+(okA?'✓':'')+'</span>':'');
+      const s=(b?'<span class="bB">계획 '+Math.round(actual/b*100)+'%'+(okB?'✓':'')+'</span>':'')+(b&&a?' · ':'')+(a?'<span class="bA">목표 '+Math.round(actual/a*100)+'%'+(okA?'✓':'')+'</span>':'');
       return `<td style="${okB?'font-weight:700':''}">${s}</td>`;};
     return `<tr><td>${labelFn(k)}</td><td>${t.runs}회</td><td>${t.dist.toFixed(1)}km</td>${cell(t.runs,gp.runs,gt.runs)}${cell(t.dist,gp.distance_km,gt.distance_km)}</tr>`;
   }).join('');
@@ -1694,7 +1694,7 @@ function bindHover(el){el.querySelectorAll('[data-t]').forEach(m=>{m.addEventLis
 function barChart(el,data,opts){
   opts=opts||{};const guides=opts.guides||[];
   if(!data.length){el.innerHTML='<div class="empty">데이터 없음</div>';return;}
-  const W=el.clientWidth||460,H=200,P={t:12,r:guides.length?30:8,b:24,l:28};
+  const W=el.clientWidth||460,H=200,P={t:12,r:guides.length?48:8,b:24,l:28};
   const iw=W-P.l-P.r,ih=H-P.t-P.b;
   const max=Math.max(...data.map(d=>d.v),...guides.map(x=>x.v),1)*1.12,bw=iw/data.length,bar=Math.min(30,bw*.6);
   const y=v=>P.t+ih-(v/max)*ih;let g='';
