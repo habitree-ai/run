@@ -65,12 +65,25 @@
   h2.vh{font-size:20px;letter-spacing:-.01em;margin:0 0 4px}
   .vsub{color:var(--muted);font-size:13px;margin:0 0 20px}
   /* cards / kpi */
-  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
   .card{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);padding:15px 16px;box-shadow:var(--shadow)}
-  .kpi .label{font-size:12px;color:var(--text-secondary)}
-  .kpi .val{font-size:26px;font-weight:750;letter-spacing:-.02em;margin-top:6px;line-height:1.05}
-  .kpi .val small{font-size:13px;font-weight:600;color:var(--muted);margin-left:2px}
-  .kpi .foot{font-size:11px;color:var(--muted);margin-top:4px}
+  .statrow{display:flex;flex-wrap:wrap;background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:5px 0}
+  .statrow .st{flex:1;min-width:130px;text-align:center;padding:11px 8px;border-left:1px solid var(--border)}
+  .statrow .st:first-child{border-left:none}
+  .statrow .label{font-size:11.5px;color:var(--text-secondary)}
+  .statrow .val{font-size:21px;font-weight:750;letter-spacing:-.02em;margin-top:2px;line-height:1.1}
+  .statrow .val small{font-size:12px;font-weight:600;color:var(--muted);margin-left:1px}
+  .statrow .foot{font-size:10.5px;color:var(--muted);margin-top:1px}
+  /* β(계획)·α(목표) 표기 */
+  .bB{color:var(--guide-beta);font-weight:750}
+  .bA{color:var(--guide-alpha);font-weight:750}
+  .chipB,.chipA{display:inline-block;font-size:10.5px;font-weight:800;padding:1px 8px;border-radius:999px;vertical-align:1px}
+  .chipB{color:var(--guide-beta);background:rgba(178,106,0,.12)}
+  .chipA{color:var(--guide-alpha);background:rgba(124,92,214,.13)}
+  :root[data-theme="dark"] .chipB{background:rgba(194,122,0,.2)}
+  :root[data-theme="dark"] .chipA{background:rgba(134,104,216,.22)}
+  @media(prefers-color-scheme:dark){
+    :root:not([data-theme="light"]) .chipB{background:rgba(194,122,0,.2)}
+    :root:not([data-theme="light"]) .chipA{background:rgba(134,104,216,.22)}}
   /* backends */
   .backends{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:6px}
   .be{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px}
@@ -127,8 +140,8 @@
   /* charts */
   .chart-card{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:15px 17px 10px}
   .chart-card h3{margin:0;font-size:14px;font-weight:700}.chart-card .cs{font-size:11.5px;color:var(--muted);margin:2px 0 6px}
-  .charts2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
-  @media(max-width:760px){.charts2{grid-template-columns:1fr}}
+  .grid2a{display:grid;grid-template-columns:1.2fr 1fr;gap:14px;margin-top:14px}
+  @media(max-width:760px){.grid2a{grid-template-columns:1fr}}
   svg.chart{width:100%;height:auto;display:block;overflow:visible}
   .tick{fill:var(--muted);font-size:10px;font-family:var(--font);font-variant-numeric:tabular-nums}
   .gridline{stroke:var(--grid);stroke-width:1}.baseline{stroke:var(--axis);stroke-width:1}
@@ -137,9 +150,11 @@
   .area{fill:var(--series-1);opacity:.08}.dot-m{fill:var(--surface-1);stroke:var(--series-1);stroke-width:2}
   .empty{text-align:center;color:var(--muted);font-size:13px;padding:40px 10px;border:1px dashed var(--border);border-radius:12px}
   /* goals */
-  .goalcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-top:12px}
+  .goalcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(218px,1fr));gap:12px;margin-top:12px}
   .goal-row{margin-top:12px}
-  .goal-top{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--text-secondary);margin-bottom:5px}
+  .goal-top{display:flex;justify-content:space-between;gap:4px 8px;font-size:12px;color:var(--text-secondary);margin-bottom:5px;flex-wrap:wrap}
+  .goal-top>span{white-space:nowrap}
+  .goalcards .card{word-break:keep-all}
   .goal-top b{font-variant-numeric:tabular-nums;color:var(--text-primary);font-weight:650;white-space:nowrap}
   .gbar{height:8px;background:var(--grid);border-radius:999px;overflow:hidden}
   .gfill{height:100%;background:var(--series-1);border-radius:999px;transition:width .3s}
@@ -1062,7 +1077,7 @@ function goalBarHTML(label,actual,beta,alpha,unit){ /* 2중 게이지 — 채움
   const mark=beta&&alpha&&alpha>beta?Math.min(99,Math.round(beta/alpha*100)):null;
   const at=unit==='km'?(Math.round(actual*100)/100):actual;
   return `<div class="goal-row"><div class="goal-top"><span>${label}</span>
-    <b>${at}${unit} · β${beta??'—'}${okB?'✓':''} · α${alpha??'—'}${okA?'✓':''}</b></div>
+    <b>${at}${unit} <span class="bB">β${beta??'—'}${okB?'✓':''}</span> <span class="bA">α${alpha??'—'}${okA?'✓':''}</span></b></div>
     <div class="gbar" style="position:relative">
       ${mark?`<span style="position:absolute;left:${mark}%;top:-2px;height:12px;width:2px;background:var(--guide-beta);border-radius:1px"></span>`:''}
       <div class="gfill${okB?' done':''}" style="width:${okA?100:Math.min(pct,99)}%"></div></div></div>`;
@@ -1080,7 +1095,7 @@ function paceStatus(){ /* 페이스 현재값 — 안정: 최근 5회(3km 이상
 function paceLine(label,cur,beta,alpha){
   const chk=v=>cur&&v&&cur<=v?'✓':'';
   return `<div class="goal-row"><div class="goal-top"><span>${label}</span>
-    <b>${cur?paceTxt(cur):'—'} · β${beta?paceTxt(beta):'—'}${chk(beta)} · α${alpha?paceTxt(alpha):'—'}${chk(alpha)}</b></div></div>`;
+    <b>${cur?paceTxt(cur):'—'} <span class="bB">β${beta?paceTxt(beta):'—'}${chk(beta)}</span> <span class="bA">α${alpha?paceTxt(alpha):'—'}${chk(alpha)}</span></b></div></div>`;
 }
 function paceCard(){
   const g=state.goals,ps=paceStatus();
@@ -1126,15 +1141,15 @@ function ringSVG(actual,beta,alpha){ /* 횟수 링 — 채움=현재/α · β �
     ${frac>0?`<circle cx="44" cy="44" r="${R}" fill="none" stroke="${okB?'var(--good)':'var(--series-1)'}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${(C*frac).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 44 44)"/>`:''}
     ${tick}
     <text x="44" y="42" text-anchor="middle" style="font-size:20px;font-weight:750;fill:var(--text-primary)">${actual}</text>
-    <text x="44" y="57" text-anchor="middle" style="font-size:9.5px;fill:var(--muted)">/ α${alpha??beta??'—'}회</text>
+    <text x="44" y="57" text-anchor="middle" style="font-size:9.5px;font-weight:700;fill:${alpha?'var(--guide-alpha)':(beta?'var(--guide-beta)':'var(--muted)')}">/ ${alpha?'α'+alpha:(beta?'β'+beta:'—')}회</text>
   </svg>`;
 }
 function goalNudge(actual,beta,alpha,unit,dec){ /* 남은 양 넛지 — 달성 욕구의 트리거 */
   const fmt=v=>dec?(Math.round(v*10)/10):Math.ceil(v);
-  if(alpha&&actual>=alpha)return '<b style="color:var(--good-text)">α 달성 🎉</b>';
-  if(beta&&actual>=beta)return '<b style="color:var(--good-text)">β 달성 ✓</b>'+(alpha?' <span style="color:var(--muted)">· α까지 '+fmt(alpha-actual)+unit+'</span>':'');
-  if(beta)return '<b style="color:var(--guide-beta)">β까지 '+fmt(beta-actual)+unit+'</b>';
-  if(alpha)return '<span style="color:var(--muted)">α까지 '+fmt(alpha-actual)+unit+'</span>';
+  if(alpha&&actual>=alpha)return '<b style="color:var(--good-text)">🎉 목표 α 달성!</b>';
+  if(beta&&actual>=beta)return '<b style="color:var(--good-text)">계획 β 달성 ✓</b>'+(alpha?' <span class="bA" style="font-weight:600">α까지 '+fmt(alpha-actual)+unit+'</span>':'');
+  if(beta)return '<b class="bB">β까지 '+fmt(beta-actual)+unit+' 남음</b>';
+  if(alpha)return '<span class="bA">α까지 '+fmt(alpha-actual)+unit+'</span>';
   return '';
 }
 function ringCard(title,gp,gt,prog,extra){
@@ -1276,27 +1291,29 @@ function renderDashboard(){
       <div style="flex:1;min-width:200px"><h2 class="vh">대시보드</h2><p class="vsub">누적 ${a.n}회 · ${a.d.toFixed(1)}km · 브라우저 저장(localStorage + IndexedDB)</p></div>
       <button class="btn" onclick="show('add')">＋ 기록 추가</button>
     </div>
-    <div class="sect" style="margin-top:8px">계획 β · 목표 α 달성도 <a href="#" onclick="show('goals');return false" style="font-size:12px;font-weight:600;margin-left:6px">설정 →</a>
-      <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:6px">링·막대 채움=현재 · 눈금=β(반드시) · 전체=α(도전)</span></div>
+    <div class="sect" style="margin-top:8px">달성도 <a href="#" onclick="show('goals');return false" style="font-size:12px;font-weight:600;margin-left:6px">설정 →</a>
+      <span style="font-weight:400;margin-left:6px"><span class="chipB">β 계획 · 반드시 = 눈금</span> <span class="chipA">α 목표 · 도전 = 전체</span></span></div>
     <div class="goalcards">${ringCard('이번 주',g.plan.weekly,g.target.weekly,p.weekly,weekDotsHTML()+streakHTML())}${ringCard('이번 달',g.plan.monthly,g.target.monthly,p.monthly)}${ringCard('올해',proratedYearly(g.plan.yearly),proratedYearly(g.target.yearly),p.yearly,startCaption())}${paceCard()}</div>
-    <div class="chart-card" style="margin-top:14px"><h3>꾸준함 (최근 20주)</h3>
-      <div class="cs">하루 한 칸 — 진할수록 먼 거리 · <span style="display:inline-flex;gap:2px;vertical-align:-2px"><span style="width:9px;height:9px;border-radius:2px;background:var(--grid)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--series-1-soft)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--series-1)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--seq-550)"></span></span> · 테두리=오늘</div>
-      <div id="ch-heat" style="overflow-x:auto"></div></div>
-    <div class="chart-card" style="margin-top:14px"><h3>올해 누적 거리 — 계획 대비</h3>
-      <div class="cs"><span style="color:var(--series-1);font-weight:700">— 실적</span> · <span style="color:var(--guide-beta);font-weight:700">╌ β 계획</span> · <span style="color:var(--guide-alpha);font-weight:700">╌ α 목표</span> <span id="cumStart" style="font-weight:400"></span></div>
-      <div id="cumNudge" style="font-size:13px;margin:2px 0 6px"></div>
-      <div id="ch-cum"></div></div>
-    <div class="sect">누적 통계</div>
-    <div class="cards">
-      <div class="card kpi"><div class="label">총 러닝</div><div class="val">${a.n}<small>회</small></div></div>
-      <div class="card kpi"><div class="label">총 거리</div><div class="val">${a.d.toFixed(2)}<small>km</small></div></div>
-      <div class="card kpi"><div class="label">총 시간</div><div class="val">${clock(a.t)}</div></div>
-      <div class="card kpi"><div class="label">평균 페이스</div><div class="val">${paceTxt(a.avgPace?Math.round(a.avgPace):null)}<small>/km</small></div></div>
-      <div class="card kpi"><div class="label">최장 거리 (PR)</div><div class="val">${a.longest?a.longest.distance_km.toFixed(2):'—'}<small>km</small></div><div class="foot">${a.fastest?'최고 '+paceTxt(a.fastest.avg_pace_sec_per_km)+'/km':''}</div></div>
+    <div class="grid2a">
+      <div class="chart-card"><h3>꾸준함 (최근 20주)</h3>
+        <div class="cs">하루 한 칸 — 진할수록 먼 거리 · <span style="display:inline-flex;gap:2px;vertical-align:-2px"><span style="width:9px;height:9px;border-radius:2px;background:var(--grid)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--series-1-soft)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--series-1)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--seq-550)"></span></span> · 테두리=오늘</div>
+        <div id="ch-heat" style="overflow-x:auto"></div></div>
+      <div class="chart-card"><h3>주간 거리</h3><div class="cs">주별 합계 · km · 기준선 <span class="bB">β</span>·<span class="bA">α</span></div><div id="ch-week"></div></div>
     </div>
-    <div class="charts2">
-      <div class="chart-card"><h3>주간 거리</h3><div class="cs">주별 합계 · km · 기준선 <span style="color:var(--guide-beta);font-weight:700">β</span>·<span style="color:var(--guide-alpha);font-weight:700">α</span></div><div id="ch-week"></div></div>
+    <div class="grid2a">
+      <div class="chart-card"><h3>올해 누적 거리 — 계획 대비</h3>
+        <div class="cs"><span style="color:var(--series-1);font-weight:700">— 실적</span> · <span class="bB">╌ β 계획</span> · <span class="bA">╌ α 목표</span> <span id="cumStart" style="font-weight:400"></span></div>
+        <div id="cumNudge" style="font-size:13px;margin:2px 0 6px"></div>
+        <div id="ch-cum"></div></div>
       <div class="chart-card"><h3>페이스 추이</h3><div class="cs">기록 순 · 낮을수록 빠름</div><div id="ch-pace"></div></div>
+    </div>
+    <div class="sect">누적 통계</div>
+    <div class="statrow">
+      <div class="st"><div class="label">총 러닝</div><div class="val">${a.n}<small>회</small></div></div>
+      <div class="st"><div class="label">총 거리</div><div class="val">${a.d.toFixed(2)}<small>km</small></div></div>
+      <div class="st"><div class="label">총 시간</div><div class="val">${clock(a.t)}</div></div>
+      <div class="st"><div class="label">평균 페이스</div><div class="val">${paceTxt(a.avgPace?Math.round(a.avgPace):null)}<small>/km</small></div></div>
+      <div class="st"><div class="label">최장 거리 (PR)</div><div class="val">${a.longest?a.longest.distance_km.toFixed(2):'—'}<small>km</small></div><div class="foot">${a.fastest?'최고 '+paceTxt(a.fastest.avg_pace_sec_per_km)+'/km':''}</div></div>
     </div>
     <div class="chart-card" style="margin-top:14px"><h3>최근 러닝</h3><div class="cs">최신순</div>
       <div id="recentList" style="margin-top:8px"></div></div>`;
@@ -1508,16 +1525,16 @@ function renderGoals(){
   const wkKeys=lastWeeks(8),moKeys=lastMonths(6);
   $('#stage').innerHTML=`
     <h2 class="vh">목표 · 달성도</h2>
-    <p class="vsub"><b>27년까지 2중 관리</b> — <b>계획 β</b>는 반드시 지킬 최소 기준, <b>목표 α</b>는 계획을 꾸준히 지켜내며 도달할 도전 기준. 빈 칸은 기준 없음.</p>
+    <p class="vsub"><b>27년까지 2중 관리</b> — <span class="chipB">β 계획</span> 반드시 지킬 최소 기준 · <span class="chipA">α 목표</span> 꾸준히 지켜내며 도달할 도전 기준. 빈 칸은 기준 없음.</p>
     <div class="form" style="max-width:760px">
       <div class="field" style="max-width:230px;margin-bottom:16px"><label>시작점 (계획 시작일)</label>
         <input id="g_start" type="date" value="${esc(g.start_date||'')}">
         <div class="hint">비우면 올해 첫 기록일 자동 적용 — 올해 링·계획 대비 차트가 이 날부터 계산됩니다</div></div>
-      <p class="goal-h" style="margin:0 0 10px">계획 β — 반드시 지킬 기준</p>
+      <p class="goal-h" style="margin:0 0 10px"><span class="chipB">β 계획</span> 반드시 지킬 기준</p>
       <div class="fg" style="grid-template-columns:repeat(3,1fr)">${tierInputs('p')}</div>
       <div class="fg" style="margin-top:12px">${paceInputs('p')}</div>
       <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
-      <p class="goal-h" style="margin:0 0 10px">목표 α — 도전할 기준</p>
+      <p class="goal-h" style="margin:0 0 10px"><span class="chipA">α 목표</span> 도전할 기준</p>
       <div class="fg" style="grid-template-columns:repeat(3,1fr)">${tierInputs('t')}</div>
       <div class="fg" style="margin-top:12px">${paceInputs('t')}</div>
       <div class="form-actions"><button class="btn" onclick="saveGoalsForm()">기준 저장</button></div></div>
@@ -1547,8 +1564,8 @@ function historyRows(keys,keyFn,gp,gt,labelFn){
     const cell=(actual,b,a)=>{
       if(!b&&!a)return '<td>—</td>';
       const okB=b&&actual>=b,okA=a&&actual>=a; /* 원값 비교 */
-      const s=(b?'β'+Math.round(actual/b*100)+'%'+(okB?'✓':''):'')+(b&&a?' · ':'')+(a?'α'+Math.round(actual/a*100)+'%'+(okA?'✓':''):'');
-      return `<td style="${okB?'color:var(--good-text);font-weight:700':''}">${s}</td>`;};
+      const s=(b?'<span class="bB">β'+Math.round(actual/b*100)+'%'+(okB?'✓':'')+'</span>':'')+(b&&a?' ':'')+(a?'<span class="bA">α'+Math.round(actual/a*100)+'%'+(okA?'✓':'')+'</span>':'');
+      return `<td style="${okB?'font-weight:700':''}">${s}</td>`;};
     return `<tr><td>${labelFn(k)}</td><td>${t.runs}회</td><td>${t.dist.toFixed(1)}km</td>${cell(t.runs,gp.runs,gt.runs)}${cell(t.dist,gp.distance_km,gt.distance_km)}</tr>`;
   }).join('');
 }
