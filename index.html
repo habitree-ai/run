@@ -37,7 +37,7 @@
   .draft-badge{font-size:10.5px;font-weight:700;color:#fff;background:var(--series-1);padding:2px 8px;border-radius:999px;margin-left:2px}
   .spacer{flex:1}
   .storage-pill{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-secondary);
-    border:1px solid var(--border);border-radius:999px;padding:4px 11px;background:var(--plane)}
+    border:1px solid var(--border);border-radius:999px;padding:4px 11px;background:var(--plane);cursor:pointer}
   .storage-pill .d{width:8px;height:8px;border-radius:50%;background:var(--warn)}
   .storage-pill.connected .d{background:var(--good)}
   .docnav{display:flex;gap:2px}
@@ -212,11 +212,11 @@ function todayISO(){const t=new Date();return t.getFullYear()+'-'+pad(t.getMonth
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1900);}
 
 /* ============ 상태 ============ */
-const state={records:[], goals:null, backend:'local', pendingImage:null, pendingRawOcr:null, editingId:null,
+const state={records:[], goals:null, deletedIds:[], backend:'local', pendingImage:null, pendingRawOcr:null, editingId:null,
   pendingDrive:null, driveQueue:null, driveTotal:0};
 
 /* ============ 영속화 (localStorage) ============ */
-const LS_RECORDS='run.records.v2', LS_GOALS='run.goals.v1';
+const LS_RECORDS='run.records.v2', LS_GOALS='run.goals.v1', LS_DELETED='run.deleted.v1';
 const NUM_FIELDS=['distance_km','duration_sec','avg_pace_sec_per_km','elevation_gain_m','cadence_spm','avg_heart_rate_bpm'];
 let _idSeq=0;
 function migrateRecord(r){
@@ -248,7 +248,11 @@ function loadRecords(){
 function saveRecords(){
   try{localStorage.setItem(LS_RECORDS,JSON.stringify(state.records));}
   catch(e){toast('저장 공간이 부족합니다 — JSON 내보내기 후 오래된 기록을 정리하세요');}
+  scheduleAutoBackup();
 }
+/* 삭제 표(tombstone) — 기기 간 동기화 시 삭제가 다른 기기에서 부활하지 않도록 기록 */
+function loadDeleted(){try{const j=JSON.parse(localStorage.getItem(LS_DELETED)||'[]');return Array.isArray(j)?j.filter(x=>typeof x==='string'):[];}catch(e){return [];}}
+function saveDeleted(){try{localStorage.setItem(LS_DELETED,JSON.stringify(state.deletedIds.slice(-500)));}catch(e){}}
 function defaultGoals(){return {weekly:{distance_km:null,runs:3}, monthly:{distance_km:null,runs:15}, yearly:{distance_km:null,runs:180}};}
 function sanitizeGoals(g){ /* 외부 JSON 유입 대비: 유한 양수만 허용 */
   const d=defaultGoals(),n=v=>{const x=Number(v);return isFinite(x)&&x>0?x:null;};
@@ -261,7 +265,7 @@ function loadGoals(){
   try{return sanitizeGoals(JSON.parse(localStorage.getItem(LS_GOALS)));}
   catch(e){return defaultGoals();}
 }
-function saveGoals(){try{localStorage.setItem(LS_GOALS,JSON.stringify(state.goals));}catch(e){toast('목표 저장 실패(저장 공간 부족)');}}
+function saveGoals(){try{localStorage.setItem(LS_GOALS,JSON.stringify(state.goals));}catch(e){toast('목표 저장 실패(저장 공간 부족)');}scheduleAutoBackup();}
 
 /* ============ 시드 (기록/260726.png 캡쳐 1건) ============ */
 const SEED=[{record_id:'260726', date:'2026-07-26', weekday:'일', start_time:'08:17', day_part:'오전',
@@ -308,11 +312,20 @@ async function hydrateThumbs(){
 }
 
 /* ============ 구글드라이브 연동 (GIS + Picker · drive.file 최소 스코프) ============ */
-const DRIVE_SETTINGS_KEY='run.drive.v1'; // {clientId, apiKey, appId, jsonFileId} — 이 브라우저에만 저장
+/* 플랫폼 공용 OAuth 자격 — 공개 가능 값(원본 도메인 제한). 값을 채워 배포하면 사용자는
+   구글 로그인 1회로 별도 설정 없이 드라이브 자동 동기화를 쓴다 (설계: drive.html v2). */
+const PLATFORM_GOOGLE={clientId:'',apiKey:'',appId:''};
+const DRIVE_SETTINGS_KEY='run.drive.v1'; // {clientId, apiKey, appId, jsonFileId, connected, connectedEmail, folderId, folderName} — 이 브라우저에만 저장
 function driveSettings(){try{return JSON.parse(localStorage.getItem(DRIVE_SETTINGS_KEY))||{};}catch(e){return {};}}
 function saveDriveSettings(s){try{localStorage.setItem(DRIVE_SETTINGS_KEY,JSON.stringify(s));}catch(e){toast('설정 저장 실패');}}
+function driveCreds(){ /* BYO 자격 입력 시 우선(기본 폴더 등 고급 기능) — 없으면 플랫폼 공용 자격 */
+  const s=driveSettings();
+  if(s.clientId)return {clientId:s.clientId,apiKey:s.apiKey||null,appId:s.appId||null,byo:true};
+  if(PLATFORM_GOOGLE.clientId)return {clientId:PLATFORM_GOOGLE.clientId,apiKey:PLATFORM_GOOGLE.apiKey||null,appId:PLATFORM_GOOGLE.appId||null,byo:false};
+  return null;
+}
 function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.async=true;s.onload=res;s.onerror=()=>rej(new Error('스크립트 로드 실패'));document.head.appendChild(s);});}
-let _gsiP=null,_pickerP=null,_gisToken=null,_gisTokenExp=0,_tokenClient=null;
+let _gsiP=null,_pickerP=null,_gisToken=null,_gisTokenExp=0,_tokenClient=null,_tokenP=null,_tokenSnooze=0;
 async function ensureGoogleLibs(){
   if(!(window.google&&google.accounts&&google.accounts.oauth2)){
     if(!_gsiP){_gsiP=loadScript('https://accounts.google.com/gsi/client');_gsiP.catch(()=>{_gsiP=null;});}
@@ -324,52 +337,57 @@ async function ensureGoogleLibs(){
   }
 }
 async function driveToken(){
-  const s=driveSettings();
-  if(!s.clientId)throw new Error('Client ID 미설정');
+  const c=driveCreds();
+  if(!c)throw new Error('Client ID 미설정');
   if(_gisToken&&Date.now()<_gisTokenExp-60000)return _gisToken; /* 토큰은 메모리에만 보관 */
+  if(_tokenP)return _tokenP; /* 동시 호출은 진행 중인 발급을 공유 */
   await ensureGoogleLibs();
-  return new Promise((res,rej)=>{
+  _tokenP=new Promise((res,rej)=>{
     try{
       _tokenClient=google.accounts.oauth2.initTokenClient({
-        client_id:s.clientId,
-        /* drive.file: 앱 생성 파일 쓰기(정본 백업) · drive.readonly: 폴더 고정/탐색 뷰(Picker 403 방지) */
-        scope:'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly',
+        client_id:c.clientId,
+        /* drive.file: 앱 파일 읽기·쓰기(비민감 — 앱 검증 불요) · email: 연결 계정 표시.
+           drive.readonly(제한 등급 — 기본 폴더 Picker 뷰용)는 BYO 자격일 때만 추가 */
+        scope:'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email'+(c.byo?' https://www.googleapis.com/auth/drive.readonly':''),
         callback:t=>{
-          if(t&&t.access_token){_gisToken=t.access_token;_gisTokenExp=Date.now()+((+t.expires_in||3600)*1000);res(_gisToken);}
+          if(t&&t.access_token){_gisToken=t.access_token;_gisTokenExp=Date.now()+((+t.expires_in||3600)*1000);_tokenSnooze=0;res(_gisToken);}
           else rej(new Error((t&&t.error)||'토큰 발급 실패'));
         },
-        error_callback:e=>rej(new Error(e&&e.type==='popup_closed'?'로그인 창이 닫혔습니다':(e&&e.message)||'인증 오류'))
+        error_callback:e=>{_tokenSnooze=Date.now()+600000; /* 거부·차단 시 10분간 자동 재시도 중단 */
+          rej(new Error(e&&e.type==='popup_closed'?'로그인 창이 닫혔습니다':(e&&e.message)||'인증 오류'));}
       });
       _tokenClient.requestAccessToken({prompt:''});
     }catch(e){rej(e);}
   });
+  try{return await _tokenP;}finally{_tokenP=null;}
 }
 async function openDrivePicker(){
-  const s=driveSettings();
-  if(!s.clientId||!s.apiKey){openDriveSetup();return;}
+  const c=driveCreds(),s=driveSettings();
+  if(!c||!c.apiKey){openDriveSetup();return;}
   try{
     const token=await driveToken();
     await ensureGoogleLibs();
     const view=new google.picker.DocsView(google.picker.ViewId.DOCS_IMAGES).setIncludeFolders(true);
-    if(s.folderId)view.setParent(s.folderId); /* 기본 폴더 지정 시 그 폴더에서 바로 열림 */
+    if(c.byo&&s.folderId)view.setParent(s.folderId); /* 기본 폴더는 BYO 전용(drive.readonly 필요) */
     const b=new google.picker.PickerBuilder()
-      .setOAuthToken(token).setDeveloperKey(s.apiKey).addView(view)
+      .setOAuthToken(token).setDeveloperKey(c.apiKey).addView(view)
       .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
-      .setTitle('러닝 캡쳐 선택'+(s.folderName?' — '+s.folderName:'')).setCallback(pickerCb);
-    if(s.appId)b.setAppId(s.appId);
+      .setTitle('러닝 캡쳐 선택'+(c.byo&&s.folderName?' — '+s.folderName:'')).setCallback(pickerCb);
+    if(c.appId)b.setAppId(c.appId);
     b.build().setVisible(true);
   }catch(e){toast('드라이브 연결 실패: '+((e&&e.message)||e));}
 }
-async function pickDriveFolder(){ /* 기본 캡쳐 폴더 1회 지정 → 이후 선택창이 바로 그 폴더에서 열림 */
-  const s=driveSettings();
-  if(!s.clientId||!s.apiKey){openDriveSetup();return;}
+async function pickDriveFolder(){ /* 기본 캡쳐 폴더 1회 지정 — BYO 자격 전용(폴더 뷰는 drive.readonly 필요) */
+  const c=driveCreds(),s=driveSettings();
+  if(!c||!c.apiKey){openDriveSetup();return;}
+  if(!c.byo){toast('기본 폴더 고정은 ⚙ 고급 설정(자체 자격)에서만 지원됩니다');return;}
   try{
     const token=await driveToken();
     await ensureGoogleLibs();
     const view=new google.picker.DocsView(google.picker.ViewId.FOLDERS)
       .setSelectFolderEnabled(true).setMimeTypes('application/vnd.google-apps.folder');
     const b=new google.picker.PickerBuilder()
-      .setOAuthToken(token).setDeveloperKey(s.apiKey).addView(view)
+      .setOAuthToken(token).setDeveloperKey(c.apiKey).addView(view)
       .setTitle('기본 캡쳐 폴더 선택')
       .setCallback(d=>{
         if(!(window.google&&google.picker)||d.action!==google.picker.Action.PICKED)return;
@@ -378,7 +396,7 @@ async function pickDriveFolder(){ /* 기본 캡쳐 폴더 1회 지정 → 이후
         toast('기본 폴더 지정: '+(f.name||f.id));
         if(current==='data')renderData();
       });
-    if(s.appId)b.setAppId(s.appId);
+    if(c.appId)b.setAppId(c.appId);
     b.build().setVisible(true);
   }catch(e){toast('폴더 선택 실패: '+((e&&e.message)||e));}
 }
@@ -424,32 +442,146 @@ async function downloadDriveFile(id){
   if(!r.ok)throw new Error('HTTP '+r.status);
   return r.blob();
 }
-async function backupToDrive(){
+async function uploadDataset(){ /* running_records.json 생성/갱신 — 수동 백업·자동 동기화 공용 */
+  const token=await driveToken();
   const s=driveSettings();
-  if(!s.clientId){openDriveSetup();return;}
+  const doUpload=fileId=>{
+    const boundary='run_boundary_20260726';
+    const meta={name:'running_records.json',mimeType:'application/json'};
+    const body='--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(meta)+
+      '\r\n--'+boundary+'\r\nContent-Type: application/json\r\n\r\n'+JSON.stringify(datasetOut(),null,2)+'\r\n--'+boundary+'--';
+    const url=(fileId?'https://www.googleapis.com/upload/drive/v3/files/'+encodeURIComponent(fileId):'https://www.googleapis.com/upload/drive/v3/files')
+      +'?uploadType=multipart&fields=id,modifiedTime';
+    return fetch(url,{method:fileId?'PATCH':'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'multipart/related; boundary='+boundary},body});
+  };
+  let r=await doUpload(s.jsonFileId||null);
+  if(r.status===404&&s.jsonFileId){s.jsonFileId=null;saveDriveSettings(s);r=await doUpload(null);} /* 드라이브에서 파일 삭제된 경우 새로 생성 */
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  const j=await r.json();
+  if(j.id&&j.id!==s.jsonFileId){s.jsonFileId=j.id;saveDriveSettings(s);}
+  if(j.modifiedTime)_lastRemoteMod=j.modifiedTime; /* 내 업로드를 원격 변경으로 재수신하지 않도록 */
+  return j;
+}
+async function backupToDrive(){
+  if(!driveCreds()){openDriveSetup();return;}
   try{
-    const token=await driveToken();
-    const doUpload=fileId=>{
-      const boundary='run_boundary_20260726';
-      const meta={name:'running_records.json',mimeType:'application/json'};
-      const body='--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(meta)+
-        '\r\n--'+boundary+'\r\nContent-Type: application/json\r\n\r\n'+JSON.stringify(datasetOut(),null,2)+'\r\n--'+boundary+'--';
-      const url=fileId?'https://www.googleapis.com/upload/drive/v3/files/'+encodeURIComponent(fileId)+'?uploadType=multipart'
-                      :'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
-      return fetch(url,{method:fileId?'PATCH':'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'multipart/related; boundary='+boundary},body});
-    };
-    let r=await doUpload(s.jsonFileId||null);
-    if(r.status===404&&s.jsonFileId){s.jsonFileId=null;saveDriveSettings(s);r=await doUpload(null);} /* 드라이브에서 파일 삭제된 경우 새로 생성 */
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    const j=await r.json();
-    if(j.id&&j.id!==s.jsonFileId){s.jsonFileId=j.id;saveDriveSettings(s);}
+    await uploadDataset();
+    _pendingBackup=false;setPill();
     toast('드라이브에 정본을 저장했습니다 ('+state.records.length+'건)');
   }catch(e){toast('드라이브 백업 실패: '+((e&&e.message)||e));}
 }
+
+/* ---- 자동 동기화: 연결 시 복원·병합 + 저장 시 자동 백업(디바운스) + 60초 폴링 (설계: drive.html v2) ---- */
+let _syncTimer=null,_pendingBackup=false,_syncBusy=false,_lastRemoteMod=null,_bootDone=false;
+function tokenAlive(){return !!_gisToken&&Date.now()<_gisTokenExp-60000;}
+function driveConnected(){return !!driveSettings().connected&&!!driveCreds();}
+async function connectDrive(){ /* 사용자 제스처에서 호출 — 최초 1회 동의 팝업 */
+  if(!driveCreds()){openDriveSetup();return;}
+  _tokenSnooze=0;
+  try{
+    const token=await driveToken();
+    const s=driveSettings();s.connected=true;
+    try{const r=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:'Bearer '+token}});
+      if(r.ok)s.connectedEmail=(await r.json()).email||s.connectedEmail||null;}catch(e){}
+    saveDriveSettings(s);
+    toast('구글 계정이 연결되었습니다'+(s.connectedEmail?' · '+s.connectedEmail:''));
+    setPill();if(current==='data')renderData();
+    await syncFromDrive(true);
+  }catch(e){toast('연결 실패: '+((e&&e.message)||e));}
+}
+function disconnectDrive(){
+  const s=driveSettings();
+  if(_gisToken){try{google.accounts.oauth2.revoke(_gisToken,()=>{});}catch(e){}}
+  _gisToken=null;_gisTokenExp=0;_tokenClient=null;_pendingBackup=false;
+  s.connected=false;delete s.connectedEmail;saveDriveSettings(s); /* jsonFileId는 유지 — 재연결 시 같은 정본 사용 */
+  toast('구글 계정 연결을 해제했습니다');setPill();if(current==='data')renderData();
+}
+function scheduleAutoBackup(){ /* 저장 직후 3초 디바운스 — 드라이브 큐 연속 저장을 1회 업로드로 합침 */
+  if(!_bootDone||!driveConnected())return;
+  _pendingBackup=true;setPill();
+  clearTimeout(_syncTimer);_syncTimer=setTimeout(runAutoBackup,3000);
+}
+async function runAutoBackup(){
+  if(!driveConnected()||!_pendingBackup)return;
+  if(!tokenAlive()){setPill();return;} /* 토큰 만료 — 팝업 없이 보류, 다음 제스처·폴링에서 */
+  try{await uploadDataset();_pendingBackup=false;}catch(e){}
+  setPill();
+}
+async function syncFromDrive(force){ /* 원격 정본과 병합 — force는 제스처 문맥(토큰 재발급 허용) */
+  if(_syncBusy||!driveConnected())return;
+  if(!force&&!tokenAlive())return;
+  _syncBusy=true;
+  try{
+    const token=await driveToken();
+    const s=driveSettings();
+    let fileId=s.jsonFileId||null,mod=null;
+    if(fileId){
+      const r=await fetch('https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(fileId)+'?fields=id,modifiedTime',{headers:{Authorization:'Bearer '+token}});
+      if(r.ok)mod=(await r.json()).modifiedTime||null;
+      else if(r.status===404){fileId=null;s.jsonFileId=null;saveDriveSettings(s);}
+    }
+    if(!fileId){ /* 다른 기기가 만든 정본 검색 — drive.file 스코프에는 이 앱의 파일만 보임 */
+      const r=await fetch('https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent("name='running_records.json' and trashed=false")+'&fields=files(id,modifiedTime)&orderBy=modifiedTime desc&pageSize=1',{headers:{Authorization:'Bearer '+token}});
+      if(r.ok){const f=((await r.json()).files||[])[0];if(f){fileId=f.id;mod=f.modifiedTime||null;s.jsonFileId=fileId;saveDriveSettings(s);}}
+    }
+    if(!fileId){if(state.records.length){_pendingBackup=true;await runAutoBackup();}return;} /* 원격 정본 없음 → 첫 백업 생성 */
+    if(!force&&mod&&mod===_lastRemoteMod)return; /* 변경 없음 */
+    const r2=await fetch('https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(fileId)+'?alt=media',{headers:{Authorization:'Bearer '+token}});
+    if(!r2.ok)throw new Error('HTTP '+r2.status);
+    const j=await r2.json();
+    _lastRemoteMod=mod;
+    mergeRemote(j);
+  }catch(e){/* 조용히 실패 — 다음 폴링·제스처에서 재시도 */}
+  finally{_syncBusy=false;setPill();}
+}
+function mergeRemote(j){ /* record_id 합집합 병합 + 삭제 표 반영 — 같은 id 충돌은 로컬 우선 */
+  const remote=normalizeRecords(Array.isArray(j&&j.records)?j.records:[]);
+  (Array.isArray(j&&j.deleted_ids)?j.deleted_ids:[]).forEach(id=>{id=String(id);if(!state.deletedIds.includes(id))state.deletedIds.push(id);});
+  const dead=new Set(state.deletedIds);
+  const gone=state.records.filter(r=>dead.has(r.record_id)); /* 다른 기기에서 삭제된 기록 */
+  gone.forEach(r=>{revokeImg(r.record_id);imgDel(r.record_id).catch(()=>{});});
+  state.records=state.records.filter(r=>!dead.has(r.record_id));
+  const localIds=new Set(state.records.map(r=>r.record_id));
+  const localSrc=new Set(state.records.map(r=>r.source_file_id).filter(Boolean));
+  const fresh=remote.filter(r=>!dead.has(r.record_id)&&!localIds.has(r.record_id)&&!(r.source_file_id&&localSrc.has(r.source_file_id)));
+  fresh.forEach(r=>state.records.push(r));
+  if(j&&j.goals&&j.goals.updated_at&&(!state.goals.updated_at||j.goals.updated_at>state.goals.updated_at)){
+    const g=sanitizeGoals(j.goals);g.updated_at=j.goals.updated_at;state.goals=g;saveGoals(); /* 더 최근에 수정된 목표 채택 */
+  }
+  if(fresh.length||gone.length){
+    state.records.sort((a,b)=>a.date<b.date?-1:1);
+    saveDeleted();saveRecords();setPill();
+    if(current!=='add')views[current](); /* 입력 중인 폼은 건드리지 않음 */
+    toast('드라이브 동기화'+(fresh.length?' +'+fresh.length+'건':'')+(gone.length?' −'+gone.length+'건':''));
+  }else{
+    const remoteIds=new Set(remote.map(r=>r.record_id));
+    if(state.records.some(r=>!remoteIds.has(r.record_id))||state.deletedIds.some(id=>remoteIds.has(id)))scheduleAutoBackup(); /* 로컬에만 있는 변경 → 업로드 */
+  }
+}
+async function resyncNow(){ /* 수동 동기화 — 사용자 제스처라 토큰 재발급 가능 */
+  if(!driveConnected()){show('data');return;}
+  _tokenSnooze=0;
+  try{
+    await syncFromDrive(true);
+    if(_pendingBackup)await runAutoBackup();
+    toast('동기화 완료 · '+state.records.length+'건');
+  }catch(e){toast('동기화 실패: '+((e&&e.message)||e));}
+}
+document.addEventListener('pointerdown',()=>{ /* 토큰 재확보는 사용자 제스처에서만(팝업 차단 회피) — 유효하면 no-op */
+  if(!driveConnected()||tokenAlive()||_syncBusy||Date.now()<_tokenSnooze)return;
+  driveToken().then(()=>{if(_pendingBackup)runAutoBackup();syncFromDrive(true);}).catch(()=>{setPill();});
+},true);
+setInterval(()=>{ /* 60초 폴링 — 유효 토큰이 있을 때만, 팝업 없이 */
+  if(!driveConnected()||!tokenAlive())return;
+  if(_pendingBackup)runAutoBackup();else syncFromDrive();
+},60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&driveConnected()&&tokenAlive())syncFromDrive();});
 function openDriveSetup(){
   const s=driveSettings();
-  openModal(`<h3>구글드라이브 연동 설정</h3>
-    <p style="font-size:12.5px;margin:0 0 12px">Google Cloud Console에서 발급한 값을 입력하세요. 이 브라우저에만 저장됩니다. <a href="drive.html" target="_blank">설정 방법 보기 →</a></p>
+  openModal(`<h3>드라이브 고급 설정 (자체 자격)</h3>
+    <p style="font-size:12.5px;margin:0 0 12px">${PLATFORM_GOOGLE.clientId
+      ?'기본은 <b>구글 계정 연결</b> 버튼만으로 충분합니다. 자체 Google Cloud 자격을 입력하면 <b>기본 폴더 고정</b> 같은 고급 기능이 열립니다.'
+      :'플랫폼 공용 자격이 아직 배포되지 않았습니다 — Google Cloud Console에서 발급한 값을 입력하세요.'} 이 브라우저에만 저장됩니다. <a href="drive.html" target="_blank">설정 방법 보기 →</a></p>
     <div class="field" style="margin-bottom:10px"><label>OAuth Client ID *</label><input id="dv_cid" placeholder="xxxx.apps.googleusercontent.com" value="${esc(s.clientId||'')}"></div>
     <div class="field" style="margin-bottom:10px"><label>API Key (Picker) *</label><input id="dv_key" placeholder="AIza…" value="${esc(s.apiKey||'')}"></div>
     <div class="field"><label>프로젝트 번호 (선택)</label><input id="dv_app" placeholder="1234567890" value="${esc(s.appId||'')}"></div>
@@ -464,13 +596,13 @@ function saveDriveSetupForm(){
   s.apiKey=$('#dv_key').value.trim()||null;
   s.appId=$('#dv_app').value.trim()||null;
   saveDriveSettings(s);
-  _gisToken=null;_gisTokenExp=0;_tokenClient=null; /* 자격 변경 시 토큰 초기화 */
+  _gisToken=null;_gisTokenExp=0;_tokenClient=null;_tokenSnooze=0; /* 자격 변경 시 토큰 초기화 */
   toast('드라이브 설정을 저장했습니다');closeModal();
   if(current==='data')renderData();
 }
 function datasetOut(){return {dataset:'러닝 누적기록',schema_version:'2.0',backend:state.backend,
   exported_from:'index.html',exported_at:new Date().toISOString(),count:state.records.length,
-  goals:state.goals,records:state.records};}
+  goals:state.goals,deleted_ids:state.deletedIds,records:state.records};}
 function exportJSON(){
   const blob=new Blob([JSON.stringify(datasetOut(),null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
@@ -684,7 +816,19 @@ function show(v){
   current=v;document.querySelectorAll('nav.rail button').forEach(b=>b.classList.toggle('active',b.dataset.view===v));views[v]();
 }
 document.querySelectorAll('nav.rail button').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));
-function setPill(){$('#storageText').textContent='브라우저 저장 · '+state.records.length+'건';$('#storagePill').classList.add('connected');}
+function setPill(){
+  const pill=$('#storagePill'),n=state.records.length;
+  if(driveConnected()){
+    const s=driveSettings();
+    $('#storageText').textContent=(_pendingBackup?'드라이브 동기화 대기':'드라이브 동기화')+' · '+n+'건';
+    pill.title=(s.connectedEmail||'구글 계정 연결됨')+' — 클릭하면 지금 동기화';
+    pill.classList.toggle('connected',!_pendingBackup);
+  }else{
+    $('#storageText').textContent='브라우저 저장 · '+n+'건';
+    pill.title='데이터 · 내보내기로 이동';pill.classList.add('connected');
+  }
+}
+$('#storagePill').addEventListener('click',()=>{if(driveConnected())resyncNow();else show('data');});
 
 /* ============ 대시보드 뷰 ============ */
 function renderDashboard(){
@@ -942,15 +1086,23 @@ function renderData(){
       <div class="be"><span class="tag rec" style="background:var(--series-1)">현재</span>
         <div class="be-h"><span class="be-ic">■</span>브라우저 로컬 저장</div>
         <p>레코드는 localStorage, 사진은 IndexedDB에 저장됩니다. 이 브라우저·이 기기에서만 유지되므로 주기적으로 JSON을 내보내거나 드라이브에 백업하세요.</p></div>
-      <div class="be"><span class="tag ${driveSettings().clientId?'rec':'soon'}">${driveSettings().clientId?'설정됨':'설정 필요'}</span>
+      ${(()=>{const c=driveCreds(),s=driveSettings(),conn=driveConnected();
+        return `<div class="be"><span class="tag ${conn?'rec':'soon'}">${conn?'연결됨':(c?'로그인만 하면 끝':'설정 필요')}</span>
         <div class="be-h"><span class="be-ic">▲</span>구글드라이브</div>
-        <p>드라이브에서 캡쳐를 골라 가져오고(중복 자동 스킵 · OCR 프리필 · 순차 검토), 정본 JSON을 드라이브에 백업합니다. ${driveSettings().folderId?`기본 폴더 <b>${esc(driveSettings().folderName||'지정됨')}</b>에서 바로 열립니다.`:'<b>📁 기본 폴더</b>를 지정하면 선택창이 매번 그 폴더에서 바로 열립니다.'} 설계·설정: <a href="drive.html">드라이브 문서</a></p>
+        <p>${conn
+          ?`<b>${esc(s.connectedEmail||'구글 계정')}</b>과 자동 동기화 중 — 기록을 저장·삭제하면 몇 초 안에 내 드라이브의 정본(running_records.json)에 반영되고, 다른 기기의 변경도 이 브라우저로 들어옵니다.${c.byo&&s.folderName?` 기본 폴더 <b>${esc(s.folderName)}</b>.`:''}`
+          :(c?'구글 계정으로 <b>연결 한 번</b>이면 별도 설정 없이 기록이 내 드라이브와 자동 동기화됩니다(백업·복원·기기 간 병합). 드라이브 캡쳐 가져오기(중복 스킵 · OCR 프리필)도 바로 사용할 수 있어요.'
+          :'드라이브에서 캡쳐를 골라 가져오고 정본 JSON을 자동 동기화합니다. 지금은 ⚙ 설정에서 자체 Client ID를 입력해야 사용할 수 있습니다.')} 설계·설정: <a href="drive.html">드라이브 문서</a></p>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn sm" onclick="openDrivePicker()">📥 캡쳐 가져오기${driveSettings().folderName?' · '+esc(driveSettings().folderName):''}</button>
-          <button class="btn sm sec" onclick="pickDriveFolder()">📁 기본 폴더</button>
-          <button class="btn sm sec" onclick="backupToDrive()">☁ 정본 백업</button>
-          <button class="btn sm sec" onclick="openDriveSetup()">⚙ 설정</button>
-        </div></div>
+          ${conn
+            ?`<button class="btn sm" onclick="openDrivePicker()">📥 캡쳐 가져오기${c.byo&&s.folderName?' · '+esc(s.folderName):''}</button>
+              <button class="btn sm sec" onclick="resyncNow()">🔄 지금 동기화</button>
+              ${c.byo?`<button class="btn sm sec" onclick="pickDriveFolder()">📁 기본 폴더</button>`:''}
+              <button class="btn sm sec" onclick="openDriveSetup()">⚙ 고급</button>
+              <button class="btn sm sec" onclick="disconnectDrive()">연결 해제</button>`
+            :`<button class="btn sm" onclick="connectDrive()">🔗 구글 계정 연결</button>
+              <button class="btn sm sec" onclick="openDriveSetup()">⚙ 고급 설정</button>`}
+        </div></div>`;})()}
       <div class="be"><span class="tag ${blogSettings().blogId?'rec':'soon'}">${blogSettings().blogId?'설정됨':'설정 필요'}</span>
         <div class="be-h"><span class="be-ic">●</span>네이버 블로그</div>
         <p>기록 저장 시 글감(제목+캡쳐)이 자동 완성됩니다 — 붙여넣기와 발행만 하면 끝. 미발행 <b>${blogUnposted().length}건</b>. 설계·리스크: <a href="blog.html">블로그 문서</a></p>
@@ -974,9 +1126,13 @@ function importJSON(e){
       if(!confirm('현재 기록 '+state.records.length+'건을 불러온 데이터 '+recs.length+'건으로 교체합니다. 계속할까요?')){e.target.value='';return;}
       recs.forEach(x=>{if(!x.source||x.source==='demo')x.source='import';});
       const newIds=new Set(recs.map(x=>x.record_id));
-      state.records.forEach(x=>{if(!newIds.has(x.record_id)){revokeImg(x.record_id);imgDel(x.record_id).catch(()=>{});}}); /* 교체로 사라지는 레코드의 사진 정리 */
+      state.records.forEach(x=>{if(!newIds.has(x.record_id)){ /* 교체로 사라지는 레코드: 사진 정리 + 삭제 표 */
+        if(!state.deletedIds.includes(x.record_id))state.deletedIds.push(x.record_id);
+        revokeImg(x.record_id);imgDel(x.record_id).catch(()=>{});}});
+      (Array.isArray(j.deleted_ids)?j.deleted_ids:[]).forEach(id=>{id=String(id);if(!state.deletedIds.includes(id))state.deletedIds.push(id);});
+      state.deletedIds=state.deletedIds.filter(id=>!newIds.has(id));saveDeleted(); /* 가져온 기록은 부활 처리 */
       state.records=recs.sort((a,b)=>a.date<b.date?-1:1);
-      if(j.goals){state.goals=sanitizeGoals(j.goals);saveGoals();}
+      if(j.goals){state.goals=sanitizeGoals(j.goals);state.goals.updated_at=new Date().toISOString();saveGoals();}
       saveRecords();setPill();toast('불러왔습니다 · '+recs.length+'건');renderData();
     }catch(x){toast('JSON을 읽을 수 없습니다');}
     e.target.value='';
@@ -985,11 +1141,13 @@ function importJSON(e){
 }
 function delRec(id){
   state.records=state.records.filter(x=>x.record_id!==id);
+  if(!state.deletedIds.includes(id))state.deletedIds.push(id);saveDeleted(); /* 삭제 표 — 동기화 시 부활 방지 */
   saveRecords();setPill();revokeImg(id);imgDel(id).catch(()=>{});
   toast('삭제됨');renderData();
 }
 function clearAll(){
   if(!confirm('모든 기록과 사진을 삭제합니다. 내보내지 않은 데이터는 복구할 수 없습니다. 계속할까요?'))return;
+  state.records.forEach(x=>{if(!state.deletedIds.includes(x.record_id))state.deletedIds.push(x.record_id);});saveDeleted();
   state.records=[];saveRecords();setPill();
   objUrls.forEach(u=>URL.revokeObjectURL(u));objUrls.clear();imgClear().catch(()=>{});
   renderData();
@@ -1035,8 +1193,8 @@ $('#themeBtn').addEventListener('click',()=>{root.setAttribute('data-theme',root
 /* 차트·UI 색상은 전부 CSS 변수 기반이라 테마 전환 시 재렌더 불필요 (입력 중 폼 보존) */
 ['dragover','drop'].forEach(ev=>window.addEventListener(ev,e=>e.preventDefault()));
 window.addEventListener('storage',e=>{ /* 다중 탭 동기화: 다른 탭의 저장을 반영 */
-  if(e.key!==LS_RECORDS&&e.key!==LS_GOALS)return;
-  state.records=loadRecords();state.goals=loadGoals();setPill();
+  if(e.key!==LS_RECORDS&&e.key!==LS_GOALS&&e.key!==LS_DELETED)return;
+  state.records=loadRecords();state.goals=loadGoals();state.deletedIds=loadDeleted();setPill();
   if(current!=='add')views[current]();
 });
 window.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
@@ -1048,9 +1206,11 @@ loadTesseract().catch(()=>{});
 ensureSeed();
 state.records=loadRecords();
 state.goals=loadGoals();
-saveRecords(); /* v1 → v2 마이그레이션 결과 즉시 반영 */
+state.deletedIds=loadDeleted();
+saveRecords(); /* v1 → v2 마이그레이션 결과 즉시 반영 (부트 중엔 자동 백업 미발동) */
 setPill();
 show('dashboard');
+_bootDone=true; /* 이후 저장부터 자동 백업 활성 — 재방문 동기화는 첫 사용자 제스처(pointerdown)에서 */
 </script>
 </body>
 </html>
