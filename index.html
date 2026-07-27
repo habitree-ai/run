@@ -254,13 +254,30 @@ function saveRecords(){
 /* 삭제 표(tombstone) — 기기 간 동기화 시 삭제가 다른 기기에서 부활하지 않도록 기록 */
 function loadDeleted(){try{const j=JSON.parse(localStorage.getItem(LS_DELETED)||'[]');return Array.isArray(j)?j.filter(x=>typeof x==='string'):[];}catch(e){return [];}}
 function saveDeleted(){try{localStorage.setItem(LS_DELETED,JSON.stringify(state.deletedIds.slice(-500)));}catch(e){}}
-function defaultGoals(){return {weekly:{distance_km:null,runs:3}, monthly:{distance_km:null,runs:15}, yearly:{distance_km:null,runs:180}};}
-function sanitizeGoals(g){ /* 외부 JSON 유입 대비: 유한 양수만 허용 */
+function defaultGoals(){ /* 27년까지 2중 기준 — 계획 β(반드시 지킬 최소) · 목표 α(도전) — 페이스는 초/km */
+  return {
+    plan:{weekly:{runs:3,distance_km:10}, monthly:{runs:15,distance_km:45}, yearly:{runs:180,distance_km:540}, pace_stable:315, pace_record:270},
+    target:{weekly:{runs:5,distance_km:15}, monthly:{runs:20,distance_km:60}, yearly:{runs:240,distance_km:720}, pace_stable:300, pace_record:240},
+    horizon:'2027'
+  };
+}
+function sanitizeGoals(g){ /* 외부 JSON 유입 대비: 유한 양수만 허용 · 구(단일) 구조는 계획 β로 이관 */
   const d=defaultGoals(),n=v=>{const x=Number(v);return isFinite(x)&&x>0?x:null;};
-  const pick=(src,def)=>{if(!src||typeof src!=='object')return {...def};
-    return {distance_km:'distance_km'in src?n(src.distance_km):def.distance_km, runs:'runs'in src?n(src.runs):def.runs};};
+  const period=(src,def)=>{if(!src||typeof src!=='object')return {...def};
+    return {runs:'runs'in src?n(src.runs):def.runs, distance_km:'distance_km'in src?n(src.distance_km):def.distance_km};};
+  const tier=(src,def)=>({weekly:period(src&&src.weekly,def.weekly), monthly:period(src&&src.monthly,def.monthly),
+    yearly:period(src&&src.yearly,def.yearly),
+    pace_stable:src&&'pace_stable'in src?n(src.pace_stable):def.pace_stable,
+    pace_record:src&&'pace_record'in src?n(src.pace_record):def.pace_record});
   g=g&&typeof g==='object'?g:null;
-  return {weekly:pick(g&&g.weekly,d.weekly), monthly:pick(g&&g.monthly,d.monthly), yearly:pick(g&&g.yearly,d.yearly)};
+  if(g&&!g.plan&&(g.weekly||g.monthly||g.yearly)){ /* v1 단일 목표 → 계획(β)로 이관, 미설정 값은 새 기본값 */
+    const mig=p=>{if(!p||typeof p!=='object')return null;const q={...p};
+      if(q.distance_km==null)delete q.distance_km;if(q.runs==null)delete q.runs;return q;};
+    g={plan:{weekly:mig(g.weekly),monthly:mig(g.monthly),yearly:mig(g.yearly)},target:null,updated_at:g.updated_at};
+  }
+  const out={plan:tier(g&&g.plan,d.plan), target:tier(g&&g.target,d.target), horizon:'2027'};
+  if(g&&g.updated_at)out.updated_at=String(g.updated_at);
+  return out;
 }
 function loadGoals(){
   try{return sanitizeGoals(JSON.parse(localStorage.getItem(LS_GOALS)));}
@@ -1033,17 +1050,39 @@ function goalProgress(){
   const t=todayISO();
   return {weekly:periodTotals(isoWeekKey,isoWeekKey(t)), monthly:periodTotals(monthKey,monthKey(t)), yearly:periodTotals(yearKey,yearKey(t))};
 }
-function goalBarHTML(label,actual,target,unit){
-  if(!target)return '';
-  const done=actual>=target; /* 달성 판정은 반올림 전 원값 기준 */
-  const pct=Math.round(actual/target*100);
+function goalBarHTML(label,actual,beta,alpha,unit){ /* 2중 게이지 — 채움=현재 · 눈금=β(계획) · 전체=α(목표) */
+  if(!beta&&!alpha)return '';
+  const max=alpha||beta;
+  const okB=!!beta&&actual>=beta, okA=!!alpha&&actual>=alpha; /* 달성 판정은 반올림 전 원값 기준 */
+  const pct=Math.min(100,Math.round(actual/max*100));
+  const mark=beta&&alpha&&alpha>beta?Math.min(99,Math.round(beta/alpha*100)):null;
   const at=unit==='km'?(Math.round(actual*100)/100):actual;
-  return `<div class="goal-row"><div class="goal-top"><span>${label}</span><b>${at} / ${target}${unit} · ${pct}%${done?' ✓':''}</b></div>
-    <div class="gbar"><div class="gfill${done?' done':''}" style="width:${Math.min(100,done?100:Math.min(pct,99))}%"></div></div></div>`;
+  return `<div class="goal-row"><div class="goal-top"><span>${label}</span>
+    <b>${at}${unit} · β${beta??'—'}${okB?'✓':''} · α${alpha??'—'}${okA?'✓':''}</b></div>
+    <div class="gbar" style="position:relative">
+      ${mark?`<span style="position:absolute;left:${mark}%;top:-2px;height:12px;width:2px;background:var(--warn);border-radius:1px"></span>`:''}
+      <div class="gfill${okB?' done':''}" style="width:${okA?100:Math.min(pct,99)}%"></div></div></div>`;
 }
-function goalCard(title,goal,prog){
-  const bars=goalBarHTML('횟수',prog.runs,goal.runs,'회')+goalBarHTML('거리',prog.dist,goal.distance_km,'km');
-  return `<div class="card"><p class="goal-h">${title}</p>${bars||'<div class="goal-row" style="color:var(--muted);font-size:12.5px">목표 미설정 — <a href="#" onclick="show(\'goals\');return false">목표 설정하기 →</a></div>'}</div>`;
+function goalCard(title,gp,gt,prog){
+  const bars=goalBarHTML('횟수',prog.runs,gp.runs,gt.runs,'회')+goalBarHTML('거리',prog.dist,gp.distance_km,gt.distance_km,'km');
+  return `<div class="card"><p class="goal-h">${title}</p>${bars||'<div class="goal-row" style="color:var(--muted);font-size:12.5px">기준 미설정 — <a href="#" onclick="show(\'goals\');return false">설정하기 →</a></div>'}</div>`;
+}
+function paceStatus(){ /* 페이스 현재값 — 안정: 최근 5회(3km 이상) 평균 · 기록: 전체 최고 */
+  const withPace=state.records.filter(r=>r.avg_pace_sec_per_km&&(r.distance_km||0)>=3);
+  const recent=withPace.slice(-5);
+  return {stable:recent.length?Math.round(recent.reduce((a,x)=>a+x.avg_pace_sec_per_km,0)/recent.length):null,
+    best:withPace.length?Math.min(...withPace.map(x=>x.avg_pace_sec_per_km)):null, n:recent.length};
+}
+function paceLine(label,cur,beta,alpha){
+  const chk=v=>cur&&v&&cur<=v?'✓':'';
+  return `<div class="goal-row"><div class="goal-top"><span>${label}</span>
+    <b>${cur?paceTxt(cur):'—'} · β${beta?paceTxt(beta):'—'}${chk(beta)} · α${alpha?paceTxt(alpha):'—'}${chk(alpha)}</b></div></div>`;
+}
+function paceCard(){
+  const g=state.goals,ps=paceStatus();
+  return `<div class="card"><p class="goal-h">페이스 기준 <span style="font-weight:400;color:var(--muted);font-size:11px">/km · 낮을수록 달성</span></p>
+    ${paceLine('안정 (3km↑ 최근 '+(ps.n||0)+'회 평균)',ps.stable,g.plan.pace_stable,g.target.pace_stable)}
+    ${paceLine('기록 (전체 최고)',ps.best,g.plan.pace_record,g.target.pace_record)}</div>`;
 }
 
 /* ============ 뷰 라우팅 ============ */
@@ -1089,8 +1128,9 @@ function renderDashboard(){
       <div class="card kpi"><div class="label">평균 페이스</div><div class="val">${paceTxt(a.avgPace?Math.round(a.avgPace):null)}<small>/km</small></div></div>
       <div class="card kpi"><div class="label">최장 거리 (PR)</div><div class="val">${a.longest?a.longest.distance_km.toFixed(2):'—'}<small>km</small></div><div class="foot">${a.fastest?'최고 '+paceTxt(a.fastest.avg_pace_sec_per_km)+'/km':''}</div></div>
     </div>
-    <div class="sect">목표 달성도 <a href="#" onclick="show('goals');return false" style="font-size:12px;font-weight:600;margin-left:6px">설정 →</a></div>
-    <div class="goalcards">${goalCard('이번 주',g.weekly,p.weekly)}${goalCard('이번 달',g.monthly,p.monthly)}${goalCard('올해',g.yearly,p.yearly)}</div>
+    <div class="sect">계획 β · 목표 α 달성도 <a href="#" onclick="show('goals');return false" style="font-size:12px;font-weight:600;margin-left:6px">설정 →</a>
+      <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:6px">β 반드시 지킬 기준(눈금) · α 도전 기준(막대 전체)</span></div>
+    <div class="goalcards">${goalCard('이번 주',g.plan.weekly,g.target.weekly,p.weekly)}${goalCard('이번 달',g.plan.monthly,g.target.monthly,p.monthly)}${goalCard('올해',g.plan.yearly,g.target.yearly,p.yearly)}${paceCard()}</div>
     <div class="charts2">
       <div class="chart-card"><h3>주간 거리</h3><div class="cs">주별 합계 · km</div><div id="ch-week"></div></div>
       <div class="chart-card"><h3>페이스 추이</h3><div class="cs">기록 순 · 낮을수록 빠름</div><div id="ch-pace"></div></div>
@@ -1281,32 +1321,46 @@ async function _saveRecordInner(){
 }
 function editRec(id){state.editingId=id;state.pendingImage=null;state.pendingRawOcr=null;show('add');}
 
-/* ============ 목표 뷰 ============ */
-function goalInputs(px,label,goal){return `
-  <div>
-    <p class="goal-h" style="margin-bottom:10px">${label}</p>
-    <div class="field" style="margin-bottom:10px"><label>거리 (km)</label><input id="g_${px}_dist" inputmode="decimal" placeholder="없음" value="${goal.distance_km??''}"></div>
-    <div class="field"><label>횟수 (회)</label><input id="g_${px}_runs" inputmode="numeric" placeholder="없음" value="${goal.runs??''}"></div>
-  </div>`;}
+/* ============ 목표 뷰 (2중 관리 — 계획 β · 목표 α · planning/dual-goals.html) ============ */
+function tierInputs(px){ /* px: 'p'(계획 β) | 't'(목표 α) */
+  const t=state.goals[px==='p'?'plan':'target'];
+  return ['weekly','monthly','yearly'].map((k,i)=>{
+    const per=t[k],sk=['w','m','y'][i];
+    return `<div>
+      <p class="goal-h" style="margin-bottom:10px">${['주간','월간','연간'][i]}</p>
+      <div class="field" style="margin-bottom:10px"><label>횟수 (회)</label><input id="g_${px}_${sk}_runs" inputmode="numeric" placeholder="없음" value="${per.runs??''}"></div>
+      <div class="field"><label>거리 (km)</label><input id="g_${px}_${sk}_dist" inputmode="decimal" placeholder="없음" value="${per.distance_km??''}"></div>
+    </div>`;}).join('');
+}
+function paceInputs(px){
+  const t=state.goals[px==='p'?'plan':'target'];
+  return `<div class="field"><label>안정 페이스 (3km 이상, 분'초")</label><input id="g_${px}_ps" placeholder="5'15&quot;" value="${t.pace_stable?paceTxt(t.pace_stable):''}"></div>
+    <div class="field"><label>기록 페이스 (분'초")</label><input id="g_${px}_pr" placeholder="4'30&quot;" value="${t.pace_record?paceTxt(t.pace_record):''}"></div>`;
+}
 function renderGoals(){
   const g=state.goals,p=goalProgress();
   const wkKeys=lastWeeks(8),moKeys=lastMonths(6);
   $('#stage').innerHTML=`
     <h2 class="vh">목표 · 달성도</h2>
-    <p class="vsub">주간·월간·연간 목표를 설정하면 대시보드와 이 페이지에 달성률이 표시됩니다. 빈 칸은 목표 없음.</p>
-    <div class="form" style="max-width:720px"><div class="fg" style="grid-template-columns:repeat(3,1fr)">
-      ${goalInputs('w','주간',g.weekly)}${goalInputs('m','월간',g.monthly)}${goalInputs('y','연간',g.yearly)}
-    </div>
-    <div class="form-actions"><button class="btn" onclick="saveGoalsForm()">목표 저장</button></div></div>
-    <div class="sect">현재 달성 현황</div>
-    <div class="goalcards">${goalCard('이번 주',g.weekly,p.weekly)}${goalCard('이번 달',g.monthly,p.monthly)}${goalCard('올해',g.yearly,p.yearly)}</div>
+    <p class="vsub"><b>27년까지 2중 관리</b> — <b>계획 β</b>는 반드시 지킬 최소 기준, <b>목표 α</b>는 계획을 꾸준히 지켜내며 도달할 도전 기준. 빈 칸은 기준 없음.</p>
+    <div class="form" style="max-width:760px">
+      <p class="goal-h" style="margin:0 0 10px">계획 β — 반드시 지킬 기준</p>
+      <div class="fg" style="grid-template-columns:repeat(3,1fr)">${tierInputs('p')}</div>
+      <div class="fg" style="margin-top:12px">${paceInputs('p')}</div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
+      <p class="goal-h" style="margin:0 0 10px">목표 α — 도전할 기준</p>
+      <div class="fg" style="grid-template-columns:repeat(3,1fr)">${tierInputs('t')}</div>
+      <div class="fg" style="margin-top:12px">${paceInputs('t')}</div>
+      <div class="form-actions"><button class="btn" onclick="saveGoalsForm()">기준 저장</button></div></div>
+    <div class="sect">현재 달성 현황 <span style="font-size:11.5px;color:var(--muted);font-weight:400">눈금 = β 위치 · 막대 전체 = α</span></div>
+    <div class="goalcards">${goalCard('이번 주',g.plan.weekly,g.target.weekly,p.weekly)}${goalCard('이번 달',g.plan.monthly,g.target.monthly,p.monthly)}${goalCard('올해',g.plan.yearly,g.target.yearly,p.yearly)}${paceCard()}</div>
     <div class="sect">주간 이력 (최근 8주)</div>
     <div style="overflow:auto"><table class="data"><thead><tr><th>주 (월요일 시작)</th><th>횟수</th><th>거리</th><th>횟수 달성률</th><th>거리 달성률</th></tr></thead>
-      <tbody>${historyRows(wkKeys,isoWeekKey,g.weekly,k=>k.slice(5).replace('-','/')+' 주')}</tbody></table></div>
+      <tbody>${historyRows(wkKeys,isoWeekKey,g.plan.weekly,g.target.weekly,k=>k.slice(5).replace('-','/')+' 주')}</tbody></table></div>
     <div class="sect">월간 이력 (최근 6개월)</div>
     <div style="overflow:auto"><table class="data"><thead><tr><th>월</th><th>횟수</th><th>거리</th><th>횟수 달성률</th><th>거리 달성률</th></tr></thead>
-      <tbody>${historyRows(moKeys,monthKey,g.monthly,k=>k.replace('-','년 ')+'월')}</tbody></table></div>
-    <p style="font-size:11.5px;color:var(--muted);margin-top:8px">이력 달성률은 현재 설정된 목표를 과거 기간에도 동일하게 적용해 계산합니다.</p>`;
+      <tbody>${historyRows(moKeys,monthKey,g.plan.monthly,g.target.monthly,k=>k.replace('-','년 ')+'월')}</tbody></table></div>
+    <p style="font-size:11.5px;color:var(--muted);margin-top:8px">이력 달성률은 현재 설정된 기준(β·α)을 과거 기간에도 동일하게 적용해 계산합니다.</p>`;
 }
 function lastWeeks(n){
   const out=[];const cur=new Date(isoWeekKey(todayISO())+'T00:00:00');
@@ -1318,24 +1372,27 @@ function lastMonths(n){
   for(let i=0;i<n;i++){out.push(y+'-'+pad(m));m--;if(m===0){m=12;y--;}}
   return out;
 }
-function historyRows(keys,keyFn,goal,labelFn){
+function historyRows(keys,keyFn,gp,gt,labelFn){
   return keys.map(k=>{
     const t=periodTotals(keyFn,k);
-    const cell=(actual,target)=>{if(!target)return '<td>—</td>';
-      const done=actual>=target; /* 원값 비교 */
-      return `<td style="${done?'color:var(--good-text);font-weight:700':''}">${Math.round(actual/target*100)}%</td>`;};
-    return `<tr><td>${labelFn(k)}</td><td>${t.runs}회</td><td>${t.dist.toFixed(1)}km</td>${cell(t.runs,goal.runs)}${cell(t.dist,goal.distance_km)}</tr>`;
+    const cell=(actual,b,a)=>{
+      if(!b&&!a)return '<td>—</td>';
+      const okB=b&&actual>=b,okA=a&&actual>=a; /* 원값 비교 */
+      const s=(b?'β'+Math.round(actual/b*100)+'%'+(okB?'✓':''):'')+(b&&a?' · ':'')+(a?'α'+Math.round(actual/a*100)+'%'+(okA?'✓':''):'');
+      return `<td style="${okB?'color:var(--good-text);font-weight:700':''}">${s}</td>`;};
+    return `<tr><td>${labelFn(k)}</td><td>${t.runs}회</td><td>${t.dist.toFixed(1)}km</td>${cell(t.runs,gp.runs,gt.runs)}${cell(t.dist,gp.distance_km,gt.distance_km)}</tr>`;
   }).join('');
 }
 function saveGoalsForm(){
   const num=id=>{const v=$('#'+id).value.trim();if(v==='')return null;const n=parseFloat(v);return isFinite(n)&&n>0?n:null;};
-  state.goals={
-    weekly:{distance_km:num('g_w_dist'),runs:num('g_w_runs')},
-    monthly:{distance_km:num('g_m_dist'),runs:num('g_m_runs')},
-    yearly:{distance_km:num('g_y_dist'),runs:num('g_y_runs')},
-    updated_at:new Date().toISOString()
-  };
-  saveGoals();toast('목표를 저장했습니다');renderGoals();
+  const pce=id=>{const v=$('#'+id).value.trim();return v?parsePace(v):null;};
+  const tier=px=>({
+    weekly:{runs:num('g_'+px+'_w_runs'),distance_km:num('g_'+px+'_w_dist')},
+    monthly:{runs:num('g_'+px+'_m_runs'),distance_km:num('g_'+px+'_m_dist')},
+    yearly:{runs:num('g_'+px+'_y_runs'),distance_km:num('g_'+px+'_y_dist')},
+    pace_stable:pce('g_'+px+'_ps'),pace_record:pce('g_'+px+'_pr')});
+  state.goals={plan:tier('p'),target:tier('t'),horizon:'2027',updated_at:new Date().toISOString()};
+  saveGoals();toast('기준을 저장했습니다');renderGoals();
 }
 
 /* ============ 데이터 뷰 ============ */

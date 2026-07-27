@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2중 목표 관리 (계획 β · 목표 α) · 기획</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏃</text></svg>">
+<style>
+  :root{color-scheme:light;
+    --surface-1:#fcfcfb;--plane:#f9f9f7;--text-primary:#0b0b0b;--text-secondary:#52514e;--muted:#898781;
+    --border:rgba(11,11,11,0.10);--series-1:#2a78d6;--series-1-soft:#cde2fb;--seq-700:#0d366b;
+    --good:#0ca30c;--warn:#b26a00;--warn-soft:#fdecc8;
+    --radius:14px;--shadow:0 1px 2px rgba(11,11,11,.04),0 4px 16px rgba(11,11,11,.05);
+    --font:system-ui,-apple-system,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Consolas,monospace;}
+  :root[data-theme="dark"]{color-scheme:dark;
+    --surface-1:#1a1a19;--plane:#0d0d0d;--text-primary:#fff;--text-secondary:#c3c2b7;--muted:#898781;
+    --border:rgba(255,255,255,0.10);--series-1:#3987e5;--series-1-soft:#184f95;--seq-700:#b7d3f6;
+    --warn:#fab219;--warn-soft:#3a2f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+    --surface-1:#1a1a19;--plane:#0d0d0d;--text-primary:#fff;--text-secondary:#c3c2b7;--muted:#898781;
+    --border:rgba(255,255,255,0.10);--series-1:#3987e5;--series-1-soft:#184f95;--seq-700:#b7d3f6;
+    --warn:#fab219;--warn-soft:#3a2f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);}}
+  *{box-sizing:border-box}html,body{margin:0}
+  body{background:var(--plane);color:var(--text-primary);font-family:var(--font);line-height:1.65;-webkit-font-smoothing:antialiased}
+  a{color:var(--series-1);text-decoration:none}a:hover{text-decoration:underline}
+  header.top{border-bottom:1px solid var(--border);background:var(--surface-1);position:sticky;top:0;z-index:30}
+  .top-inner{display:flex;align-items:center;gap:14px;padding:11px 20px;flex-wrap:wrap;max-width:960px;margin:0 auto}
+  .brand h1{font-size:15.5px;margin:0}
+  .spacer{flex:1}
+  .tabs{display:flex;gap:2px}
+  .tabs a{padding:6px 10px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text-secondary)}
+  .tabs a.active{background:var(--series-1-soft);color:var(--seq-700)}
+  :root[data-theme="dark"] .tabs a.active{color:#fff}
+  .toggle{border:1px solid var(--border);background:transparent;color:var(--text-secondary);width:34px;height:34px;border-radius:9px;cursor:pointer}
+  main{max-width:760px;margin:0 auto;padding:32px 22px 80px}
+  h1.doc{font-size:24px;letter-spacing:-.01em;margin:0 0 4px}
+  .doc-sub{color:var(--muted);font-size:13px;margin:0 0 28px}
+  h2{font-size:18px;margin:34px 0 10px;letter-spacing:-.01em}
+  p,li{font-size:14px;color:var(--text-secondary)}
+  b,strong{color:var(--text-primary)}
+  table{border-collapse:collapse;width:100%;font-size:13px;background:var(--surface-1);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  th{background:var(--series-1-soft);color:var(--seq-700);text-align:left;padding:9px 11px;font-size:11.5px;white-space:nowrap}
+  :root[data-theme="dark"] th{color:#dbe9ff;background:#17324f}
+  td{padding:9px 11px;border-top:1px solid var(--border);vertical-align:top}
+  pre{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:16px;font-family:var(--mono);font-size:12px;line-height:1.6;overflow:auto;color:var(--text-secondary);box-shadow:var(--shadow)}
+  code{font-family:var(--mono);font-size:.92em;background:var(--series-1-soft);padding:1px 5px;border-radius:5px;color:var(--seq-700)}
+  :root[data-theme="dark"] code{color:#dbe9ff}
+  .note{font-size:13px;color:var(--text-secondary);background:var(--series-1-soft);border-radius:10px;padding:12px 14px;margin:14px 0}
+  :root[data-theme="dark"] .note{background:rgba(57,135,229,.12)}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-inner">
+  <div class="brand"><h1>2중 목표 관리 (계획 β · 목표 α)</h1></div>
+  <div class="spacer"></div>
+  <nav class="tabs"><a href="../index.html">대시보드</a><a href="../drive.html">드라이브</a><a href="../manual/index.html">매뉴얼</a><a href="index.html" class="active">기획</a></nav>
+  <button class="toggle" id="themeBtn" aria-label="테마 전환">◐</button>
+</div></header>
+<main>
+<h1 class="doc">2중 목표 관리 — 27년까지의 계획 β와 목표 α</h1>
+<p class="doc-sub">2026-07-27 · 기획 + 적용 완료 · 대상: 집계 앱 v2 목표 시스템</p>
+
+<div class="note">✅ <b>적용 완료 (2026-07-27)</b> — 목표 스키마 2계층 확장(기존 단일 목표는 계획 β로 자동 이관), 2중 게이지(채움=현재 · 눈금=β · 전체=α), 페이스 기준 카드, 설정 화면·이력 테이블(β%·α%) 이원화.</div>
+
+<h2>1. 개념 — 왜 2중인가</h2>
+<p><b>계획 β는 반드시 지킬 최소 기준</b>, <b>목표 α는 계획을 꾸준히 지켜내며 도달할 도전 기준</b>이다. 단일 목표는 미달 시 좌절, 초과 시 기준 상실의 문제가 있다 — 지킬 선(β)과 당길 선(α)을 분리하면 "β는 무조건 사수, α는 초과 성과"라는 운용이 가능하다.</p>
+
+<h2>2. 27년까지의 기준 (기본값)</h2>
+<table>
+<thead><tr><th>항목</th><th>계획 β — 반드시 지킬 기준</th><th>목표 α — 도전할 기준</th></tr></thead>
+<tbody>
+<tr><td>주간</td><td>3회 이상 · 10km~</td><td>5회 이상 · 15km~</td></tr>
+<tr><td>월간</td><td>15회 이상 · 45km~</td><td>20회 이상 · 60km~</td></tr>
+<tr><td>연간</td><td>180회 이상 · 540km~</td><td>240회 이상 · 720km~</td></tr>
+<tr><td>안정 페이스 (3km 이상)</td><td>5'15"/km</td><td>5'00"/km</td></tr>
+<tr><td>기록 페이스</td><td>4'30"/km</td><td>4'00"/km</td></tr>
+</tbody>
+</table>
+<p>모든 값은 <b>목표 · 달성도</b> 화면에서 수정 가능하며, 위 표는 신규 사용자 기본값이다. 기존 단일 목표 사용자는 설정값이 계획 β로 이관되고 목표 α는 기본값으로 채워진다.</p>
+
+<h2>3. 화면 반영</h2>
+<pre>[달성도 게이지]  막대 채움 = 현재 실적 · 주황 눈금 = β 위치 · 막대 전체 = α
+                β 달성 시 막대가 초록으로, α 달성 시 100% 채움 + ✓α
+[표기]          "1회 · β15✓ · α20"  /  "3.18km · β45 · α60"
+[페이스 카드]    안정 = 3km 이상 러닝의 최근 5회 평균  ·  기록 = 전체 최고
+                낮을수록 달성 — 기준 이하이면 ✓
+[이력 테이블]    주간·월간 달성률을 β%·α% 2중 표기 (β 달성 행은 초록 강조)</pre>
+
+<h2>4. 데이터 구조</h2>
+<pre>goals = {
+  plan:   { weekly:{runs,distance_km}, monthly:{…}, yearly:{…},
+            pace_stable, pace_record },   // 계획 β (초/km)
+  target: { …같은 구조… },                 // 목표 α
+  horizon:'2027', updated_at
+}</pre>
+<ul>
+<li>드라이브 동기화는 기존 규칙 그대로 — <code>updated_at</code>이 더 최근인 쪽 채택.</li>
+<li>구(단일) 구조의 JSON을 가져오거나 원격에서 받아도 자동 이관된다.</li>
+</ul>
+
+<h2>5. 운용 원칙</h2>
+<ul>
+<li><b>β 미달은 경고 신호</b> — 주간 카드에서 눈금 왼쪽이면 이번 주 안에 채울 것.</li>
+<li><b>α는 페널티 없는 도전</b> — β를 꾸준히 지키는 것이 α 도달의 경로라는 전제.</li>
+<li>초과 성과가 계속되면 α를 상향 조정 — 27년까지 기준이므로 연 단위로 재점검.</li>
+</ul>
+
+<div class="note">ℹ️ 관련: <a href="nrc-capture-flow.html">NRC 캡쳐 플로우 고도화</a> · <a href="../guide.html">사용법</a></div>
+</main>
+<script>
+const root=document.documentElement;
+document.getElementById('themeBtn').addEventListener('click',()=>{root.setAttribute('data-theme',root.getAttribute('data-theme')==='dark'?'light':'dark');});
+</script>
+</body>
+</html>
