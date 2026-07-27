@@ -22,7 +22,8 @@ v1의 "사용자마다 자격 발급(BYO)"을 **플랫폼 공용 자격 + 로그
         → 있으면 다운로드·병합(복원), 없으면 현재 데이터로 생성
 [저장]  기록 저장·수정·삭제·목표 변경 → 3초 디바운스 후 자동 업로드
 [수신]  60초 폴링 + 탭 복귀 시 modifiedTime 비교 → 바뀌었으면 다운로드·병합
-[병합]  record_id 합집합 · source_file_id 중복 스킵 · 같은 id는 로컬 우선
+[병합]  record_id 합집합 · source_file_id 중복 스킵
+        같은 id 충돌은 updated_at이 더 최근인 수정본 채택(없으면 로컬 유지)
         삭제는 tombstone(deleted_ids)으로 전파 — 다른 기기에서 부활하지 않음
         목표(goals)는 updated_at이 더 최근인 쪽 채택
 ```

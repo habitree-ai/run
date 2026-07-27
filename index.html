@@ -537,28 +537,34 @@ async function syncFromDrive(force){ /* 원격 정본과 병합 — force는 제
   }catch(e){/* 조용히 실패 — 다음 폴링·제스처에서 재시도 */}
   finally{_syncBusy=false;setPill();}
 }
-function mergeRemote(j){ /* record_id 합집합 병합 + 삭제 표 반영 — 같은 id 충돌은 로컬 우선 */
+function mergeRemote(j){ /* record_id 합집합 병합 + 삭제 표 반영 — 같은 id 충돌은 updated_at 최신 우선(없으면 로컬 유지) */
   const remote=normalizeRecords(Array.isArray(j&&j.records)?j.records:[]);
   (Array.isArray(j&&j.deleted_ids)?j.deleted_ids:[]).forEach(id=>{id=String(id);if(!state.deletedIds.includes(id))state.deletedIds.push(id);});
   const dead=new Set(state.deletedIds);
   const gone=state.records.filter(r=>dead.has(r.record_id)); /* 다른 기기에서 삭제된 기록 */
   gone.forEach(r=>{revokeImg(r.record_id);imgDel(r.record_id).catch(()=>{});});
   state.records=state.records.filter(r=>!dead.has(r.record_id));
-  const localIds=new Set(state.records.map(r=>r.record_id));
+  const byId=new Map(state.records.map(r=>[r.record_id,r]));
+  let updated=0; /* 다른 기기에서 수정된 기록 — 더 최근 수정본 채택 */
+  remote.forEach(r=>{const loc=byId.get(r.record_id);
+    if(loc&&r.updated_at&&(!loc.updated_at||r.updated_at>loc.updated_at)){Object.assign(loc,r);updated++;}});
   const localSrc=new Set(state.records.map(r=>r.source_file_id).filter(Boolean));
-  const fresh=remote.filter(r=>!dead.has(r.record_id)&&!localIds.has(r.record_id)&&!(r.source_file_id&&localSrc.has(r.source_file_id)));
+  const fresh=remote.filter(r=>!dead.has(r.record_id)&&!byId.has(r.record_id)&&!(r.source_file_id&&localSrc.has(r.source_file_id)));
   fresh.forEach(r=>state.records.push(r));
   if(j&&j.goals&&j.goals.updated_at&&(!state.goals.updated_at||j.goals.updated_at>state.goals.updated_at)){
     const g=sanitizeGoals(j.goals);g.updated_at=j.goals.updated_at;state.goals=g;saveGoals(); /* 더 최근에 수정된 목표 채택 */
   }
-  if(fresh.length||gone.length){
+  if(fresh.length||gone.length||updated){
     state.records.sort((a,b)=>a.date<b.date?-1:1);
     saveDeleted();saveRecords();setPill();
     if(current!=='add')views[current](); /* 입력 중인 폼은 건드리지 않음 */
-    toast('드라이브 동기화'+(fresh.length?' +'+fresh.length+'건':'')+(gone.length?' −'+gone.length+'건':''));
+    const parts=[];if(fresh.length)parts.push('+'+fresh.length+'건');if(updated)parts.push('갱신 '+updated+'건');if(gone.length)parts.push('−'+gone.length+'건');
+    toast('드라이브 동기화 '+parts.join(' · '));
   }else{
-    const remoteIds=new Set(remote.map(r=>r.record_id));
-    if(state.records.some(r=>!remoteIds.has(r.record_id))||state.deletedIds.some(id=>remoteIds.has(id)))scheduleAutoBackup(); /* 로컬에만 있는 변경 → 업로드 */
+    const rById=new Map(remote.map(r=>[r.record_id,r]));
+    const localOnly=state.records.some(r=>{const rr=rById.get(r.record_id);
+      return !rr||(r.updated_at&&(!rr.updated_at||r.updated_at>rr.updated_at));}); /* 로컬 신규·로컬이 더 최근 수정 */
+    if(localOnly||state.deletedIds.some(id=>rById.has(id)))scheduleAutoBackup(); /* 로컬에만 있는 변경 → 업로드 */
   }
 }
 async function resyncNow(){ /* 수동 동기화 — 사용자 제스처라 토큰 재발급 가능 */
@@ -876,7 +882,8 @@ function drawRecent(){
   $('#recentList').innerHTML=r.map(x=>`<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid var(--border);font-size:13px">
     ${(x.has_image||x.image_url)?`<span class="thumbwrap"><img class="thumb sm" data-rid="${esc(x.record_id)}" alt="" onclick="showImageModal('${esc(x.record_id)}')"></span>`:''}
     <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis"><b>${esc(x.date)}</b> ${x.weekday?'('+esc(x.weekday)+')':''} · ${esc(x.title||'러닝')} <span class="src ${esc(x.source||'manual')}">${esc((x.source||'manual').toUpperCase())}</span></span>
-    <span style="color:var(--text-secondary);font-variant-numeric:tabular-nums;white-space:nowrap">${(x.distance_km||0).toFixed(2)}km · ${paceTxt(x.avg_pace_sec_per_km)} · ${clock(x.duration_sec)}</span></div>`).join('');
+    <span style="color:var(--text-secondary);font-variant-numeric:tabular-nums;white-space:nowrap">${(x.distance_km||0).toFixed(2)}km · ${paceTxt(x.avg_pace_sec_per_km)} · ${clock(x.duration_sec)}</span>
+    <span style="white-space:nowrap"><button class="edit" title="수정" onclick="editRec('${esc(x.record_id)}')">✎</button><button class="del" title="삭제" onclick="delRec('${esc(x.record_id)}')">✕</button></span></div>`).join('');
 }
 
 /* ============ 기록 추가 뷰 (사진 업로드 우선) ============ */
@@ -970,14 +977,14 @@ async function _saveRecordInner(){
   if(!(fields.distance_km>0)){toast('거리는 0보다 큰 숫자여야 합니다');return;}
   const editing=state.editingId?state.records.find(r=>r.record_id===state.editingId):null;
   let rec;
-  if(editing){rec=Object.assign(editing,fields);}
+  if(editing){rec=Object.assign(editing,fields);rec.updated_at=new Date().toISOString();} /* 수정 시각 — 동기화 병합 기준 */
   else{
     rec={record_id:'r'+Date.now(), ...fields,
       source:state.pendingDrive?'drive':(state.pendingImage?'ocr':'manual'),
       source_file_id:state.pendingDrive?state.pendingDrive.id:null,
       original_filename:state.pendingDrive?state.pendingDrive.name:null,
       has_image:false, image_url:null, raw_ocr:state.pendingRawOcr||null,
-      created_at:new Date().toISOString(), schema_version:'2.0'};
+      created_at:new Date().toISOString(), updated_at:new Date().toISOString(), schema_version:'2.0'};
     state.records.push(rec);
   }
   if(state.pendingImage){
@@ -1143,10 +1150,12 @@ function importJSON(e){
   rd.readAsText(f);
 }
 function delRec(id){
+  const r=state.records.find(x=>x.record_id===id);if(!r)return;
+  if(!confirm((r.date||'')+' 기록을 삭제할까요?'+(driveConnected()?' 드라이브 동기화로 다른 기기에서도 삭제됩니다.':'')))return;
   state.records=state.records.filter(x=>x.record_id!==id);
   if(!state.deletedIds.includes(id))state.deletedIds.push(id);saveDeleted(); /* 삭제 표 — 동기화 시 부활 방지 */
   saveRecords();setPill();revokeImg(id);imgDel(id).catch(()=>{});
-  toast('삭제됨');renderData();
+  toast('삭제됨');views[current](); /* 대시보드·데이터 어디서 지웠든 현재 화면 유지 */
 }
 function clearAll(){
   if(!confirm('모든 기록과 사진을 삭제합니다. 내보내지 않은 데이터는 복구할 수 없습니다. 계속할까요?'))return;
