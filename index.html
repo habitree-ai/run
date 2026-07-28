@@ -559,8 +559,22 @@ function driveCreds(){ /* 자체 자격을 입력했으면 우선 — 없으면 
   if(PLATFORM_GOOGLE.clientId)return {clientId:PLATFORM_GOOGLE.clientId,apiKey:PLATFORM_GOOGLE.apiKey||null,appId:PLATFORM_GOOGLE.appId||null};
   return null;
 }
+const DRIVE_TOKEN_KEY='run.drive.token.v1'; // {t, exp} — 이 브라우저에만 저장
+/* 토큰을 새로고침 너머로 살린다. 메모리에만 두면 부팅마다 재발급이 돌고, GIS는 무음
+   재발급도 팝업 창을 열었다 닫으므로 PC에서 로그인 깜빡임으로 보인다 (REQ-0003). */
+function loadTokenCache(){
+  try{const c=JSON.parse(localStorage.getItem(DRIVE_TOKEN_KEY));
+    return c&&c.t&&c.exp>Date.now()+60000?c:null;}catch(e){return null;} /* 만료·손상은 조용히 무시 */
+}
+function saveTokenCache(t,exp){try{localStorage.setItem(DRIVE_TOKEN_KEY,JSON.stringify({t,exp}));}catch(e){}}
+function clearTokenCache(){try{localStorage.removeItem(DRIVE_TOKEN_KEY);}catch(e){}}
+function checkAuth(r){ /* 캐시된 토큰은 구글에서 철회됐을 수 있다 — 401이면 버려서 다음 시도가 재발급하게 한다 */
+  if(r&&r.status===401){_gisToken=null;_gisTokenExp=0;clearTokenCache();}
+  return r;
+}
 function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.async=true;s.onload=res;s.onerror=()=>rej(new Error('스크립트 로드 실패'));document.head.appendChild(s);});}
-let _gsiP=null,_pickerP=null,_gisToken=null,_gisTokenExp=0,_tokenClient=null,_tokenP=null,_tokenSnooze=0;
+const _tokenCache0=loadTokenCache();
+let _gsiP=null,_pickerP=null,_gisToken=_tokenCache0?_tokenCache0.t:null,_gisTokenExp=_tokenCache0?_tokenCache0.exp:0,_tokenClient=null,_tokenP=null,_tokenSnooze=0;
 async function ensureGoogleLibs(){
   if(!(window.google&&google.accounts&&google.accounts.oauth2)){
     if(!_gsiP){_gsiP=loadScript('https://accounts.google.com/gsi/client');_gsiP.catch(()=>{_gsiP=null;});}
@@ -587,7 +601,8 @@ async function driveToken(fresh){ /* fresh: 만료 전 선제 갱신용 — 캐�
            (2026-07-28 프로덕션 실측). 제한 등급인 drive.readonly는 불필요해 요청하지 않는다. */
         scope:'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
         callback:t=>{
-          if(t&&t.access_token){_gisToken=t.access_token;_gisTokenExp=Date.now()+((+t.expires_in||3600)*1000);_tokenSnooze=0;res(_gisToken);}
+          if(t&&t.access_token){_gisToken=t.access_token;_gisTokenExp=Date.now()+((+t.expires_in||3600)*1000);_tokenSnooze=0;
+            saveTokenCache(_gisToken,_gisTokenExp);res(_gisToken);}
           else rej(new Error((t&&t.error)||'토큰 발급 실패'));
         },
         error_callback:e=>{_tokenSnooze=Date.now()+600000; /* 거부·차단 시 10분간 자동 재시도 중단 */
@@ -869,8 +884,8 @@ async function uploadDataset(){ /* running_records.json 생성/갱신 — 수동
       +'?uploadType=multipart&fields=id,modifiedTime';
     return fetch(url,{method:fileId?'PATCH':'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'multipart/related; boundary='+boundary},body});
   };
-  let r=await doUpload(s.jsonFileId||null);
-  if(r.status===404&&s.jsonFileId){s.jsonFileId=null;saveDriveSettings(s);r=await doUpload(null);} /* 드라이브에서 파일 삭제된 경우 새로 생성 */
+  let r=checkAuth(await doUpload(s.jsonFileId||null));
+  if(r.status===404&&s.jsonFileId){s.jsonFileId=null;saveDriveSettings(s);r=checkAuth(await doUpload(null));} /* 드라이브에서 파일 삭제된 경우 새로 생성 */
   if(!r.ok)throw new Error('HTTP '+r.status);
   const j=await r.json();
   if(j.id&&j.id!==s.jsonFileId){s.jsonFileId=j.id;saveDriveSettings(s);}
@@ -934,7 +949,7 @@ function openOriginHelp(e){ /* 400 origin_mismatch 진단 — 이 주소가 구�
 function disconnectDrive(){
   const s=driveSettings();
   if(_gisToken){try{google.accounts.oauth2.revoke(_gisToken,()=>{});}catch(e){}}
-  _gisToken=null;_gisTokenExp=0;_tokenClient=null;_pendingBackup=false;
+  _gisToken=null;_gisTokenExp=0;_tokenClient=null;_pendingBackup=false;clearTokenCache();
   s.connected=false;delete s.connectedEmail;delete s.connectedName;delete s.connectedPicture;
   saveDriveSettings(s); /* jsonFileId는 유지 — 재연결 시 같은 정본 사용 */
   toast('구글 계정 연결을 해제했습니다');setPill();if(current==='data')renderData();
@@ -959,17 +974,17 @@ async function syncFromDrive(force){ /* 원격 정본과 병합 — force는 제
     const s=driveSettings();
     let fileId=s.jsonFileId||null,mod=null;
     if(fileId){
-      const r=await fetch('https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(fileId)+'?fields=id,modifiedTime',{headers:{Authorization:'Bearer '+token}});
+      const r=checkAuth(await fetch('https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(fileId)+'?fields=id,modifiedTime',{headers:{Authorization:'Bearer '+token}}));
       if(r.ok)mod=(await r.json()).modifiedTime||null;
       else if(r.status===404){fileId=null;s.jsonFileId=null;saveDriveSettings(s);}
     }
     if(!fileId){ /* 다른 기기가 만든 정본 검색 — drive.file 스코프에는 이 앱의 파일만 보임 */
-      const r=await fetch('https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent("name='running_records.json' and trashed=false")+'&fields=files(id,modifiedTime)&orderBy=modifiedTime desc&pageSize=1',{headers:{Authorization:'Bearer '+token}});
+      const r=checkAuth(await fetch('https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent("name='running_records.json' and trashed=false")+'&fields=files(id,modifiedTime)&orderBy=modifiedTime desc&pageSize=1',{headers:{Authorization:'Bearer '+token}}));
       if(r.ok){const f=((await r.json()).files||[])[0];if(f){fileId=f.id;mod=f.modifiedTime||null;s.jsonFileId=fileId;saveDriveSettings(s);}}
     }
     if(!fileId){if(state.records.length){_pendingBackup=true;await runAutoBackup();}return;} /* 원격 정본 없음 → 첫 백업 생성 */
     if(!force&&mod&&mod===_lastRemoteMod)return; /* 변경 없음 */
-    const r2=await fetch('https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(fileId)+'?alt=media',{headers:{Authorization:'Bearer '+token}});
+    const r2=checkAuth(await fetch('https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(fileId)+'?alt=media',{headers:{Authorization:'Bearer '+token}}));
     if(!r2.ok)throw new Error('HTTP '+r2.status);
     const j=await r2.json();
     _lastRemoteMod=mod;
@@ -1048,7 +1063,7 @@ function saveDriveSetupForm(){
   s.apiKey=$('#dv_key').value.trim()||null;
   s.appId=$('#dv_app').value.trim()||null;
   saveDriveSettings(s);
-  _gisToken=null;_gisTokenExp=0;_tokenClient=null;_tokenSnooze=0; /* 자격 변경 시 토큰 초기화 */
+  _gisToken=null;_gisTokenExp=0;_tokenClient=null;_tokenSnooze=0;clearTokenCache(); /* 자격 변경 시 토큰 초기화 */
   toast('드라이브 설정을 저장했습니다');closeModal();
   if(current==='data')renderData();
 }
