@@ -88,7 +88,8 @@
   .statrow-sm .val{font-size:18px}
   .statrow .st:first-child{border-left:none}
   .statrow .label{font-size:11.5px;color:var(--text-secondary)}
-  .statrow .val{font-size:21px;font-weight:750;letter-spacing:-.02em;margin-top:2px;line-height:1.1}
+  .statrow .val{font-size:21px;font-weight:750;letter-spacing:-.02em;margin-top:2px;line-height:1.1;
+    font-variant-numeric:proportional-nums} /* 큰 숫자는 등폭이면 자간이 벌어져 보인다 */
   .statrow .val small{font-size:12px;font-weight:600;color:var(--muted);margin-left:1px}
   .statrow .foot{font-size:10.5px;color:var(--muted);margin-top:1px}
   /* β(계획)·α(목표) 표기 */
@@ -159,7 +160,6 @@
   /* charts */
   .chart-card{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:15px 17px 10px}
   .chart-card h3{margin:0;font-size:14px;font-weight:700}.chart-card .cs{font-size:11.5px;color:var(--muted);margin:2px 0 6px}
-  .ch-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
   /* 기간 토글 (주/월/년) */
   .rangetog{display:inline-flex;border:1px solid var(--border);border-radius:9px;overflow:hidden;background:var(--plane);flex:none}
   .rangetog button{border:none;background:transparent;color:var(--text-secondary);font-family:inherit;
@@ -167,13 +167,29 @@
   .rangetog button+button{border-left:1px solid var(--border)}
   .rangetog button:hover{color:var(--text-primary)}
   .rangetog button.active{background:var(--series-1);color:#fff}
+  /* 공용 기간 필터 — 스코프하는 차트들 '위'에 한 줄 (차트 카드 안에 두지 않는다) */
+  .filterrow{display:flex;align-items:center;gap:10px;margin:16px 0 2px;flex-wrap:wrap}
+  .fr-label{font-size:11.5px;font-weight:700;letter-spacing:.03em;color:var(--muted)}
+  .fr-hint{font-size:11px;color:var(--muted)}
+  /* 범례 — 문장이 아니라 색 샘플 */
+  .legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:11.5px;font-weight:400;color:var(--text-secondary);margin-top:6px}
+  .legend .lg{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+  .legend em{font-style:normal;color:var(--muted)}
+  .legend i{width:11px;height:11px;border-radius:3px;flex:none}
+  .sw-run{background:var(--series-1)}
+  .sw-beta{background:var(--guide-beta);width:3px!important;height:13px!important;border-radius:1px!important}
+  .sw-alpha{background:var(--guide-alpha);width:3px!important;height:13px!important;border-radius:1px!important}
   /* 달성도 카드 — 탭하면 기간 내역 */
-  .legend{font-size:11.5px;font-weight:400;color:var(--text-secondary);margin-top:5px;line-height:1.7}
   .gcard{cursor:pointer;transition:border-color .12s}
   .gcard:hover{border-color:var(--series-1)}
   .gcard:focus-visible{outline:2px solid var(--series-1);outline-offset:2px}
-  .gcard-more{font-size:11px;color:var(--muted);margin-top:9px}
-  .gcard:hover .gcard-more{color:var(--series-1)}
+  .gc-title{margin:0;font-size:11.5px;font-weight:700;letter-spacing:.03em;color:var(--muted);display:flex;align-items:center;gap:5px}
+  .gc-title>span{font-weight:600;letter-spacing:0;color:var(--text-secondary)}
+  .gc-chev{margin-left:auto;font-size:16px;color:var(--border);font-weight:400}
+  .gcard:hover .gc-chev{color:var(--series-1)}
+  .gc-note{font-size:12.5px;color:var(--text-secondary);margin:4px 0 10px}
+  .gc-note b{color:var(--text-primary);font-weight:700}
+  .gc-note b.ok{color:var(--good-text)}
   .grid2a{display:grid;grid-template-columns:1.2fr 1fr;gap:14px;margin-top:14px}
   @media(max-width:760px){.grid2a{grid-template-columns:1fr}}
   svg.chart{width:100%;height:auto;display:block;overflow:visible}
@@ -186,11 +202,14 @@
   /* goals */
   .goalcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(262px,1fr));gap:12px;margin-top:12px}
   .goal-row{margin-top:12px}
-  .goal-top{display:flex;justify-content:space-between;gap:4px 8px;font-size:12px;color:var(--text-secondary);margin-bottom:5px;flex-wrap:wrap}
+  /* 수치는 크게·검정, 기준은 작게·회색 — 글자에 시리즈 색을 쓰지 않는다 (REQ-0002) */
+  .goal-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:11.5px;color:var(--muted);margin-bottom:5px}
   .goal-top>span{white-space:nowrap}
   .goalcards .card{word-break:keep-all}
-  .goal-top b{font-variant-numeric:tabular-nums;color:var(--text-primary);font-weight:650;text-align:right}
-  .goal-top b .bB,.goal-top b .bA{white-space:nowrap} /* '계획 10' 묶음 단위로만 줄바꿈 */
+  .goal-top b{font-size:16.5px;font-weight:750;color:var(--text-primary);letter-spacing:-.02em;white-space:nowrap}
+  .goal-top b small{font-size:11px;font-weight:600;color:var(--muted);margin-left:1px}
+  .goal-foot{font-size:10.5px;color:var(--muted);margin-top:4px;font-variant-numeric:tabular-nums}
+  .gbar-tick{position:absolute;top:-2px;height:12px;width:2px;background:var(--guide-beta);border-radius:1px}
   .gbar{height:8px;background:var(--grid);border-radius:999px;overflow:hidden}
   .gfill{height:100%;background:var(--series-1);border-radius:999px;transition:width .3s}
   .gfill.done{background:var(--good)}
@@ -1290,11 +1309,12 @@ function goalBarHTML(label,actual,beta,alpha,unit){ /* 2중 게이지 — 채움
   const pct=Math.min(100,Math.round(actual/max*100));
   const mark=beta&&alpha&&alpha>beta?Math.min(99,Math.round(beta/alpha*100)):null;
   const at=unit==='km'?(Math.round(actual*100)/100):actual;
-  return `<div class="goal-row"><div class="goal-top"><span>${label}</span>
-    <b>${at}${unit} <span class="bB">계획 ${beta??'—'}${okB?'✓':''}</span> <span class="bA">목표 ${alpha??'—'}${okA?'✓':''}</span></b></div>
+  return `<div class="goal-row">
+    <div class="goal-top"><span>${label}</span><b>${at}<small>${unit}</small></b></div>
     <div class="gbar" style="position:relative">
-      ${mark?`<span style="position:absolute;left:${mark}%;top:-2px;height:12px;width:2px;background:var(--guide-beta);border-radius:1px"></span>`:''}
-      <div class="gfill${okB?' done':''}" style="width:${okA?100:Math.min(pct,99)}%"></div></div></div>`;
+      ${mark?`<span class="gbar-tick" style="left:${mark}%"></span>`:''}
+      <div class="gfill${okB?' done':''}" style="width:${okA?100:Math.min(pct,99)}%"></div></div>
+    <div class="goal-foot">${beta?`계획 ${beta}${unit}${okB?' ✓':''}`:''}${beta&&alpha?' · ':''}${alpha?`목표 ${alpha}${unit}${okA?' ✓':''}`:''}</div></div>`;
 }
 function goalCard(title,gp,gt,prog){
   const bars=goalBarHTML('횟수',prog.runs,gp.runs,gt.runs,'회')+goalBarHTML('거리',prog.dist,gp.distance_km,gt.distance_km,'km');
@@ -1307,15 +1327,16 @@ function paceStatus(){ /* 페이스 현재값 — 안정: 최근 5회(3km 이상
     best:withPace.length?Math.min(...withPace.map(x=>x.avg_pace_sec_per_km)):null, n:recent.length};
 }
 function paceLine(label,cur,beta,alpha){
-  const chk=v=>cur&&v&&cur<=v?'✓':'';
-  return `<div class="goal-row"><div class="goal-top"><span>${label}</span>
-    <b>${cur?paceTxt(cur):'—'} <span class="bB">계획 ${beta?paceTxt(beta):'—'}${chk(beta)}</span> <span class="bA">목표 ${alpha?paceTxt(alpha):'—'}${chk(alpha)}</span></b></div></div>`;
+  const chk=v=>cur&&v&&cur<=v?' ✓':'';
+  return `<div class="goal-row">
+    <div class="goal-top"><span>${label}</span><b>${cur?paceTxt(cur):'—'}</b></div>
+    <div class="goal-foot">${beta?`계획 ${paceTxt(beta)}${chk(beta)}`:''}${beta&&alpha?' · ':''}${alpha?`목표 ${paceTxt(alpha)}${chk(alpha)}`:''}</div></div>`;
 }
 function paceCard(){
   const g=state.goals,ps=paceStatus();
-  return `<div class="card"><p style="margin:0 0 6px;font-size:11.5px;font-weight:700;letter-spacing:.03em;color:var(--muted)">페이스 <span style="font-weight:400;letter-spacing:0">/km · 낮을수록 달성</span></p>
-    ${paceLine('안정 · 3km↑ 최근 '+(ps.n||0)+'회',ps.stable,g.plan.pace_stable,g.target.pace_stable)}
-    ${paceLine('기록 · 전체 최고',ps.best,g.plan.pace_record,g.target.pace_record)}</div>`;
+  return `<div class="card"><p class="gc-title">페이스 <span>/km · 낮을수록 좋음</span></p>
+    ${paceLine('안정 · 최근 '+(ps.n||0)+'회',ps.stable,g.plan.pace_stable,g.target.pace_stable)}
+    ${paceLine('최고 기록',ps.best,g.plan.pace_record,g.target.pace_record)}</div>`;
 }
 
 /* ---- 동기부여 대시보드 (planning/dashboard-motivation.html) — 링 게이지 · 넛지 · 스트릭 · 누적 진도 ---- */
@@ -1360,14 +1381,6 @@ function ringSVG(actual,beta,alpha){ /* 횟수 링 — 채움=현재/α · β �
       }${beta?`<tspan fill="var(--guide-beta)">계획 ${beta}</tspan>`:''}${beta&&alpha?'<tspan fill="var(--muted)"> · </tspan>':''}${alpha?`<tspan fill="var(--guide-alpha)">목표 ${alpha}</tspan>`:''}${!beta&&!alpha?'<tspan fill="var(--muted)">기준 없음</tspan>':''}</text>
   </svg>`;
 }
-function goalNudge(actual,beta,alpha,unit,dec){ /* 남은 양 넛지 — 달성 욕구의 트리거 */
-  const fmt=v=>dec?(Math.round(v*10)/10):Math.ceil(v);
-  if(alpha&&actual>=alpha)return '<b style="color:var(--good-text)">🎉 목표 달성!</b>';
-  if(beta&&actual>=beta)return '<b style="color:var(--good-text)">계획 달성 ✓</b>'+(alpha?' <span class="bA" style="font-weight:600">목표까지 '+fmt(alpha-actual)+unit+'</span>':'');
-  if(beta)return '<b class="bB">계획까지 '+fmt(beta-actual)+unit+' 남음</b>';
-  if(alpha)return '<span class="bA">목표까지 '+fmt(alpha-actual)+unit+'</span>';
-  return '';
-}
 function periodRemain(kind){ /* 이 기간이 끝나기까지 남은 날 수 (오늘 포함) */
   const t=new Date(todayISO()+'T00:00:00');let end;
   if(kind==='week'){end=new Date(isoWeekKey(todayISO())+'T00:00:00');end.setDate(end.getDate()+7);}
@@ -1376,14 +1389,14 @@ function periodRemain(kind){ /* 이 기간이 끝나기까지 남은 날 수 (�
   return Math.max(0,Math.round((end-t)/86400000));
 }
 const KIND_NOUN={week:'주',month:'달',year:'해'};
-function periodInsight(prog,gp,gt,kind){ /* 숫자를 문장으로 — "지금 상태 + 다음 행동" */
-  const n=prog.runs,b=gp.runs,a=gt.runs,noun=KIND_NOUN[kind],remain=periodRemain(kind);
-  const tail=remain?` <span style="color:var(--muted)">· ${remain}일 남음</span>`:'';
-  if(a&&n>=a)return `🎉 <b style="color:var(--good-text)">목표까지 다 채웠어요</b> — 이번 ${noun} ${n}번`;
-  if(b&&n>=b)return `<b style="color:var(--good-text)">계획 달성 ✓</b> ${n}번 달렸어요`+(a?` · <span class="bA">목표까지 ${a-n}번</span>`:'')+tail;
-  if(b)return `${n}번 달렸어요 · <b class="bB">계획 ${b}번까지 ${b-n}번 더</b>`+tail;
-  if(a)return `${n}번 달렸어요 · <span class="bA">목표 ${a}번까지 ${a-n}번</span>`+tail;
-  return `${n}번 달렸어요 — <a href="#" onclick="event.stopPropagation();show('goals');return false">기준을 정해보세요 →</a>`;
+function periodInsight(prog,gp,gt,kind){ /* 다음 행동 한 줄 — 글자에는 시리즈 색을 쓰지 않는다(색은 링·막대가 진다) */
+  const n=prog.runs,b=gp.runs,a=gt.runs,remain=periodRemain(kind);
+  const tail=remain?` · ${remain}일 남음`:'';
+  if(a&&n>=a)return `<b class="ok">목표 달성 🎉</b>`;
+  if(b&&n>=b)return `<b class="ok">계획 달성 ✓</b>`+(a?` 목표까지 ${a-n}회`:'');
+  if(b)return `<b>계획까지 ${b-n}회</b>${tail}`;
+  if(a)return `<b>목표까지 ${a-n}회</b>${tail}`;
+  return `<a href="#" onclick="event.stopPropagation();show('goals');return false">기준 정하기 →</a>`;
 }
 function ringCard(title,sub,gp,gt,prog,kind,extra){
   const okB=!!gp.runs&&prog.runs>=gp.runs; /* 계획 달성 카드는 좌측 초록 라인으로 상태 표시 */
@@ -1392,12 +1405,10 @@ function ringCard(title,sub,gp,gt,prog,kind,extra){
       style="display:flex;gap:14px;align-items:center${okB?';border-left:3px solid var(--good)':''}">
     ${ringSVG(prog.runs,gp.runs,gt.runs)}
     <div style="flex:1;min-width:0">
-      <p style="margin:0;font-size:11.5px;font-weight:700;letter-spacing:.03em;color:var(--muted)">${title}
-        <span style="font-weight:600;letter-spacing:0;color:var(--text-secondary)">${sub}</span></p>
-      <div style="font-size:13px;margin:3px 0 9px">${periodInsight(prog,gp,gt,kind)}</div>
+      <p class="gc-title">${title} <span>${sub}</span><span class="gc-chev">›</span></p>
+      <div class="gc-note">${periodInsight(prog,gp,gt,kind)}</div>
       ${goalBarHTML('거리',prog.dist,gp.distance_km,gt.distance_km,'km')}
       ${extra||''}
-      <div class="gcard-more">탭하면 이번 ${KIND_NOUN[kind]} 내역 →</div>
     </div></div>`;
 }
 function openPeriodDetail(kind){ /* 카드 상세 — 이 숫자가 어떤 러닝들로 만들어졌는지 */
@@ -1624,19 +1635,20 @@ function renderDashboard(){
       <button class="btn hide-mobile" onclick="show('add')">＋ 기록 추가</button>
     </div>
     <div class="sect" style="margin-top:8px">달성도 <a href="#" onclick="show('goals');return false" style="font-size:12px;font-weight:600;margin-left:6px">설정 →</a>
-      <div class="legend"><span class="chipB">계획</span> 반드시 지킬 최소선 — 링의 눈금·막대 위 표식
-        <span class="chipA" style="margin-left:10px">목표</span> 도전할 선 — 링 한 바퀴·막대 끝</div></div>
+      <div class="legend"><span class="lg"><i class="sw-run"></i>실적</span><span class="lg"><i class="sw-beta"></i>계획 <em>꼭 지킬 선</em></span><span class="lg"><i class="sw-alpha"></i>목표 <em>도전할 선</em></span></div></div>
     <div class="goalcards">${
       ringCard('이번 주',weekLabel(isoWeekKey(todayISO())),g.plan.weekly,g.target.weekly,p.weekly,'week',weekDotsHTML()+streakHTML())}${
       ringCard('이번 달',(+monthKey(todayISO()).slice(5))+'월',g.plan.monthly,g.target.monthly,p.monthly,'month')}${
       ringCard('올해',yearKey(todayISO())+'년',proratedYearly(g.plan.yearly),proratedYearly(g.target.yearly),p.yearly,'year',startCaption())}${
       paceCard()}</div>
+    <div class="filterrow"><span class="fr-label">기간</span>${rangeTogHTML()}
+      <span class="fr-hint">거리·페이스 차트에 적용</span></div>
     <div class="grid2a">
       <div class="chart-card"><h3>꾸준함 (최근 20주)</h3>
         <div class="cs">하루 한 칸 · 진할수록 먼 거리 <span style="display:inline-flex;gap:2px;vertical-align:-2px"><span style="width:9px;height:9px;border-radius:2px;background:var(--grid)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--series-1-soft)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--series-1)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--seq-550)"></span></span> · 테두리 = 오늘</div>
         <div id="ch-heat" style="overflow-x:auto"></div>
         <div id="heatSummary" style="font-size:12.5px;color:var(--text-secondary);margin-top:10px"></div></div>
-      <div class="chart-card"><div class="ch-head"><h3>거리</h3>${rangeTogHTML()}</div>
+      <div class="chart-card"><h3>거리</h3>
         <div class="cs" id="distCaption"></div><div id="ch-dist"></div></div>
     </div>
     <div class="grid2a">
