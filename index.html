@@ -455,9 +455,29 @@ async function imgUrl(rec){
   if(rec.has_image){
     if(objUrls.has(rec.record_id))return objUrls.get(rec.record_id);
     try{const b=await imgGet(rec.record_id);if(b){const u=URL.createObjectURL(b);objUrls.set(rec.record_id,u);return u;}}catch(e){}
+    const u=await refetchDriveImage(rec); /* 다른 기기에서 등록된 기록 — 드라이브 원본에서 복구 */
+    if(u)return u;
     return rec.image_url||null;
   }
   return rec.image_url||null;
+}
+/* 사진은 드라이브 정본(JSON)에 실리지 않아 기기 간 동기화로 넘어온 기록에는 로컬 사본이 없다.
+   대신 source_file_id가 남아 있고 그 파일은 이 앱이 Picker로 권한을 받은 것이라 어느 기기에서든
+   같은 자격으로 다시 받을 수 있다 — 한 번 받아 IndexedDB에 캐시하면 이후에는 로컬에서 뜬다. */
+const _refetching=new Map();
+async function refetchDriveImage(rec){
+  if(!rec.source_file_id||!driveConnected()||!tokenAlive())return null; /* 토큰 없으면 조용히 보류 — 팝업 금지 */
+  if(_refetching.has(rec.record_id))return _refetching.get(rec.record_id);
+  const p=(async()=>{
+    try{
+      const blob=await downloadDriveFile(rec.source_file_id);
+      try{await imgPut(rec.record_id,blob);}catch(e){} /* 캐시 실패(용량 등)해도 이번 표시는 진행 */
+      const u=URL.createObjectURL(blob);objUrls.set(rec.record_id,u);return u;
+    }catch(e){return null;}
+    finally{_refetching.delete(rec.record_id);}
+  })();
+  _refetching.set(rec.record_id,p);
+  return p;
 }
 function revokeImg(id){if(objUrls.has(id)){URL.revokeObjectURL(objUrls.get(id));objUrls.delete(id);}}
 async function hydrateThumbs(){
@@ -466,7 +486,8 @@ async function hydrateThumbs(){
     if(!rec)continue;
     const drop=()=>{if(img.parentElement&&img.parentElement.classList.contains('thumbwrap'))img.parentElement.remove();};
     const u=await imgUrl(rec);
-    if(u){img.onerror=drop;img.src=u;}else drop();
+    if(u){img.onerror=drop;img.src=u;}
+    else if(!(rec.source_file_id&&driveConnected()))drop(); /* 드라이브에서 복구 가능한 건 남겨두고 재시도 */
   }
 }
 
@@ -485,10 +506,10 @@ function originApproved(){return APPROVED_ORIGINS.includes(location.origin);}
 const DRIVE_SETTINGS_KEY='run.drive.v1'; // {clientId, apiKey, appId, jsonFileId, connected, connectedEmail, folderId, folderName} — 이 브라우저에만 저장
 function driveSettings(){try{return JSON.parse(localStorage.getItem(DRIVE_SETTINGS_KEY))||{};}catch(e){return {};}}
 function saveDriveSettings(s){try{localStorage.setItem(DRIVE_SETTINGS_KEY,JSON.stringify(s));}catch(e){toast('설정 저장 실패');}}
-function driveCreds(){ /* BYO 자격 입력 시 우선(기본 폴더 등 고급 기능) — 없으면 플랫폼 공용 자격 */
+function driveCreds(){ /* 자체 자격을 입력했으면 우선 — 없으면 플랫폼 공용 자격 (기능 차이 없음) */
   const s=driveSettings();
-  if(s.clientId)return {clientId:s.clientId,apiKey:s.apiKey||null,appId:s.appId||null,byo:true};
-  if(PLATFORM_GOOGLE.clientId)return {clientId:PLATFORM_GOOGLE.clientId,apiKey:PLATFORM_GOOGLE.apiKey||null,appId:PLATFORM_GOOGLE.appId||null,byo:false};
+  if(s.clientId)return {clientId:s.clientId,apiKey:s.apiKey||null,appId:s.appId||null};
+  if(PLATFORM_GOOGLE.clientId)return {clientId:PLATFORM_GOOGLE.clientId,apiKey:PLATFORM_GOOGLE.apiKey||null,appId:PLATFORM_GOOGLE.appId||null};
   return null;
 }
 function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.async=true;s.onload=res;s.onerror=()=>rej(new Error('스크립트 로드 실패'));document.head.appendChild(s);});}
@@ -515,8 +536,9 @@ async function driveToken(fresh){ /* fresh: 만료 전 선제 갱신용 — 캐�
         client_id:c.clientId,
         hint:driveSettings().connectedEmail||undefined, /* 연결 계정 힌트 — 계정 선택창 없이 조용한 재발급 */
         /* drive.file: 앱 파일 읽기·쓰기 · email/profile: 로그인 프로필 표시 — 전부 비민감(앱 검증 불요).
-           drive.readonly(제한 등급 — 기본 폴더 Picker 뷰용)는 BYO 자격일 때만 추가 */
-        scope:'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile'+(c.byo?' https://www.googleapis.com/auth/drive.readonly':''),
+           Picker는 사용자 컨텍스트에서 돌아 폴더 탐색·setParent가 drive.file만으로 동작한다
+           (2026-07-28 프로덕션 실측). 제한 등급인 drive.readonly는 불필요해 요청하지 않는다. */
+        scope:'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
         callback:t=>{
           if(t&&t.access_token){_gisToken=t.access_token;_gisTokenExp=Date.now()+((+t.expires_in||3600)*1000);_tokenSnooze=0;res(_gisToken);}
           else rej(new Error((t&&t.error)||'토큰 발급 실패'));
@@ -536,19 +558,18 @@ async function openDrivePicker(){
     const token=await driveToken();
     await ensureGoogleLibs();
     const view=new google.picker.DocsView(google.picker.ViewId.DOCS_IMAGES).setIncludeFolders(true);
-    if(c.byo&&s.folderId)view.setParent(s.folderId); /* 기본 폴더는 BYO 전용(drive.readonly 필요) */
+    if(s.folderId)view.setParent(s.folderId); /* 지정해 둔 기본 폴더에서 바로 시작 */
     const b=new google.picker.PickerBuilder()
       .setOAuthToken(token).setDeveloperKey(c.apiKey).addView(view)
       .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
-      .setTitle('러닝 캡쳐 선택'+(c.byo&&s.folderName?' — '+s.folderName:'')).setCallback(pickerCb);
+      .setTitle('러닝 캡쳐 선택'+(s.folderName?' — '+s.folderName:'')).setCallback(pickerCb);
     if(c.appId)b.setAppId(c.appId);
     b.build().setVisible(true);
   }catch(e){toast('드라이브 연결 실패: '+((e&&e.message)||e));}
 }
-async function pickDriveFolder(){ /* 기본 캡쳐 폴더 1회 지정 — BYO 자격 전용(폴더 뷰는 drive.readonly 필요) */
-  const c=driveCreds(),s=driveSettings();
+async function pickDriveFolder(){ /* 기본 캡쳐 폴더 1회 지정 — 다음부터 Picker가 이 폴더에서 열린다 */
+  const c=driveCreds();
   if(!c||!c.apiKey){openDriveSetup();return;}
-  if(!c.byo){toast('기본 폴더 고정은 ⚙ 고급 설정(자체 자격)에서만 지원됩니다');return;}
   try{
     const token=await driveToken();
     await ensureGoogleLibs();
@@ -837,6 +858,7 @@ async function connectDrive(){ /* 사용자 제스처에서 호출 — 최초 1�
     toast('구글 계정이 연결되었습니다'+(s.connectedEmail?' · '+s.connectedEmail:''));
     setPill();if(current==='data')renderData();
     await syncFromDrive(true);
+    hydrateThumbs(); /* 연결로 토큰이 생겼으니 다른 기기 기록의 사진을 복구 */
   }catch(e){
     if(!originApproved()&&!driveSettings().clientId){openOriginHelp(e);return;} /* 미승인 주소 — 원인 안내 */
     toast('연결 실패: '+((e&&e.message)||e));
@@ -951,7 +973,7 @@ async function resyncNow(){ /* 수동 동기화 — 사용자 제스처라 토�
 document.addEventListener('pointerdown',()=>{ /* 제스처에서 토큰 유지 — 만료 10분 전부터 선제 갱신해 재로그인 공백 제거 */
   if(!driveConnected()||_syncBusy||Date.now()<_tokenSnooze)return;
   if(_gisToken&&_gisTokenExp-Date.now()>600000)return; /* 10분 이상 남으면 통과 */
-  driveToken(true).then(()=>{if(_pendingBackup)runAutoBackup();syncFromDrive(true);}).catch(()=>{setPill();});
+  driveToken(true).then(()=>{if(_pendingBackup)runAutoBackup();syncFromDrive(true);hydrateThumbs();}).catch(()=>{setPill();});
 },true);
 setInterval(()=>{ /* 60초 폴링 — 유효 토큰이 있을 때만, 팝업 없이 */
   if(!driveConnected()||!tokenAlive())return;
@@ -962,7 +984,7 @@ function openDriveSetup(){
   const s=driveSettings();
   openModal(`<h3>드라이브 고급 설정 (자체 자격)</h3>
     <p style="font-size:12.5px;margin:0 0 12px">${PLATFORM_GOOGLE.clientId
-      ?'기본은 <b>구글 계정 연결</b> 버튼만으로 충분합니다. 자체 Google Cloud 자격을 입력하면 <b>기본 폴더 고정</b> 같은 고급 기능이 열립니다.'
+      ?'기본은 <b>구글 계정 연결</b> 버튼만으로 충분합니다 — 기본 폴더 지정을 포함한 모든 기능이 그대로 동작합니다. 자체 Google Cloud 자격은 별도 프로젝트로 운영하고 싶을 때만 쓰세요.'
       :'플랫폼 공용 자격이 아직 배포되지 않았습니다 — Google Cloud Console에서 발급한 값을 입력하세요.'} 이 브라우저에만 저장됩니다. <a href="drive.html" target="_blank">설정 방법 보기 →</a></p>
     <div class="field" style="margin-bottom:10px"><label>OAuth Client ID *</label><input id="dv_cid" placeholder="xxxx.apps.googleusercontent.com" value="${esc(s.clientId||'')}"></div>
     <div class="field" style="margin-bottom:10px"><label>API Key (Picker) *</label><input id="dv_key" placeholder="AIza…" value="${esc(s.apiKey||'')}"></div>
@@ -1907,14 +1929,14 @@ function renderData(){
         <div class="be-h"><span class="be-ic">▲</span>구글드라이브</div>
         ${(!conn&&!s.clientId&&!originApproved())?`<div class="note warn" style="font-size:12px">이 주소(<b style="word-break:break-all">${esc(location.origin)}</b>)는 구글에 등록돼 있지 않아 로그인이 차단됩니다. <a href="#" onclick="openOriginHelp();return false">해결 방법 →</a></div>`:''}
         <p>${conn
-          ?`<b>${esc(s.connectedEmail||'구글 계정')}</b>과 자동 동기화 중 — 기록을 저장·삭제하면 몇 초 안에 내 드라이브의 정본(running_records.json)에 반영되고, 다른 기기의 변경도 이 브라우저로 들어옵니다.${c.byo&&s.folderName?` 기본 폴더 <b>${esc(s.folderName)}</b>.`:''}`
+          ?`<b>${esc(s.connectedEmail||'구글 계정')}</b>과 자동 동기화 중 — 기록을 저장·삭제하면 몇 초 안에 내 드라이브의 정본(running_records.json)에 반영되고, 다른 기기의 변경도 이 브라우저로 들어옵니다.${s.folderName?` 기본 폴더 <b>${esc(s.folderName)}</b>.`:''}`
           :(c?'구글 계정으로 <b>연결 한 번</b>이면 별도 설정 없이 기록이 내 드라이브와 자동 동기화됩니다(백업·복원·기기 간 병합). 드라이브 캡쳐 가져오기(중복 스킵 · OCR 프리필)도 바로 사용할 수 있어요.'
           :'드라이브에서 캡쳐를 골라 가져오고 정본 JSON을 자동 동기화합니다. 지금은 ⚙ 설정에서 자체 Client ID를 입력해야 사용할 수 있습니다.')} 설계·설정: <a href="drive.html">드라이브 문서</a></p>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           ${conn
-            ?`<button class="btn sm" onclick="openDrivePicker()">📥 캡쳐 가져오기${c.byo&&s.folderName?' · '+esc(s.folderName):''}</button>
+            ?`<button class="btn sm" onclick="openDrivePicker()">📥 캡쳐 가져오기${s.folderName?' · '+esc(s.folderName):''}</button>
               <button class="btn sm sec" onclick="resyncNow()">🔄 지금 동기화</button>
-              ${c.byo?`<button class="btn sm sec" onclick="pickDriveFolder()">📁 기본 폴더</button>`:''}
+              <button class="btn sm sec" onclick="pickDriveFolder()">📁 기본 폴더${s.folderName?' 변경':' 지정'}</button>
               <button class="btn sm sec" onclick="openDriveSetup()">⚙ 고급</button>
               <button class="btn sm sec" onclick="disconnectDrive()">연결 해제</button>`
             :`<button class="btn sm" onclick="connectDrive()">🔗 구글 계정 연결</button>
@@ -2104,7 +2126,7 @@ if('serviceWorker' in navigator&&location.protocol!=='file:') /* PWA — 홈 화
   navigator.serviceWorker.register('sw.js').catch(()=>{});
 _bootDone=true; /* 이후 저장부터 자동 백업 활성 */
 if(driveConnected()) /* 재방문 자동 로그인 — 계정 힌트로 조용히 세션 복구, 팝업 차단 시 첫 클릭에서 폴백 */
-  driveToken().then(()=>{if(_pendingBackup)runAutoBackup();syncFromDrive(true);}).catch(()=>{setPill();});
+  driveToken().then(()=>{if(_pendingBackup)runAutoBackup();syncFromDrive(true);hydrateThumbs();}).catch(()=>{setPill();});
 </script>
 </body>
 </html>
