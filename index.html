@@ -5,7 +5,7 @@
 <script>try{var _t=localStorage.getItem('run.theme.v1');if(_t)document.documentElement.setAttribute('data-theme',_t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>러닝 누적기록 · 집계 대시보드</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏃</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-3 -3 30 30'><rect x='-3' y='-3' width='30' height='30' rx='6.5' fill='%232a78d6'/><g transform='translate(1.25,0.55)' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><circle cx='16.5' cy='4' r='1.6' fill='%23fff' stroke='none'/><path d='M15 7l-3.5 5.5'/><path d='M10.5 8.5L14 6.5L17.5 8'/><path d='M11.5 12.5L15 15.5L13.5 20.5'/><path d='M11.5 12.5L7.5 15.5L4 14'/></g></svg>">
 <meta name="theme-color" content="#f9f9f7" id="metaTheme">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -92,6 +92,22 @@
     font-variant-numeric:proportional-nums} /* 큰 숫자는 등폭이면 자간이 벌어져 보인다 */
   .statrow .val small{font-size:12px;font-weight:600;color:var(--muted);margin-left:1px}
   .statrow .foot{font-size:10.5px;color:var(--muted);margin-top:1px}
+  /* 누적 총계 — 대시보드 최상단. 3열 고정이라 좁은 화면에서도 줄이 깨지지 않는다 */
+  .totalrow{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface-1);border:1px solid var(--border);
+    border-radius:var(--radius);box-shadow:var(--shadow);margin:12px 0 2px}
+  .totalrow .st{text-align:center;padding:13px 6px;border-left:1px solid var(--border);min-width:0}
+  .totalrow .st:first-child{border-left:none}
+  .totalrow .label{font-size:11.5px;color:var(--text-secondary)}
+  .totalrow .val{font-size:22px;font-weight:750;letter-spacing:-.02em;margin-top:2px;line-height:1.15;
+    font-variant-numeric:proportional-nums}
+  .totalrow .val small{font-size:12px;font-weight:600;color:var(--muted);margin-left:1px}
+  .totalrow .foot{font-size:10.5px;color:var(--muted);margin-top:1px}
+  @media(max-width:560px){
+    .totalrow .st{padding:11px 3px}
+    .totalrow .label{font-size:10.5px}
+    .totalrow .val{font-size:18px}
+    .totalrow .val small{font-size:10.5px}
+    .totalrow .foot{font-size:9.5px}}
   /* β(계획)·α(목표) 표기 */
   .bB{color:var(--guide-beta);font-weight:750}
   .bA{color:var(--guide-alpha);font-weight:750}
@@ -366,7 +382,7 @@
 <header class="top">
   <div class="top-inner">
     <div class="brand">
-      <div class="logo"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/><path d="M4 17l3-3 3 1 2-4 3 2 2-1"/><path d="M8.5 21l2.5-5 3 2 1 3"/></svg></div>
+      <div class="logo"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="16.5" cy="4" r="1.6" fill="currentColor" stroke="none"/><path d="M15 7l-3.5 5.5"/><path d="M10.5 8.5L14 6.5L17.5 8"/><path d="M11.5 12.5L15 15.5L13.5 20.5"/><path d="M11.5 12.5L7.5 15.5L4 14"/></svg></div>
       <div><h1>러닝 누적기록 <span class="draft-badge">v2</span></h1><div class="sub">사진 한 장 = 기록 한 건 · 데이터는 내 브라우저에</div></div>
     </div>
     <div class="spacer"></div>
@@ -1328,9 +1344,7 @@ function agg(){
   const paced=r.filter(x=>x.avg_pace_sec_per_km&&x.distance_km);
   const pd=paced.reduce((a,x)=>a+x.distance_km,0);
   const avgPace=pd?paced.reduce((a,x)=>a+x.avg_pace_sec_per_km*x.distance_km,0)/pd:null;
-  const longest=r.reduce((m,x)=>(x.distance_km>(m?.distance_km||0)?x:m),null);
-  const fastest=r.filter(x=>x.avg_pace_sec_per_km).reduce((m,x)=>(x.avg_pace_sec_per_km<(m?.avg_pace_sec_per_km||1e9)?x:m),null);
-  return {n:r.length,...tot,avgPace,longest,fastest};
+  return {n:r.length,...tot,avgPace};
 }
 function periodTotals(keyFn,key){
   let dist=0,runs=0;
@@ -1747,8 +1761,13 @@ function renderDashboard(){
   const p=goalProgress(), g=state.goals;
   $('#stage').innerHTML=`
     <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
-      <div style="flex:1;min-width:200px"><h2 class="vh">대시보드</h2><p class="vsub">${(d=>d.getMonth()+1+'월 '+d.getDate()+'일 ('+WD[d.getDay()]+')')(new Date(todayISO()+'T00:00:00'))} · 누적 <b>${a.n}회</b> · <b>${a.d.toFixed(1)}km</b></p></div>
+      <div style="flex:1;min-width:200px"><h2 class="vh">대시보드</h2><p class="vsub">${(d=>d.getMonth()+1+'월 '+d.getDate()+'일 ('+WD[d.getDay()]+')')(new Date(todayISO()+'T00:00:00'))}</p></div>
       <button class="btn hide-mobile" onclick="show('add')">＋ 기록 추가</button>
+    </div>
+    <div class="totalrow">
+      <div class="st"><div class="label">누적 러닝</div><div class="val">${a.n}<small>회</small></div></div>
+      <div class="st"><div class="label">총 거리</div><div class="val">${a.d.toFixed(1)}<small>km</small></div></div>
+      <div class="st"><div class="label">총 시간</div><div class="val">${clock(a.t)}</div><div class="foot">평균 ${paceTxt(a.avgPace?Math.round(a.avgPace):null)}/km</div></div>
     </div>
     <div class="sect" style="margin-top:8px">지금 <a href="#" onclick="show('goals');return false" style="font-size:12px;font-weight:600;margin-left:6px">기준 설정 →</a>
       <div class="legend"><span class="lg"><i class="sw-run"></i>실적</span><span class="lg"><i class="sw-beta"></i>계획 <em>꼭 지킬 선</em></span><span class="lg"><i class="sw-alpha"></i>목표 <em>도전할 선</em></span></div></div>
@@ -1778,11 +1797,7 @@ function renderDashboard(){
     <div class="chart-card"><h3>최근 러닝</h3><div class="cs">최근 5회 · 전체 목록은 <a href="#" onclick="show('data');return false">데이터</a>에서</div>
       <div id="recentList" style="margin-top:8px"></div></div>
     </div>
-    <div class="statrow" style="margin-top:14px">
-      <div class="st"><div class="label">최장 거리 (PR)</div><div class="val">${a.longest?a.longest.distance_km.toFixed(2):'—'}<small>km</small></div></div>
-      <div class="st"><div class="label">최고 페이스</div><div class="val">${paceTxt(a.fastest?a.fastest.avg_pace_sec_per_km:null)}<small>/km</small></div></div>
-      <div class="st"><div class="label">총 시간</div><div class="val">${clock(a.t)}</div><div class="foot">평균 ${paceTxt(a.avgPace?Math.round(a.avgPace):null)}/km</div></div>
-    </div>`;
+    `;
   drawHeatmap();drawDistance();drawPace();drawCumulative();drawRecent();hydrateThumbs();
 }
 function rangeTogHTML(){ /* 주/월/년 전환 — 거리·페이스 차트 공통 */

@@ -6,7 +6,7 @@ import {mkdirSync} from 'node:fs';
 const glyph=(size,scale)=>`<!doctype html><body style="margin:0">
 <div style="width:${size}px;height:${size}px;background:linear-gradient(135deg,#2a78d6,#1c5cab);display:grid;place-items:center">
 <svg width="${Math.round(size*scale)}" height="${Math.round(size*scale)}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-<path d="M13 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/><path d="M4 17l3-3 3 1 2-4 3 2 2-1"/><path d="M8.5 21l2.5-5 3 2 1 3"/></svg></div>`;
+<circle cx="16.5" cy="4" r="1.6" fill="#fff" stroke="none"/><path d="M15 7l-3.5 5.5"/><path d="M10.5 8.5L14 6.5L17.5 8"/><path d="M11.5 12.5L15 15.5L13.5 20.5"/><path d="M11.5 12.5L7.5 15.5L4 14"/></svg></div>`;
 
 mkdirSync('../icons',{recursive:true});
 const b=await chromium.launch();
