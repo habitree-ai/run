@@ -49,13 +49,17 @@ ok((await page.locator('#recentList').textContent()).includes('2026-07-26'),'rec
 const sw=await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();return !!r;});
 ok(sw,'service worker registered');
 
-// 3. 뷰 전환
-for(const [v,t] of [['add','기록 추가'],['goals','목표 · 달성도'],['data','데이터 · 내보내기']]){
+// 3. 뷰 전환 (기록은 목록 전용, 데이터는 백업·연동 전용)
+for(const [v,t] of [['add','기록 추가'],['records','기록'],['goals','목표 · 달성도'],['data','데이터 · 백업']]){
   await page.click(`nav.rail button[data-view="${v}"]`);
   ok((await page.locator('h2.vh').first().textContent()).includes(t),'view '+v);
 }
+// 데이터 뷰에는 기록 목록이 없어야 한다
+ok(await page.locator('#dataWrap').count()===0,'data view has no record list');
+ok(await page.locator('.backends').count()===1,'data view keeps backends');
 
-// 4. 데이터 뷰 검색·필터·정렬
+// 4. 기록 뷰 검색·필터·정렬
+await page.click('nav.rail button[data-view="records"]');
 await page.fill('#dq','없는검색어zzz');
 ok((await page.locator('#dataWrap').textContent()).includes('조건에 맞는'),'filter no-match message');
 ok(!(await page.locator('#dreset').getAttribute('class')||'').includes('hide'),'reset link visible');

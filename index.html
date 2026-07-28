@@ -157,9 +157,9 @@
   /* 기록 추가 — 드라이브에서 바로 가져오기 진입점 */
   .orrow{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:11.5px}
   .orrow::before,.orrow::after{content:'';flex:1;height:1px;background:var(--border)}
-  .drivebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-  .drivebar .dhint{font-size:12px;color:var(--muted);flex:1;min-width:170px}
-  @media(max-width:560px){.drivebar .btn{width:100%}.drivebar .dhint{min-width:0}}
+  .drivebar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:7px}
+  #addDrive .dhint{display:block;font-size:12px;color:var(--muted);line-height:1.5}
+  @media(max-width:560px){.drivebar{gap:7px}.drivebar .btn{flex:1;min-width:132px}}
   /* table */
   table.data{border-collapse:collapse;width:100%;font-size:13px;background:var(--surface-1);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
   table.data th{background:var(--series-1-soft);color:var(--seq-700);text-align:left;padding:9px 11px;font-size:11.5px;font-weight:700;white-space:nowrap}
@@ -405,10 +405,12 @@
   <nav class="rail" id="rail">
     <div class="rail-h">개요</div>
     <button data-view="dashboard" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg>대시보드</button>
-    <div class="rail-h">기록</div>
+    <div class="rail-h">러닝</div>
     <button data-view="add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>기록 추가</button>
+    <button data-view="records"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>기록</button>
     <button data-view="goals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>목표 · 달성도</button>
-    <button data-view="data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="18" height="4" rx="1"/></svg>데이터 · 내보내기</button>
+    <div class="rail-h">관리</div>
+    <button data-view="data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15.5A4.5 4.5 0 0 1 5.3 7a6 6 0 0 1 11.4-1.3A4.6 4.6 0 0 1 20 15"/><path d="M12 11v9M8.5 16.5L12 20l3.5-3.5"/></svg>데이터 · 백업</button>
   </nav>
 
   <main class="stage" id="stage"></main>
@@ -418,8 +420,8 @@
 <nav class="tabbar" id="tabbar" aria-label="주 메뉴">
   <button data-view="dashboard" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg>홈</button>
   <button data-view="add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>기록 추가</button>
+  <button data-view="records"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>기록</button>
   <button data-view="goals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>목표</button>
-  <button data-view="data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="18" height="4" rx="1"/></svg>데이터</button>
   <button id="moreTab" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="5" cy="12" r=".6" fill="currentColor"/><circle cx="12" cy="12" r=".6" fill="currentColor"/><circle cx="19" cy="12" r=".6" fill="currentColor"/></svg>더보기</button>
 </nav>
 
@@ -1210,12 +1212,12 @@ function openNaverWrite(){ /* 순수 동기 핸들러 — 팝업 차단 회피(�
 function markBlogPosted(id){
   const r=state.records.find(x=>x.record_id===id);if(!r)return;
   r.blog_posted_at=new Date().toISOString();saveRecords();closeModal();
-  toast('발행 완료로 표시했습니다');if(current==='data')renderData();
+  toast('발행 완료로 표시했습니다');refreshLists();
 }
 function unmarkBlogPosted(id){
   const r=state.records.find(x=>x.record_id===id);if(!r)return;
   r.blog_posted_at=null;saveRecords();closeModal();
-  toast('발행 표시를 해제했습니다');if(current==='data')renderData();
+  toast('발행 표시를 해제했습니다');refreshLists();
 }
 function openBlogQueue(){
   const list=blogUnposted().slice().reverse();
@@ -1671,7 +1673,7 @@ function drawCumulative(){ /* 누적 거리 vs 계획·목표 페이스라인 �
 }
 
 /* ============ 뷰 라우팅 ============ */
-const views={dashboard:renderDashboard, add:renderAdd, goals:renderGoals, data:renderData};
+const views={dashboard:renderDashboard, add:renderAdd, records:renderRecords, goals:renderGoals, data:renderData};
 let current='dashboard';
 function show(v){
   if(v!=='add'){state.editingId=null;state.pendingImage=null;state.pendingRawOcr=null;
@@ -1690,6 +1692,12 @@ const DOC_LINKS=[
 function openMoreSheet(){ /* 모바일에서 헤더가 감당하지 못하는 것들 — 문서 내비·테마·계정 */
   const dark=effTheme()==='dark', conn=driveConnected(), s=driveSettings();
   openModal(`<h3 style="margin-bottom:14px">더보기</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <button onclick="closeModal();show('data')" style="display:flex;align-items:center;gap:9px;min-height:46px;padding:0 12px;
+        border:1px solid var(--border);border-radius:11px;background:var(--plane);font-family:inherit;font-size:13.5px;
+        font-weight:600;color:var(--text-primary);cursor:pointer;text-align:left"><svg viewBox="0 0 24 24" width="17" height="17"
+        fill="none" stroke="var(--series-1)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15.5A4.5 4.5 0 0 1 5.3 7a6 6 0 0 1 11.4-1.3A4.6 4.6 0 0 1 20 15"/><path d="M12 11v9M8.5 16.5L12 20l3.5-3.5"/></svg>데이터 · 백업</button>
+    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
       ${DOC_LINKS.map(([h,t,i])=>`<a href="${h}" style="display:flex;align-items:center;gap:9px;min-height:46px;padding:0 12px;
         border:1px solid var(--border);border-radius:11px;background:var(--plane);font-size:13.5px;font-weight:600;
@@ -1715,7 +1723,7 @@ function setPill(){
     pill.classList.toggle('connected',!_pendingBackup);
   }else{
     $('#storageLabel').textContent='브라우저 저장 · ';
-    pill.title='데이터 · 내보내기로 이동';pill.classList.add('connected');
+    pill.title='데이터 · 백업으로 이동';pill.classList.add('connected');
   }
   renderAuth();
 }
@@ -1800,7 +1808,7 @@ function renderDashboard(){
       <div class="cs">하루 한 칸 · 진할수록 먼 거리 <span style="display:inline-flex;gap:2px;vertical-align:-2px"><span style="width:9px;height:9px;border-radius:2px;background:var(--grid)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--series-1-soft)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--series-1)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--seq-550)"></span></span> · 테두리 = 오늘</div>
       <div id="ch-heat" style="overflow-x:auto"></div>
       <div id="heatSummary" style="font-size:12.5px;color:var(--text-secondary);margin-top:10px"></div></div>
-    <div class="chart-card"><h3>최근 러닝</h3><div class="cs">최근 5회 · 전체 목록은 <a href="#" onclick="show('data');return false">데이터</a>에서</div>
+    <div class="chart-card"><h3>최근 러닝</h3><div class="cs">최근 5회 · 전체 목록은 <a href="#" onclick="show('records');return false">기록</a>에서</div>
       <div id="recentList" style="margin-top:8px"></div></div>
     </div>
     `;
@@ -1861,10 +1869,16 @@ function drawRecent(){
 function addDriveHTML(){ /* 기록 추가에서 바로 드라이브 캡쳐를 고른다 — 데이터 뷰를 거치지 않도록 */
   const s=driveSettings();
   return driveConnected()
-    ? `<div class="drivebar"><button class="btn sec" onclick="openDrivePicker()">📥 구글드라이브에서 캡쳐 가져오기${s.folderName?' · '+esc(s.folderName):''}</button>
-        <span class="dhint">여러 장을 골라도 됩니다 — 한 번에 검토하고 저장해요. 이미 가져온 캡쳐는 건너뜁니다.</span></div>`
-    : `<div class="drivebar"><button class="btn sec" onclick="connectDrive()">🔗 구글 계정 연결</button>
-        <span class="dhint">연결하면 폰에서 드라이브로 백업한 캡쳐를 여기서 바로 불러올 수 있어요.</span></div>`;
+    ? `<div class="drivebar">
+        <button class="btn sec" onclick="openDrivePicker()">📥 캡쳐 가져오기</button>
+        <button class="btn sec sm" onclick="resyncNow()">🔄 지금 동기화</button>
+        <button class="btn sec sm" onclick="pickDriveFolder()">📁 캡쳐 폴더 ${s.folderName?'변경':'지정'}</button>
+      </div>
+      <span class="dhint">${s.folderName
+        ?`<b>${esc(s.folderName)}</b> 폴더에서 바로 열립니다. 여러 장을 골라도 한 번에 검토·저장돼요.`
+        :'캡쳐 폴더를 지정해 두면 다음부터 그 폴더에서 바로 열립니다. 여러 장을 골라도 한 번에 검토·저장돼요.'} 이미 가져온 캡쳐는 건너뜁니다.</span>`
+    : `<div class="drivebar"><button class="btn sec" onclick="connectDrive()">🔗 구글 계정 연결</button></div>
+      <span class="dhint">연결하면 폰에서 드라이브로 백업한 캡쳐를 여기서 바로 불러오고, 기록이 기기 간에 동기화됩니다.</span>`;
 }
 function refreshAddDrive(){const el=$('#addDrive');if(el)el.innerHTML=addDriveHTML();} /* 연결 상태만 갱신 — 작성 중인 폼을 날리지 않는다 */
 function renderAdd(){
@@ -2127,7 +2141,7 @@ function dataFiltered(){
   return list.sort((a,b)=>{const u=val(a),v=val(b);return u<v?-d:u>v?d:0;});
 }
 function setDataSort(k){_dsort=_dsort.k===k?{k,d:-_dsort.d}:{k,d:k==='pace'?1:-1};updateDataTable();} /* 페이스는 빠른 순이 기본 */
-function clearDataFilter(){_dq={q:'',ym:'',src:''};renderData();}
+function clearDataFilter(){_dq={q:'',ym:'',src:''};renderRecords();}
 function sortArr(k){return _dsort.k===k?(_dsort.d===1?' ▲':' ▼'):'';}
 function dataTableHTML(list){
   if(!list.length)return '<div class="empty">조건에 맞는 기록이 없습니다.</div>';
@@ -2186,33 +2200,59 @@ function updateDataTable(){ /* 표/카드만 부분 재렌더 — 검색 입력 
   const rs=$('#dreset');if(rs)rs.classList.toggle('hide',!(_dq.q||_dq.ym||_dq.src));
   hydrateThumbs();
 }
-function renderData(){
+/* ============ 기록 뷰 — 내 러닝 목록만 (백업·연동은 '데이터 · 백업'으로 분리) ============ */
+function refreshLists(){ /* 기록 목록·연동 카드가 함께 바뀌는 동작에서 현재 화면만 다시 그린다 */
+  if(current==='records')renderRecords();else if(current==='data')renderData();
+}
+function renderRecords(){
   const r=state.records;
   const months=[...new Set(r.map(x=>String(x.date).slice(0,7)))].sort().reverse();
   const srcs=[...new Set(r.map(x=>x.source||'manual'))];
   if(_dq.ym&&!months.includes(_dq.ym))_dq.ym='';
   if(_dq.src&&!srcs.includes(_dq.src))_dq.src='';
+  if(!r.length){$('#stage').innerHTML=`<h2 class="vh">기록</h2><p class="vsub">저장한 러닝이 여기에 쌓입니다.</p>
+    <div class="onb" style="padding:30px 22px">
+      <h3 style="font-size:17px">아직 기록이 없습니다</h3>
+      <p class="obs">러닝 앱 캡쳐를 올리면 첫 기록이 만들어집니다.</p>
+      <div class="obact"><button class="btn" onclick="show('add')">＋ 기록 추가</button></div>
+    </div>`;return;}
   $('#stage').innerHTML=`
-    <h2 class="vh">데이터 · 내보내기</h2>
-    <p class="vsub">브라우저(localStorage + IndexedDB)에 저장된 정본입니다. <b>JSON 내보내기</b>로 백업하세요 — 사진은 내보내기에 포함되지 않습니다.</p>
-    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-      <button class="btn" onclick="exportJSON()">⬇ 정본 내보내기 (JSON)</button>
-      <button class="btn sec" onclick="exportCSV()">⬇ CSV (엑셀)</button>
-      <label class="btn sec" for="impFile">📁 JSON 가져오기<input id="impFile" type="file" accept="application/json,.json" class="hide"></label>
-      <button class="btn sec hide-mobile" onclick="show('add')">＋ 기록 추가</button>
-      ${r.length?`<button class="btn sec" onclick="clearAll()">전체 비우기</button>`:''}
-      <span style="flex:1"></span><span style="align-self:center;font-size:12px;color:var(--muted)">스키마 v2.0 · ${r.length}건</span>
+    <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px"><h2 class="vh">기록</h2>
+        <p class="vsub">저장된 러닝 <b>${r.length}건</b> · 눌러서 수정하거나 지울 수 있습니다.</p></div>
+      <button class="btn hide-mobile" onclick="show('add')">＋ 기록 추가</button>
     </div>
-    ${r.length?`<div class="filterbar">
+    <div class="filterbar">
       <input id="dq" placeholder="🔍 제목·위치·날짜 검색" value="${esc(_dq.q)}">
       <select id="dym"><option value="">전체 기간</option>${months.map(m=>`<option value="${m}"${_dq.ym===m?' selected':''}>${m.replace('-','년 ')}월</option>`).join('')}</select>
       ${srcs.length>1?`<select id="dsrc"><option value="">모든 출처</option>${srcs.map(s0=>`<option value="${esc(s0)}"${_dq.src===s0?' selected':''}>${esc(s0.toUpperCase())}</option>`).join('')}</select>`:''}
       <select id="dsort" class="sortsel">${SORT_OPTS.map(([v,t])=>`<option value="${v}">${t}</option>`).join('')}</select>
       <span id="dcount"></span><a href="#" id="dreset" class="hide" onclick="clearDataFilter();return false">초기화</a>
     </div>
-    <div id="dataWrap"></div>`
-      :`<div class="empty">기록이 없습니다.</div>`}
-    <div class="backends" style="margin-top:22px">
+    <div id="dataWrap"></div>`;
+  $('#dq').oninput=e=>{_dq.q=e.target.value;updateDataTable();};
+  $('#dym').onchange=e=>{_dq.ym=e.target.value;updateDataTable();};
+  const ds=$('#dsrc');if(ds)ds.onchange=e=>{_dq.src=e.target.value;updateDataTable();};
+  $('#dsort').onchange=e=>setDataSortSel(e.target.value);
+  updateDataTable();
+}
+/* ============ 데이터 · 백업 뷰 — 내보내기·가져오기·연동만 ============ */
+function renderData(){
+  const r=state.records;
+  $('#stage').innerHTML=`
+    <h2 class="vh">데이터 · 백업</h2>
+    <p class="vsub">기록은 이 브라우저에만 저장됩니다. 브라우저 데이터를 지우면 되돌릴 수 없으니 <b>구글 계정을 연결</b>하거나 <b>JSON으로 내보내</b> 두세요.</p>
+    <div class="sect">백업 · 복원</div>
+    <div style="display:flex;gap:10px;margin-bottom:6px;flex-wrap:wrap">
+      <button class="btn" onclick="exportJSON()">⬇ 정본 내보내기 (JSON)</button>
+      <label class="btn sec" for="impFile">📁 JSON 가져오기<input id="impFile" type="file" accept="application/json,.json" class="hide"></label>
+      <button class="btn sec" onclick="exportCSV()">⬇ CSV (엑셀)</button>
+      ${r.length?`<button class="btn sec" onclick="clearAll()">전체 비우기</button>`:''}
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 4px">JSON은 복원용 정본입니다 — 사진은 포함되지 않습니다. CSV는 스프레드시트 분석용이에요.
+      기록 목록은 <a href="#" onclick="show('records');return false">기록</a> 탭에 있습니다. (스키마 v2.0 · ${r.length}건)</p>
+    <div class="sect" style="margin-top:20px">저장 위치 · 연동</div>
+    <div class="backends">
       <div class="be"><span class="tag rec" style="background:var(--series-1)">현재</span>
         <div class="be-h"><span class="be-ic">■</span>브라우저 로컬 저장</div>
         <p>레코드는 localStorage, 사진은 IndexedDB에 저장됩니다. 이 브라우저·이 기기에서만 유지되므로 주기적으로 JSON을 내보내거나 드라이브에 백업하세요.</p></div>
@@ -2243,13 +2283,6 @@ function renderData(){
         </div></div>
     </div>`;
   $('#impFile').onchange=importJSON;
-  if(r.length){
-    $('#dq').oninput=e=>{_dq.q=e.target.value;updateDataTable();};
-    $('#dym').onchange=e=>{_dq.ym=e.target.value;updateDataTable();};
-    const ds=$('#dsrc');if(ds)ds.onchange=e=>{_dq.src=e.target.value;updateDataTable();};
-    $('#dsort').onchange=e=>setDataSortSel(e.target.value);
-    updateDataTable();
-  }
 }
 function exportCSV(){ /* 엑셀·스프레드시트용 — BOM 포함 · 전체 기록 */
   if(!state.records.length){toast('내보낼 기록이 없습니다');return;}
@@ -2296,7 +2329,7 @@ function applyImport(mode){
   if(mode==='merge'){
     const res=mergeRemote({records:recs,deleted_ids:j.deleted_ids,goals:j.goals},'가져오기 병합');
     if(!res.fresh&&!res.updated&&!res.gone)toast('추가·변경된 기록이 없습니다');
-    renderData();return;
+    refreshLists();return;
   }
   const newIds=new Set(recs.map(x=>x.record_id));
   state.records.forEach(x=>{if(!newIds.has(x.record_id)){ /* 교체로 사라지는 레코드: 사진 정리 + 삭제 표 */
@@ -2306,7 +2339,7 @@ function applyImport(mode){
   state.deletedIds=state.deletedIds.filter(id=>!newIds.has(id));saveDeleted(); /* 가져온 기록은 부활 처리 */
   state.records=recs.sort((a,b)=>a.date<b.date?-1:1);
   if(j.goals){state.goals=sanitizeGoals(j.goals);state.goals.updated_at=new Date().toISOString();saveGoals();}
-  saveRecords();setPill();toast('교체 완료 · '+recs.length+'건');renderData();
+  saveRecords();setPill();toast('교체 완료 · '+recs.length+'건');refreshLists();
 }
 function delRec(id){
   const r=state.records.find(x=>x.record_id===id);if(!r)return;
@@ -2321,7 +2354,7 @@ function clearAll(){
   state.records.forEach(x=>{if(!state.deletedIds.includes(x.record_id))state.deletedIds.push(x.record_id);});saveDeleted();
   state.records=[];saveRecords();setPill();
   objUrls.forEach(u=>URL.revokeObjectURL(u));objUrls.clear();imgClear().catch(()=>{});
-  renderData();
+  refreshLists();
 }
 async function showImageModal(id){
   const rec=state.records.find(x=>x.record_id===id);if(!rec)return;
@@ -2393,7 +2426,7 @@ document.addEventListener('paste',e=>{ /* 캡쳐 붙여넣기(Ctrl+V) — 어느
   state.pendingDrive=null;
   handleFile(f);
 });
-mqCards.addEventListener('change',()=>{if(current==='data')renderData();}); /* 표 ↔ 카드 전환 */
+mqCards.addEventListener('change',()=>{if(current==='records')renderRecords();}); /* 표 ↔ 카드 전환 */
 let _rzT=null,_rzW=innerWidth;
 window.addEventListener('resize',()=>{ /* 창 크기·회전 변경 시 차트 폭 재계산 */
   clearTimeout(_rzT);_rzT=setTimeout(()=>{

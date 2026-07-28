@@ -207,8 +207,8 @@
   <span>자동 인식은 <b>빈 칸을 대신 채워주는 보조 수단</b>입니다. 최종 확인은 항상 사람이 합니다 — 저장 전에 한 번만 훑어보세요.</span>
 </div>
 
-<h2 class="sec">화면 네 개가 전부입니다</h2>
-<p class="lead">PC는 왼쪽 메뉴, 폰은 아래쪽 탭바에 있습니다.</p>
+<h2 class="sec">화면 다섯 개가 전부입니다</h2>
+<p class="lead">PC는 왼쪽 메뉴, 폰은 아래쪽 탭바에 있습니다. (폰에서 <b>데이터 · 백업</b>은 <b>더보기</b> 안에 있어요)</p>
 <div class="screens">
   <div class="sc">
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg>
@@ -223,8 +223,12 @@
     <div><b>목표 · 달성도</b><p>주·월·연 기준을 정합니다. 기본값은 <b>주 3회 · 월 15회 · 연 180회</b>.</p></div>
   </div>
   <div class="sc">
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="18" height="4" rx="1"/></svg>
-    <div><b>데이터 · 내보내기</b><p>기록 검색·수정·삭제, 파일로 내보내기·가져오기, 구글드라이브 연결.</p></div>
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>
+    <div><b>기록</b><p>지금까지 저장한 러닝 목록. 검색·정렬하고 수정하거나 지울 수 있습니다.</p></div>
+  </div>
+  <div class="sc">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15.5A4.5 4.5 0 0 1 5.3 7a6 6 0 0 1 11.4-1.3A4.6 4.6 0 0 1 20 15"/><path d="M12 11v9M8.5 16.5L12 20l3.5-3.5"/></svg>
+    <div><b>데이터 · 백업</b><p>파일로 내보내기·가져오기, 구글드라이브·네이버 블로그 연동.</p></div>
   </div>
 </div>
 
@@ -239,14 +243,14 @@
     <span class="num"></span>
     <div class="body">
       <b><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15.5A4.5 4.5 0 0 1 5.3 7a6 6 0 0 1 11.4-1.3A4.6 4.6 0 0 1 20 15"/><path d="M12 11v9M8.5 16.5L12 20l3.5-3.5"/></svg>구글 계정 연결 <span style="font-size:11.5px;font-weight:700;color:var(--good-text);background:var(--good-soft);padding:1px 8px;border-radius:999px">권장</span></b>
-      <p><b>데이터 · 내보내기 → 구글드라이브 → 🔗 구글 계정 연결</b>. 로그인 한 번이면 이후 저장할 때마다 내 드라이브에 자동 백업되고, <b>다른 기기에서도 같은 기록</b>이 이어집니다.</p>
+      <p><b>데이터 · 백업 → 구글드라이브 → 🔗 구글 계정 연결</b>(또는 <b>기록 추가</b> 화면의 연결 버튼). 로그인 한 번이면 이후 저장할 때마다 내 드라이브에 자동 백업되고, <b>다른 기기에서도 같은 기록</b>이 이어집니다.</p>
     </div>
   </li>
   <li>
     <span class="num"></span>
     <div class="body">
       <b><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M8 11l4 4 4-4"/><path d="M4 19h16"/></svg>가끔 파일로 내보내기</b>
-      <p><b>⬇ 정본 내보내기(JSON)</b>로 파일 하나를 받아두세요. 복원은 <b>📁 JSON 가져오기</b> 한 번이면 됩니다.</p>
+      <p><b>데이터 · 백업 → ⬇ 정본 내보내기(JSON)</b>로 파일 하나를 받아두세요. 복원은 <b>📁 JSON 가져오기</b> 한 번이면 됩니다.</p>
     </div>
   </li>
 </ol>
@@ -275,7 +279,7 @@
     <span class="num"></span>
     <div class="body">
       <b>한 번만 설정하기</b>
-      <p><b>데이터 · 내보내기 → 네이버 블로그 → ⚙ 설정</b>에서 <b>블로그 ID</b>를 넣습니다. 블로그 주소의 마지막 부분이에요 — <code>blog.naver.com/myid</code> 라면 <code>myid</code>.</p>
+      <p><b>데이터 · 백업 → 네이버 블로그 → ⚙ 설정</b>에서 <b>블로그 ID</b>를 넣습니다. 블로그 주소의 마지막 부분이에요 — <code>blog.naver.com/myid</code> 라면 <code>myid</code>.</p>
     </div>
   </li>
   <li>
