@@ -237,6 +237,15 @@
   .onb .obact{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-top:24px}
   a.btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
   a.btn:hover{text-decoration:none}
+  /* 공유 링크로 들어온 읽기 전용 화면 — 내 데이터를 다루는 UI를 모두 감춘다 */
+  body.shared nav.rail,body.shared .tabbar,body.shared #authArea,body.shared #storagePill,
+  body.shared .draft-badge{display:none!important}
+  body.shared .shell{grid-template-columns:1fr}
+  body.shared main.stage{padding-bottom:60px}
+  .sharedban{display:inline-block;font-size:11.5px;font-weight:700;color:var(--seq-700);
+    background:var(--series-1-soft);padding:4px 11px;border-radius:999px;margin-bottom:12px}
+  :root[data-theme="dark"] .sharedban{color:#dbe9ff}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .sharedban{color:#dbe9ff}}
   @media(max-width:560px){.onb{padding:28px 18px}.onb h3{font-size:18px}.onb .obact .btn{flex:1;min-width:140px}}
   /* goals */
   .goalcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(262px,1fr));gap:12px;margin-top:12px}
@@ -1407,6 +1416,152 @@ function paceCard(){
 }
 
 /* ---- 동기부여 대시보드 (planning/dashboard-motivation.html) — 링 게이지 · 넛지 · 스트릭 · 누적 진도 ---- */
+/* ============ 공유 — 요약 객체 · 링크 인코딩 (REQ-0004) ============
+   링크와 카드 이미지가 이 객체 하나를 함께 보므로 두 경로의 숫자가 어긋날 수 없다.
+   개별 레코드·날짜·시간·위치·사진·계정은 담지 않는다. */
+function buildSummary(scope){
+  const today=todayISO(), y=today.slice(0,4);
+  const all=scope!=='year';
+  const rs=all?state.records:state.records.filter(r=>String(r.date).slice(0,4)===y);
+  const tot=rs.reduce((a,x)=>({d:a.d+(x.distance_km||0),t:a.t+(x.duration_sec||0)}),{d:0,t:0});
+  const paced=rs.filter(x=>x.avg_pace_sec_per_km&&x.distance_km);
+  const pd=paced.reduce((a,x)=>a+x.distance_km,0);
+  const g=state.goals;
+  /* 월별 거리 12칸 — 올해는 1~12월, 전체는 최근 12개월. 라벨은 at(생성일)에서 다시 계산한다 */
+  const keys=[];
+  if(all){const d=new Date(today.slice(0,7)+'-01T00:00:00');d.setMonth(d.getMonth()-11);
+    for(let i=0;i<12;i++){keys.push(d.getFullYear()+'-'+pad(d.getMonth()+1));d.setMonth(d.getMonth()+1);}}
+  else for(let i=1;i<=12;i++)keys.push(y+'-'+pad(i));
+  const m=keys.map(k=>Math.round(rs.filter(x=>String(x.date).slice(0,7)===k)
+    .reduce((a,x)=>a+(x.distance_km||0),0)*10)/10);
+  return {v:1, sc:all?'a':'y', n:rs.length,
+    d:Math.round(tot.d*10)/10, t:tot.t,
+    ap:pd?Math.round(paced.reduce((a,x)=>a+x.avg_pace_sec_per_km*x.distance_km,0)/pd):null,
+    bp:paced.length?Math.min(...paced.map(x=>x.avg_pace_sec_per_km)):null,
+    st:betaStreak(),
+    gp:all?null:[g.plan.yearly.runs||0,g.plan.yearly.distance_km||0],
+    gt:all?null:[g.target.yearly.runs||0,g.target.yearly.distance_km||0],
+    m, at:today};
+}
+function sumPeriodLabel(s){ /* 링크·카드·읽기전용 뷰가 같은 문구를 쓴다 */
+  return s.sc==='y'?(s.at||'').slice(0,4)+'년':'전체 기간';
+}
+function sumMonthLabels(s){
+  if(s.sc==='y')return Array.from({length:12},(_,i)=>(i+1)+'월');
+  const d=new Date((s.at||todayISO()).slice(0,7)+'-01T00:00:00');d.setMonth(d.getMonth()-11);
+  return Array.from({length:12},()=>{const t=(d.getMonth()+1)+'월';d.setMonth(d.getMonth()+1);return t;});
+}
+function b64uEnc(str){
+  const b=new TextEncoder().encode(str);let s='';
+  b.forEach(c=>{s+=String.fromCharCode(c);});
+  return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function b64uDec(t){
+  t=String(t).replace(/-/g,'+').replace(/_/g,'/');
+  while(t.length%4)t+='=';
+  const s=atob(t),b=new Uint8Array(s.length);
+  for(let i=0;i<s.length;i++)b[i]=s.charCodeAt(i);
+  return new TextDecoder().decode(b);
+}
+function encodeShare(sum){return b64uEnc(JSON.stringify(sum));}
+function decodeShare(tok){ /* 깨진 값·버전 불일치는 null — 호출부는 평소 앱으로 부팅한다 */
+  try{
+    const o=JSON.parse(b64uDec(tok));
+    if(!o||o.v!==1||typeof o.n!=='number'||typeof o.d!=='number'||!Array.isArray(o.m))return null;
+    return o;
+  }catch(e){return null;}
+}
+function shareUrl(sum){return location.origin+location.pathname+'#s='+encodeShare(sum);}
+
+/* ---- 공유 카드 (canvas 1080×1080) ----
+   받는 사람 환경을 모르므로 화면 테마를 따라가지 않고 라이트 팔레트를 고정한다.
+   외부 폰트를 불러오지 않는다(오프라인·CORS). */
+const SHARE_C={bg:'#ffffff',plane:'#f4f4f1',ink:'#0b0b0b',sub:'#52514e',mute:'#898781',
+  line:'#e1e0d9',brand:'#2a78d6',deep:'#0d366b',beta:'#b26a00',alpha:'#7c5cd6',good:'#0ca30c'};
+function drawShareCard(s){
+  const S=1080,c=document.createElement('canvas');c.width=c.height=S;
+  const x=c.getContext('2d');
+  const F=(w,px)=>`${w} ${px}px system-ui,-apple-system,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif`;
+  const rr=(a,b,w,h,r)=>{x.beginPath();x.moveTo(a+r,b);x.arcTo(a+w,b,a+w,b+h,r);x.arcTo(a+w,b+h,a,b+h,r);
+    x.arcTo(a,b+h,a,b,r);x.arcTo(a,b,a+w,b,r);x.closePath();};
+  x.fillStyle=SHARE_C.bg;x.fillRect(0,0,S,S);
+  const P=76;
+  /* 머리말 */
+  const g=x.createLinearGradient(P,60,P+60,120);g.addColorStop(0,SHARE_C.brand);g.addColorStop(1,SHARE_C.deep);
+  x.fillStyle=g;rr(P,62,58,58,16);x.fill();
+  x.strokeStyle='#fff';x.lineWidth=4;x.lineCap='round';x.lineJoin='round';
+  const sc=58/24*0.62, ox=P+58/2-12*sc-1.25*sc*0+ (58-24*sc)/2-P*0; /* 러너 글리프 — 로고와 같은 도형 */
+  const gx=P+(58-24*sc)/2, gy=62+(58-24*sc)/2;
+  const pt=(px,py)=>[gx+px*sc,gy+py*sc];
+  x.beginPath();x.arc(...pt(16.5,4),1.6*sc,0,7);x.fillStyle='#fff';x.fill();
+  const seg=pts=>{x.beginPath();pts.forEach(([a,b],i)=>i?x.lineTo(...pt(a,b)):x.moveTo(...pt(a,b)));x.stroke();};
+  seg([[15,7],[11.5,12.5]]);seg([[10.5,8.5],[14,6.5],[17.5,8]]);
+  seg([[11.5,12.5],[15,15.5],[13.5,20.5]]);seg([[11.5,12.5],[7.5,15.5],[4,14]]);
+  x.fillStyle=SHARE_C.ink;x.font=F(750,34);x.textBaseline='alphabetic';
+  x.fillText('러닝 누적기록',P+76,92);
+  x.fillStyle=SHARE_C.mute;x.font=F(500,25);
+  x.fillText(sumPeriodLabel(s)+' 요약',P+76,124);
+  /* 히어로 — 총 거리 */
+  x.fillStyle=SHARE_C.sub;x.font=F(600,27);x.fillText('총 거리',P,214);
+  x.fillStyle=SHARE_C.brand;x.font=F(800,132);
+  const dTxt=s.d.toFixed(1);x.fillText(dTxt,P,330);
+  const dW=x.measureText(dTxt).width;
+  x.fillStyle=SHARE_C.mute;x.font=F(700,42);x.fillText('km',P+dW+14,330);
+  /* 3열 지표 */
+  const cells=[['러닝',String(s.n),'회'],['시간',clock(s.t),''],['평균 페이스',s.ap?paceTxt(s.ap):'—','/km']];
+  const cw=(S-P*2)/3;
+  x.strokeStyle=SHARE_C.line;x.lineWidth=2;
+  x.beginPath();x.moveTo(P,378);x.lineTo(S-P,378);x.stroke();
+  cells.forEach(([lab,val,unit],i)=>{
+    const cx0=P+cw*i;
+    if(i){x.beginPath();x.moveTo(cx0,392);x.lineTo(cx0,486);x.stroke();}
+    x.fillStyle=SHARE_C.mute;x.font=F(600,23);x.fillText(lab,cx0+(i?26:0),424);
+    x.fillStyle=SHARE_C.ink;x.font=F(750,46);x.fillText(val,cx0+(i?26:0),476);
+    if(unit){const w=x.measureText(val).width;x.fillStyle=SHARE_C.mute;x.font=F(700,24);
+      x.fillText(unit,cx0+(i?26:0)+w+7,476);}
+  });
+  x.beginPath();x.moveTo(P,502);x.lineTo(S-P,502);x.stroke();
+  let yy=560;
+  /* 계획 대비 진도 — 올해 범위에서 기준이 있을 때만 */
+  if(s.gp&&(s.gp[0]||s.gp[1])){
+    const beta=s.gp[0]||0, alpha=(s.gt&&s.gt[0])||0, max=alpha||beta;
+    x.fillStyle=SHARE_C.sub;x.font=F(650,25);x.fillText('올해 횟수',P,yy);
+    x.fillStyle=SHARE_C.ink;x.font=F(750,25);
+    const rt=s.n+' / '+(max||'—')+'회';x.fillText(rt,S-P-x.measureText(rt).width,yy);
+    const bw=S-P*2,bh=18,by=yy+16;
+    x.fillStyle=SHARE_C.plane;rr(P,by,bw,bh,9);x.fill();
+    const pct=max?Math.min(1,s.n/max):0;
+    if(pct>0){x.fillStyle=s.n>=beta&&beta?SHARE_C.good:SHARE_C.brand;rr(P,by,Math.max(bh,bw*pct),bh,9);x.fill();}
+    if(beta&&alpha&&alpha>beta){const mx=P+bw*(beta/alpha);
+      x.strokeStyle=SHARE_C.beta;x.lineWidth=4;x.beginPath();x.moveTo(mx,by-4);x.lineTo(mx,by+bh+4);x.stroke();}
+    x.fillStyle=SHARE_C.mute;x.font=F(600,21);
+    x.fillText((beta?'계획 '+beta+'회':'')+(beta&&alpha?'  ·  ':'')+(alpha?'목표 '+alpha+'회':''),P,by+bh+30);
+    yy=by+bh+88;
+  }else yy=600; /* 기준이 없으면 카드가 위로 쏠리지 않게 월별 거리를 내린다 */
+  /* 월별 거리 */
+  x.fillStyle=SHARE_C.sub;x.font=F(650,25);x.fillText('월별 거리',P,yy);
+  const labels=sumMonthLabels(s), maxM=Math.max(1,...s.m);
+  const gw=S-P*2, bwid=gw/12, top=yy+28, gh=182;
+  s.m.forEach((v,i)=>{
+    const h=Math.max(v>0?5:0,Math.round(gh*(v/maxM)));
+    const bx=P+bwid*i+bwid*0.19, bwd=bwid*0.62;
+    x.fillStyle=v>0?SHARE_C.brand:SHARE_C.line;
+    rr(bx,top+gh-h,bwd,Math.max(h,3),5);x.fill();
+  });
+  x.fillStyle=SHARE_C.mute;x.font=F(600,19);
+  labels.forEach((t,i)=>{if(i%2)return;const w=x.measureText(t).width;
+    x.fillText(t,P+bwid*i+bwid/2-w/2,top+gh+28);});
+  /* 꼬리말 */
+  const fy=S-96;
+  x.strokeStyle=SHARE_C.line;x.lineWidth=2;x.beginPath();x.moveTo(P,fy-42);x.lineTo(S-P,fy-42);x.stroke();
+  if(s.st>0){x.fillStyle=SHARE_C.ink;x.font=F(700,26);x.fillText('🔥 계획 연속 '+s.st+'주 달성 중',P,fy);}
+  else if(s.bp){x.fillStyle=SHARE_C.ink;x.font=F(700,26);x.fillText('최고 페이스 '+paceTxt(s.bp)+'/km',P,fy);}
+  x.fillStyle=SHARE_C.mute;x.font=F(600,24);
+  const brand='run.habitree.io';
+  x.fillText(brand,S-P-x.measureText(brand).width,fy);
+  return new Promise((res,rej)=>c.toBlob(b=>b?res(b):rej(new Error('카드 생성 실패')),'image/png'));
+}
+
 function firstRunDate(){ /* 기록 전체에서 가장 이른 날 — '언제부터 달렸나' (startPoint는 올해 계획 기준이라 별개) */
   return state.records.reduce((m,x)=>(x.date&&(!m||x.date<m)?x.date:m),null);
 }
@@ -1766,6 +1921,117 @@ function openProfileMenu(){
       <button class="btn sm" onclick="closeModal()">닫기</button></div>`);
 }
 
+/* ============ 공유 모달 (REQ-0004) ============ */
+let _shareScope='year',_shareBlob=null,_shareFile=null,_shareUrlObj=null;
+function shareSummaryNow(){return buildSummary(_shareScope);}
+function openShareModal(){
+  _shareScope=state.records.some(r=>String(r.date).slice(0,4)===todayISO().slice(0,4))?'year':'all';
+  _shareBlob=null;_shareFile=null;
+  openModal(`<h3>공유</h3>
+    <p style="font-size:12.5px;color:var(--text-secondary);margin:0 0 12px">요약만 공유됩니다 — 개별 러닝의 날짜·시간·위치는 담기지 않아요.</p>
+    <div class="rangetog" role="group" aria-label="공유 범위" style="margin-bottom:12px">
+      <button data-sc="year" onclick="setShareScope('year')">올해</button>
+      <button data-sc="all" onclick="setShareScope('all')">전체</button>
+    </div>
+    <div id="sharePrev" style="min-height:150px;display:grid;place-items:center;background:var(--plane);
+      border:1px solid var(--border);border-radius:12px;padding:10px;margin-bottom:12px">
+      <span style="font-size:12.5px;color:var(--muted)">카드를 그리는 중…</span></div>
+    <div class="field" style="margin-bottom:12px"><label>공유 링크</label>
+      <input id="shareLink" readonly value="" style="font-family:var(--mono);font-size:12px"></div>
+    <div id="shareBtns" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+    <div class="note warn" style="font-size:12px;margin-top:12px">링크를 가진 사람은 누구나 열 수 있고, <b>보낸 뒤에는 취소할 수 없습니다.</b> 이 앱에는 서버가 없어 링크 자체가 데이터이기 때문입니다.</div>
+    <div style="display:flex;justify-content:flex-end;margin-top:14px"><button class="btn sec" onclick="closeModal()">닫기</button></div>`);
+  refreshShareModal();
+}
+function setShareScope(v){_shareScope=v;refreshShareModal();}
+async function refreshShareModal(){
+  document.querySelectorAll('.rangetog button[data-sc]').forEach(b=>b.classList.toggle('active',b.dataset.sc===_shareScope));
+  const s=shareSummaryNow(),u=shareUrl(s),li=$('#shareLink');
+  if(li)li.value=u;
+  const prev=$('#sharePrev'),btns=$('#shareBtns');
+  if(!prev)return;
+  _shareBlob=null;_shareFile=null;
+  if(btns)btns.innerHTML='';
+  let blob;
+  try{blob=await drawShareCard(s);}catch(e){prev.innerHTML='<span style="font-size:12.5px;color:var(--warn)">카드를 그리지 못했습니다 — 링크는 사용할 수 있어요.</span>';}
+  if(!$('#sharePrev'))return; /* 그리는 사이 모달이 닫혔다 */
+  if(blob){
+    _shareBlob=blob;
+    _shareFile=new File([blob],'running-summary-'+s.at+'.png',{type:'image/png'});
+    if(_shareUrlObj)URL.revokeObjectURL(_shareUrlObj);
+    _shareUrlObj=URL.createObjectURL(blob);
+    prev.innerHTML=`<img src="${_shareUrlObj}" alt="요약 카드 미리보기" style="width:100%;max-width:280px;border-radius:10px;display:block">`;
+  }
+  const canShare=!!(_shareFile&&navigator.canShare&&navigator.canShare({files:[_shareFile]}));
+  if(btns)btns.innerHTML=`<button class="btn sm" onclick="copyShareLink()">🔗 링크 복사</button>`
+    +(_shareBlob&&canCopyImg()?`<button class="btn sm sec" onclick="copyShareImage()">🖼 이미지 복사</button>`:'')
+    +(canShare?`<button class="btn sm sec" onclick="shareShareImage()">📤 공유</button>`:'')
+    +(_shareBlob&&!canCopyImg()&&!canShare?`<button class="btn sm sec" onclick="downloadShareImage()">⬇ 이미지 저장</button>`:'');
+}
+function copyShareLink(){
+  const el=$('#shareLink');if(!el)return;
+  const fb=()=>{el.select();try{document.execCommand('copy');toast('링크를 복사했습니다');}catch(e){toast('복사 실패 — 링크를 길게 눌러 복사해주세요');}};
+  if(navigator.clipboard&&navigator.clipboard.writeText)
+    navigator.clipboard.writeText(el.value).then(()=>toast('링크를 복사했습니다 · '+el.value.length+'자'),fb);
+  else fb();
+}
+function copyShareImage(){ /* 클릭 핸들러에서 동기 호출 — Safari는 await 후 write 시 제스처 소실 */
+  if(!_shareBlob){toast('카드를 아직 그리는 중입니다');return;}
+  const ok=()=>toast('요약 카드를 복사했습니다 — 붙여넣기 하세요');
+  const fail=()=>toast('이미지 복사 실패 — ⬇ 저장을 이용해주세요');
+  try{navigator.clipboard.write([new ClipboardItem({'image/png':_shareBlob})]).then(ok,fail);}catch(e){fail();}
+}
+function shareShareImage(){
+  if(!_shareFile)return;
+  navigator.share({files:[_shareFile],title:'러닝 요약',text:sumPeriodLabel(shareSummaryNow())+' 러닝 요약'}).catch(()=>{});
+}
+function downloadShareImage(){
+  if(!_shareBlob)return;
+  const a=document.createElement('a'),u=URL.createObjectURL(_shareBlob);
+  a.href=u;a.download=_shareFile?_shareFile.name:'running-summary.png';a.click();
+  setTimeout(()=>URL.revokeObjectURL(u),4000);
+}
+
+/* ============ 읽기 전용 공유 뷰 — #s= 로 들어온 사람이 보는 화면 ============
+   내 기록을 읽지도 쓰지도 않는다. 요약 객체만으로 그린다. */
+function renderSharedView(s){
+  document.body.classList.add('shared');
+  const mx=Math.max(1,...s.m), labels=sumMonthLabels(s);
+  const bar=(v,i)=>`<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:5px">
+    <div style="width:62%;min-height:3px;height:${Math.max(v>0?4:3,Math.round(96*(v/mx)))}px;border-radius:4px;
+      background:${v>0?'var(--series-1)':'var(--grid)'}"></div>
+    <span style="font-size:10px;color:var(--muted)">${i%2?'':esc(labels[i])}</span></div>`;
+  $('#stage').innerHTML=`
+    <div class="sharedban">공유받은 러닝 요약 · ${esc(String(s.at||'').replace(/-/g,'.'))} 기준</div>
+    <h2 class="vh">${esc(sumPeriodLabel(s))} 러닝 요약</h2>
+    <p class="vsub">보낸 사람의 누적 기록 요약입니다 — 개별 러닝 내역은 담겨 있지 않습니다.</p>
+    <div class="totalrow">
+      <div class="st"><div class="label">러닝</div><div class="val">${s.n}<small>회</small></div></div>
+      <div class="st"><div class="label">총 거리</div><div class="val">${s.d.toFixed(1)}<small>km</small></div></div>
+      <div class="st"><div class="label">총 시간</div><div class="val">${clock(s.t)}</div>
+        <div class="foot">평균 ${s.ap?paceTxt(s.ap):'—'}/km</div></div>
+    </div>
+    ${s.gp&&(s.gp[0]||s.gp[1])?`<div class="card" style="margin-top:14px">
+      ${goalBarHTML('올해 횟수',s.n,s.gp[0]||0,(s.gt&&s.gt[0])||0,'회')}
+      ${goalBarHTML('올해 거리',Math.round(s.d*10)/10,s.gp[1]||0,(s.gt&&s.gt[1])||0,'km')}
+    </div>`:''}
+    <div class="chart-card" style="margin-top:14px"><h3>월별 거리</h3>
+      <div class="cs">km · 가장 많이 달린 달 ${mx.toFixed(1)}km</div>
+      <div style="display:flex;gap:4px;align-items:flex-end;height:126px;margin-top:8px">${s.m.map(bar).join('')}</div></div>
+    <div class="card" style="margin-top:14px;display:flex;gap:14px;flex-wrap:wrap">
+      <div style="flex:1;min-width:130px"><div style="font-size:11.5px;color:var(--text-secondary)">최고 페이스</div>
+        <div style="font-size:19px;font-weight:750">${s.bp?paceTxt(s.bp)+'<small style="font-size:12px;color:var(--muted)">/km</small>':'—'}</div></div>
+      <div style="flex:1;min-width:130px"><div style="font-size:11.5px;color:var(--text-secondary)">계획 연속</div>
+        <div style="font-size:19px;font-weight:750">${s.st>0?s.st+'<small style="font-size:12px;color:var(--muted)">주</small>':'—'}</div></div>
+    </div>
+    <div class="onb" style="margin-top:22px">
+      <h3 style="font-size:18px">나도 이렇게 기록해볼까요?</h3>
+      <p class="obs">러닝 앱 캡쳐 한 장이면 됩니다. 기록은 내 브라우저에만 저장돼요.</p>
+      <div class="obact"><a class="btn" href="${esc(location.pathname)}">내 기록 시작하기</a>
+        <a class="btn sec" href="guide.html">사용법 보기</a></div>
+    </div>`;
+}
+
 /* ============ 대시보드 뷰 ============ */
 function renderDashboard(){
   const a=agg();
@@ -1787,6 +2053,7 @@ function renderDashboard(){
   $('#stage').innerHTML=`
     <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
       <div style="flex:1;min-width:200px"><h2 class="vh">대시보드</h2><p class="vsub">${(d=>d.getMonth()+1+'월 '+d.getDate()+'일 ('+WD[d.getDay()]+')')(new Date(todayISO()+'T00:00:00'))}${sinceCaption()}</p></div>
+      <button class="btn sec sm" onclick="openShareModal()" title="요약 링크·카드 이미지 공유">📤 공유</button>
       <button class="btn hide-mobile" onclick="show('add')">＋ 기록 추가</button>
     </div>
     <div class="totalrow">
@@ -2450,19 +2717,31 @@ window.addEventListener('resize',()=>{ /* 창 크기·회전 변경 시 차트 �
 loadTesseract().catch(()=>{});
 
 /* ============ 부트 ============ */
-ensureSeed();
-state.records=loadRecords();
-state.goals=loadGoals();
-state.deletedIds=loadDeleted();
-saveRecords(); /* v1 → v2 마이그레이션 결과 즉시 반영 (부트 중엔 자동 백업 미발동) */
-setPill();
+/* 공유 링크(#s=)로 들어왔으면 평소 경로를 타지 않는다 — 기록을 읽지도 쓰지도 않아
+   남의 링크를 열어도 내 데이터가 손상될 수 없다. 값이 깨졌으면 조용히 평소 앱으로 부팅. */
+/* 해시가 바뀌면 다시 부팅한다 — 앱이 열린 탭에 공유 링크를 붙여넣거나(진입),
+   공유 화면에서 '내 기록 시작하기'로 해시를 지울 때(복귀) 화면이 그대로 남는 것을 막는다.
+   해시는 이 기능 외에 쓰이지 않아 항상 리로드해도 안전하다. */
+window.addEventListener('hashchange',()=>location.reload());
+const _shareTok=(location.hash.match(/[#&]s=([A-Za-z0-9\-_]+)/)||[])[1];
+const _sharedSum=_shareTok?decodeShare(_shareTok):null;
 syncThemeMeta();
-show('dashboard');
-if('serviceWorker' in navigator&&location.protocol!=='file:') /* PWA — 홈 화면 설치·오프라인 조회 */
-  navigator.serviceWorker.register('sw.js').catch(()=>{});
-_bootDone=true; /* 이후 저장부터 자동 백업 활성 */
-if(driveConnected()) /* 재방문 자동 로그인 — 계정 힌트로 조용히 세션 복구, 팝업 차단 시 첫 클릭에서 폴백 */
-  driveToken().then(()=>{if(_pendingBackup)runAutoBackup();syncFromDrive(true);hydrateThumbs();}).catch(()=>{setPill();});
+if(_sharedSum){
+  renderSharedView(_sharedSum);
+}else{
+  ensureSeed();
+  state.records=loadRecords();
+  state.goals=loadGoals();
+  state.deletedIds=loadDeleted();
+  saveRecords(); /* v1 → v2 마이그레이션 결과 즉시 반영 (부트 중엔 자동 백업 미발동) */
+  setPill();
+  show('dashboard');
+  if('serviceWorker' in navigator&&location.protocol!=='file:') /* PWA — 홈 화면 설치·오프라인 조회 */
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  _bootDone=true; /* 이후 저장부터 자동 백업 활성 */
+  if(driveConnected()) /* 재방문 자동 로그인 — 계정 힌트로 조용히 세션 복구, 팝업 차단 시 첫 클릭에서 폴백 */
+    driveToken().then(()=>{if(_pendingBackup)runAutoBackup();syncFromDrive(true);hydrateThumbs();}).catch(()=>{setPill();});
+}
 </script>
 </body>
 </html>
