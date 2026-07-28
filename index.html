@@ -168,8 +168,6 @@
   .rangetog button:hover{color:var(--text-primary)}
   .rangetog button.active{background:var(--series-1);color:#fff}
   /* 공용 기간 필터 — 스코프하는 차트들 '위'에 한 줄 (차트 카드 안에 두지 않는다) */
-  .filterrow{display:flex;align-items:center;gap:10px;margin:16px 0 2px;flex-wrap:wrap}
-  .fr-label{font-size:11.5px;font-weight:700;letter-spacing:.03em;color:var(--muted)}
   .fr-hint{font-size:11px;color:var(--muted)}
   /* 범례 — 문장이 아니라 색 샘플 */
   .legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:11.5px;font-weight:400;color:var(--text-secondary);margin-top:6px}
@@ -215,6 +213,24 @@
   .gfill.done{background:var(--good)}
   .goal-h{font-size:13px;font-weight:700;margin:0}
   .sect{margin:26px 0 8px;font-size:15px;font-weight:700}
+  /* 위계: 이번 주는 히어로, 나머지는 보조 (REQ-0005) */
+  .sect.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .hero{display:flex;gap:18px;align-items:center;margin-top:12px}
+  .hero-b{flex:1;min-width:0;max-width:560px} /* 거리 바가 화면 폭만큼 늘어나면 수치가 멀어진다 */
+  .hero .gc-title{font-size:14.5px}
+  .hero-lead{font-size:15px;margin:3px 0 11px}
+  .minirow{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;margin-top:12px}
+  .mini-t{font-size:12px;font-weight:700;color:var(--text-secondary);margin:0;display:flex;align-items:center;justify-content:space-between;gap:6px;white-space:nowrap}
+  .mini-v{font-size:25px;font-weight:750;letter-spacing:-.02em;margin:5px 0 0;line-height:1.1}
+  .mini-v small{font-size:11.5px;font-weight:600;color:var(--muted);margin-left:1px}
+  .mini-bar{margin:9px 0 7px}
+  .mini-s{font-size:11px;color:var(--muted);margin:0}
+  .grid2b{display:grid;grid-template-columns:1fr 1.2fr;gap:14px;margin-top:14px}
+  /* 그리드 칸은 기본 min-width:auto라 히트맵 SVG가 칸을 밀어 페이지에 가로 스크롤을 만든다
+     (개편 전부터 있던 결함). 칸을 0까지 줄이면 #ch-heat의 overflow-x가 대신 받는다. */
+  .grid2a>*,.grid2b>*{min-width:0}
+  @media(max-width:760px){.grid2b{grid-template-columns:1fr}}
+  @media(max-width:430px){.hero{flex-direction:column;align-items:flex-start;gap:10px}}
   /* images */
   .thumb{width:42px;height:42px;object-fit:cover;object-position:top;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--plane);display:block}
   .thumb.sm{width:34px;height:34px}
@@ -1378,14 +1394,14 @@ function startCaption(){ /* 환산 중일 때만 표시 */
   const sp=startPoint(),g=state.goals;
   return `<div style="font-size:11px;color:var(--muted);margin-top:6px">시작 ${+sp.slice(5,7)}/${+sp.slice(8,10)} 기준 환산 · 연간 원기준 계획 ${g.plan.yearly.runs??'—'} · 목표 ${g.target.yearly.runs??'—'}회</div>`;
 }
-function ringSVG(actual,beta,alpha){ /* 횟수 링 — 채움=현재/α · β 위치 눈금 */
+function ringSVG(actual,beta,alpha,size){ /* 횟수 링 — 채움=현재/α · β 위치 눈금 · size로 위계 표현 */
   const R=34,C=2*Math.PI*R,max=alpha||beta||1;
   const frac=Math.min(1,(actual||0)/max);
   const okB=!!beta&&actual>=beta;
   let tick='';
   if(beta&&alpha&&beta<alpha){const a=(-90+360*beta/alpha)*Math.PI/180;
     tick=`<line x1="${(44+(R-7)*Math.cos(a)).toFixed(1)}" y1="${(44+(R-7)*Math.sin(a)).toFixed(1)}" x2="${(44+(R+7)*Math.cos(a)).toFixed(1)}" y2="${(44+(R+7)*Math.sin(a)).toFixed(1)}" stroke="var(--guide-beta)" stroke-width="2.5" stroke-linecap="round"/>`;}
-  return `<svg viewBox="0 0 88 102" width="90" height="104" style="display:block;flex:none">
+  return `<svg viewBox="0 0 88 102" width="${size||90}" height="${Math.round((size||90)*104/90)}" style="display:block;flex:none">
     <title>횟수 ${actual} · 계획 ${beta??'—'} · 목표 ${alpha??'—'}</title>
     <circle cx="44" cy="44" r="${R}" fill="none" stroke="var(--grid)" stroke-width="8"/>
     ${frac>0?`<circle cx="44" cy="44" r="${R}" fill="none" stroke="${okB?'var(--good)':'var(--series-1)'}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${(C*frac).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 44 44)"/>`:''}
@@ -1413,18 +1429,39 @@ function periodInsight(prog,gp,gt,kind){ /* 다음 행동 한 줄 — 글자에�
   if(a)return `<b>목표까지 ${a-n}회</b>${tail}`;
   return `<a href="#" onclick="event.stopPropagation();show('goals');return false">기준 정하기 →</a>`;
 }
-function ringCard(title,sub,gp,gt,prog,kind,extra){
-  const okB=!!gp.runs&&prog.runs>=gp.runs; /* 계획 달성 카드는 좌측 초록 라인으로 상태 표시 */
-  return `<div class="card gcard" role="button" tabindex="0" onclick="openPeriodDetail('${kind}')"
+function heroCard(){ /* 이번 주 — 화면의 1순위. 크기로 위계를 만든다 (REQ-0005) */
+  const g=state.goals,p=goalProgress().weekly,gp=g.plan.weekly,gt=g.target.weekly;
+  const okB=!!gp.runs&&p.runs>=gp.runs;
+  return `<div class="card gcard hero" role="button" tabindex="0" onclick="openPeriodDetail('week')"
       onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"
-      style="display:flex;gap:14px;align-items:center${okB?';border-left:3px solid var(--good)':''}">
-    ${ringSVG(prog.runs,gp.runs,gt.runs)}
-    <div style="flex:1;min-width:0">
-      <p class="gc-title">${title} <span>${sub}</span><span class="gc-chev">›</span></p>
-      <div class="gc-note">${periodInsight(prog,gp,gt,kind)}</div>
-      ${goalBarHTML('거리',prog.dist,gp.distance_km,gt.distance_km,'km')}
-      ${extra||''}
+      ${okB?'style="border-left:3px solid var(--good)"':''}>
+    ${ringSVG(p.runs,gp.runs,gt.runs,124)}
+    <div class="hero-b">
+      <p class="gc-title">이번 주 <span>${weekLabel(isoWeekKey(todayISO()))}</span><span class="gc-chev">›</span></p>
+      <div class="gc-note hero-lead">${periodInsight(p,gp,gt,'week')}</div>
+      ${goalBarHTML('거리',p.dist,gp.distance_km,gt.distance_km,'km')}
+      ${weekDotsHTML()}${streakHTML()}
     </div></div>`;
+}
+function miniCard(title,gp,gt,prog,kind){ /* 보조 지표 — 히어로보다 작게 (REQ-0005) */
+  const max=gt.runs||gp.runs||0;
+  const okB=!!gp.runs&&prog.runs>=gp.runs;
+  return `<div class="card mini gcard" role="button" tabindex="0" onclick="openPeriodDetail('${kind}')"
+      onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
+    <p class="mini-t">${title}<span class="gc-chev">›</span></p>
+    <p class="mini-v">${prog.runs}<small>${max?' / '+max:''}회</small></p>
+    <div class="gbar mini-bar"><div class="gfill${okB?' done':''}" style="width:${max?Math.min(100,Math.round(prog.runs/max*100)):0}%"></div></div>
+    <p class="mini-s">${Math.round(prog.dist*10)/10}km${gp.distance_km?` · 계획 ${gp.distance_km}km`:''}</p>
+  </div>`;
+}
+function paceMini(){ /* 페이스는 '지금 값'만 — 추이는 추세 섹션의 차트가 진다 (REQ-0005) */
+  const ps=paceStatus();
+  return `<div class="card mini">
+    <p class="mini-t">페이스<span style="font-weight:600;color:var(--muted);font-size:11px">/km</span></p>
+    <p class="mini-v">${ps.stable?paceTxt(ps.stable):'—'}</p>
+    <div class="mini-bar"></div>
+    <p class="mini-s">최근 ${ps.n||0}회 평균 · 최고 ${ps.best?paceTxt(ps.best):'—'}</p>
+  </div>`;
 }
 function openPeriodDetail(kind){ /* 카드 상세 — 이 숫자가 어떤 러닝들로 만들어졌는지 */
   const t=todayISO(),g=state.goals;
@@ -1515,48 +1552,84 @@ function drawHeatmap(){ /* 꾸준함 잔디 — 최근 20주 요일×주 격자,
       :'아직 이 기간의 기록이 없어요 — 오늘 한 칸을 채워볼까요?';
   }
 }
-function drawCumulative(){ /* 올해 누적 거리 vs β·α 페이스라인 — 시작점 기준 (기준선은 연간값의 시작일 환산) */
-  const el=$('#ch-cum');if(!el)return;
-  const y=+todayISO().slice(0,4),g=state.goals;
-  const sp=startPoint();
+function cumMeta(){ /* 누적 차트의 창(窓) — 기간 필터를 따른다 (REQ-0005) */
+  const t=todayISO(),g=state.goals,today=new Date(t+'T00:00:00');
+  if(_dashRange==='week'){
+    const s0=new Date(isoWeekKey(t)+'T00:00:00'),end=new Date(s0);end.setDate(end.getDate()+7);
+    const ticks=[];
+    for(let i=0;i<7;i++){const d=new Date(s0);d.setDate(d.getDate()+i);
+      ticks.push({d:new Date(d.getTime()+43200000),label:WD[d.getDay()]});} /* 칸 가운데(정오)에 요일 */
+    return {s0,end,today,unit:'day',title:'이번 주 누적 — 계획 대비',
+      plan:g.plan.weekly.distance_km||null,target:g.target.weekly.distance_km||null,ticks,note:''};
+  }
+  if(_dashRange==='month'){
+    const y=+t.slice(0,4),m=+t.slice(5,7);
+    const s0=new Date(y,m-1,1),end=new Date(y,m,1);
+    const last=Math.round((end-s0)/86400000);
+    const ticks=[];for(let i=1;i<=last;i+=5)ticks.push({d:new Date(y,m-1,i,12),label:String(i)});
+    return {s0,end,today,unit:'day',title:m+'월 누적 — 계획 대비',
+      plan:g.plan.monthly.distance_km||null,target:g.target.monthly.distance_km||null,ticks,note:''};
+  }
+  /* 년 — 시작점 환산 기준 (기존 동작 유지) */
+  const y=+t.slice(0,4),sp=startPoint();
   const yStart=new Date(y,0,1),yEnd=new Date(y+1,0,1);
   const spD=new Date(sp+'T00:00:00'),s0=spD>yStart?spD:yStart;
-  const totalDays=Math.round((yEnd-yStart)/86400000);
-  const remainDays=Math.max(1,Math.round((yEnd-s0)/86400000));
-  const f=remainDays/totalDays;
-  const bY=g.plan.yearly.distance_km?Math.round(g.plan.yearly.distance_km*f):null;
-  const aY=g.target.yearly.distance_km?Math.round(g.target.yearly.distance_km*f):null;
-  const sM=s0.getMonth()+1,nowM=new Date().getMonth()+1;
-  const per=Array(12).fill(0);
-  state.records.forEach(r=>{if(r.date&&+r.date.slice(0,4)===y&&r.date>=sp)per[+r.date.slice(5,7)-1]+=r.distance_km||0;});
+  const f=Math.max(1,Math.round((yEnd-s0)/86400000))/Math.round((yEnd-yStart)/86400000);
+  const sM=s0.getMonth()+1,mStep=(12-sM+1)>8?2:1;
+  const ticks=[];for(let m=sM;m<=12;m+=mStep)ticks.push({d:new Date(y,m-1,15),label:m+'월'});
+  return {s0,end:yEnd,today,unit:'month',sM,year:y,startISO:sp,title:y+'년 누적 — 계획 대비',
+    plan:g.plan.yearly.distance_km?Math.round(g.plan.yearly.distance_km*f):null,
+    target:g.target.yearly.distance_km?Math.round(g.target.yearly.distance_km*f):null,ticks,
+    note:f<0.999?`· 시작 ${+sp.slice(5,7)}/${+sp.slice(8,10)} — 기준선은 연간 계획·목표의 시작일 환산`:''};
+}
+function drawCumulative(){ /* 누적 거리 vs 계획·목표 페이스라인 — 주/월/년 (REQ-0005) */
+  const el=$('#ch-cum');if(!el)return;
+  const M=cumMeta(),bY=M.plan,aY=M.target;
+  const tEl=$('#cumTitle');if(tEl)tEl.textContent=M.title;
+  const dkey=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
   let acc=0;const cum=[];
-  for(let m=sM;m<=nowM;m++){acc+=per[m-1];cum.push({m,v:Math.round(acc*100)/100});}
-  const nEl=$('#cumNudge');
-  if(nEl&&bY){ /* 시작점 이후 경과일 기준 β 진도선 대비 */
-    const elapsed=Math.max(1,Math.round((new Date(todayISO()+'T00:00:00')-s0)/86400000)+1);
-    const d=acc-bY*Math.min(1,elapsed/remainDays);
-    nEl.innerHTML=d>=0?`<b style="color:var(--good-text)">지금 계획 페이스보다 ${d.toFixed(1)}km 앞서 있어요 🔥</b>`
-      :`<b style="color:var(--guide-beta)">계획 페이스까지 ${(-d).toFixed(1)}km — 따라잡아요!</b>`;
+  if(M.unit==='day'){ /* 일별 누적 — 오늘 이후는 그리지 않는다(0으로 이으면 급락으로 오독된다) */
+    const byDate={};state.records.forEach(r=>{if(r.date)byDate[r.date]=(byDate[r.date]||0)+(r.distance_km||0);});
+    const cur=new Date(M.s0);
+    while(cur<M.end&&cur<=M.today){
+      acc+=byDate[dkey(cur)]||0;
+      const at=new Date(cur);at.setDate(at.getDate()+1); /* 그 날 끝에 찍는다 */
+      cum.push({at,v:Math.round(acc*100)/100,label:(cur.getMonth()+1)+'/'+cur.getDate()+' ('+WD[cur.getDay()]+')'});
+      cur.setDate(cur.getDate()+1);
+    }
+  }else{ /* 월별 누적 — 진행 중인 이번 달은 오늘 위치에 찍는다 */
+    const per=Array(12).fill(0);
+    state.records.forEach(r=>{if(r.date&&+r.date.slice(0,4)===M.year&&r.date>=M.startISO)per[+r.date.slice(5,7)-1]+=r.distance_km||0;});
+    const nowM=M.today.getMonth()+1;
+    for(let m=M.sM;m<=nowM;m++){acc+=per[m-1];
+      cum.push({at:m===nowM?M.today:new Date(M.year,m,0),v:Math.round(acc*100)/100,label:m+'월'});}
   }
-  const sEl=$('#cumStart');
-  if(sEl)sEl.textContent=f<0.999?`· 시작 ${+sp.slice(5,7)}/${+sp.slice(8,10)} — 기준선은 연간 계획·목표의 시작일 환산`:'';
+  const nEl=$('#cumNudge');
+  if(nEl)nEl.innerHTML=(()=>{ /* 경과 비율만큼의 계획 진도와 비교 */
+    if(!bY)return '';
+    const span=Math.max(1,Math.round((M.end-M.s0)/86400000));
+    const elapsed=Math.max(1,Math.round((M.today-M.s0)/86400000)+1);
+    const d=acc-bY*Math.min(1,elapsed/span);
+    return d>=0?`<b style="color:var(--good-text)">지금 계획 페이스보다 ${d.toFixed(1)}km 앞서 있어요 🔥</b>`
+      :`<b style="color:var(--guide-beta)">계획 페이스까지 ${(-d).toFixed(1)}km — 따라잡아요!</b>`;
+  })();
+  const sEl=$('#cumStart');if(sEl)sEl.textContent=M.note;
   const W=el.clientWidth||940,H=225,P={t:16,r:64,b:24,l:40};
   const iw=W-P.l-P.r,ih=H-P.t-P.b;
   const maxV=Math.max(aY||0,bY||0,acc,1)*1.05;
-  const xd=d=>P.l+iw*Math.min(1,Math.max(0,(d-s0)/(yEnd-s0)));
+  const xd=d=>P.l+iw*Math.min(1,Math.max(0,(d-M.s0)/(M.end-M.s0)));
   const yv=v=>P.t+ih-(v/maxV)*ih;
   let s='';
   [0,maxV/2,maxV].forEach(t=>{const yy=yv(t);s+=`<line class="gridline" x1="${P.l}" y1="${yy}" x2="${W-P.r}" y2="${yy}"/><text class="tick" x="${P.l-5}" y="${yy+3}" text-anchor="end">${Math.round(t)}</text>`;});
-  const mStep=(12-sM+1)>8?2:1;
-  for(let m=sM;m<=12;m+=mStep)s+=`<text class="tick" x="${xd(new Date(y,m-1,15)).toFixed(1)}" y="${H-7}" text-anchor="middle">${m}월</text>`;
+  M.ticks.forEach(k=>{s+=`<text class="tick" x="${xd(k.d).toFixed(1)}" y="${H-7}" text-anchor="middle">${k.label}</text>`;});
   const guide=(v,c,lb)=>v?`<line x1="${P.l}" y1="${yv(0)}" x2="${(P.l+iw).toFixed(1)}" y2="${yv(v)}" stroke="${c}" stroke-width="2" stroke-dasharray="6 5"/><text x="${(P.l+iw+4).toFixed(1)}" y="${yv(v)+3}" style="font-size:10px;font-weight:700;fill:${c}">${lb}</text>`:'';
-  s+=guide(aY,'var(--guide-alpha)','목표 '+aY)+guide(bY,'var(--guide-beta)','계획 '+bY);
-  const today=new Date(todayISO()+'T00:00:00');
-  const pts=cum.map(e=>[xd(e.m===nowM?today:new Date(y,e.m,0)),yv(e.v),e]);
+  const fmt=v=>Number.isInteger(v)?v:Math.round(v*10)/10;
+  s+=guide(aY,'var(--guide-alpha)','목표 '+fmt(aY))+guide(bY,'var(--guide-beta)','계획 '+fmt(bY));
+  const pts=cum.map(e=>[xd(e.at),yv(e.v),e]);
   if(pts.length){
     s+=`<path class="area" d="M${P.l} ${yv(0)} ${pts.map(p=>'L'+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ')} L${pts.at(-1)[0].toFixed(1)} ${yv(0)} Z"/>`;
     s+=`<path class="linepath" style="stroke-width:2.5" d="M${P.l} ${yv(0)} ${pts.map(p=>'L'+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ')}"/>`;
-    s+=pts.map(p=>`<circle class="dot-m" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.5"/><circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="11" fill="transparent" data-t="${p[2].m}월 · 누적 <b>${p[2].v.toFixed(1)}km</b>"/>`).join('');
+    s+=pts.map(p=>`<circle class="dot-m" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.5"/><circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="11" fill="transparent" data-t="${p[2].label} · 누적 <b>${p[2].v.toFixed(1)}km</b>"/>`).join('');
     s+=`<text x="${pts.at(-1)[0].toFixed(1)}" y="${(pts.at(-1)[1]-9).toFixed(1)}" text-anchor="middle" style="font-size:10.5px;font-weight:750;fill:var(--series-1)">${acc.toFixed(0)}km</text>`;
   }
   el.innerHTML=`<svg class="chart" viewBox="0 0 ${W} ${H}">${s}<line class="baseline" x1="${P.l}" y1="${P.t+ih}" x2="${W-P.r}" y2="${P.t+ih}"/></svg>`;
@@ -1649,40 +1722,39 @@ function renderDashboard(){
       <div style="flex:1;min-width:200px"><h2 class="vh">대시보드</h2><p class="vsub">${(d=>d.getMonth()+1+'월 '+d.getDate()+'일 ('+WD[d.getDay()]+')')(new Date(todayISO()+'T00:00:00'))} · 누적 <b>${a.n}회</b> · <b>${a.d.toFixed(1)}km</b></p></div>
       <button class="btn hide-mobile" onclick="show('add')">＋ 기록 추가</button>
     </div>
-    <div class="sect" style="margin-top:8px">달성도 <a href="#" onclick="show('goals');return false" style="font-size:12px;font-weight:600;margin-left:6px">설정 →</a>
+    <div class="sect" style="margin-top:8px">지금 <a href="#" onclick="show('goals');return false" style="font-size:12px;font-weight:600;margin-left:6px">기준 설정 →</a>
       <div class="legend"><span class="lg"><i class="sw-run"></i>실적</span><span class="lg"><i class="sw-beta"></i>계획 <em>꼭 지킬 선</em></span><span class="lg"><i class="sw-alpha"></i>목표 <em>도전할 선</em></span></div></div>
-    <div class="goalcards">${
-      ringCard('이번 주',weekLabel(isoWeekKey(todayISO())),g.plan.weekly,g.target.weekly,p.weekly,'week',weekDotsHTML()+streakHTML())}${
-      ringCard('이번 달',(+monthKey(todayISO()).slice(5))+'월',g.plan.monthly,g.target.monthly,p.monthly,'month')}${
-      ringCard('올해',yearKey(todayISO())+'년',proratedYearly(g.plan.yearly),proratedYearly(g.target.yearly),p.yearly,'year',startCaption())}${
-      paceCard()}</div>
-    <div class="filterrow"><span class="fr-label">기간</span>${rangeTogHTML()}
-      <span class="fr-hint">거리·페이스 차트에 적용</span></div>
-    <div class="grid2a">
-      <div class="chart-card"><h3>꾸준함 (최근 20주)</h3>
-        <div class="cs">하루 한 칸 · 진할수록 먼 거리 <span style="display:inline-flex;gap:2px;vertical-align:-2px"><span style="width:9px;height:9px;border-radius:2px;background:var(--grid)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--series-1-soft)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--series-1)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--seq-550)"></span></span> · 테두리 = 오늘</div>
-        <div id="ch-heat" style="overflow-x:auto"></div>
-        <div id="heatSummary" style="font-size:12.5px;color:var(--text-secondary);margin-top:10px"></div></div>
+    ${heroCard()}
+    <div class="minirow">${
+      miniCard('이번 달',g.plan.monthly,g.target.monthly,p.monthly,'month')}${
+      miniCard('올해',proratedYearly(g.plan.yearly),proratedYearly(g.target.yearly),p.yearly,'year')}${
+      paceMini()}</div>
+    ${startCaption()}
+    <div class="sect row">추세 ${rangeTogHTML()}
+      <span class="fr-hint">아래 세 차트에 함께 적용</span></div>
+    <div class="grid2b">
       <div class="chart-card"><h3>거리</h3>
         <div class="cs" id="distCaption"></div><div id="ch-dist"></div></div>
-    </div>
-    <div class="grid2a">
-      <div class="chart-card"><h3>올해 누적 거리 — 계획 대비</h3>
-        <div class="cs"><span style="color:var(--series-1);font-weight:700">— 실적</span> · <span class="bB">╌ 계획</span> · <span class="bA">╌ 목표</span> <span id="cumStart" style="font-weight:400"></span></div>
+      <div class="chart-card"><h3 id="cumTitle">누적 — 계획 대비</h3>
+        <div class="cs"><span style="font-weight:700">— 실적</span> · <span class="bB">╌ 계획</span> · <span class="bA">╌ 목표</span> <span id="cumStart" style="font-weight:400"></span></div>
         <div id="cumNudge" style="font-size:13px;margin:2px 0 6px"></div>
         <div id="ch-cum"></div></div>
-      <div class="chart-card"><h3>페이스 추이</h3><div class="cs" id="paceCaption"></div><div id="ch-pace"></div></div>
     </div>
-    <div class="sect">누적 통계</div>
-    <div class="statrow">
-      <div class="st"><div class="label">총 러닝</div><div class="val">${a.n}<small>회</small></div></div>
-      <div class="st"><div class="label">총 거리</div><div class="val">${a.d.toFixed(2)}<small>km</small></div></div>
-      <div class="st"><div class="label">총 시간</div><div class="val">${clock(a.t)}</div></div>
-      <div class="st"><div class="label">평균 페이스</div><div class="val">${paceTxt(a.avgPace?Math.round(a.avgPace):null)}<small>/km</small></div></div>
-      <div class="st"><div class="label">최장 거리 (PR)</div><div class="val">${a.longest?a.longest.distance_km.toFixed(2):'—'}<small>km</small></div><div class="foot">${a.fastest?'최고 '+paceTxt(a.fastest.avg_pace_sec_per_km)+'/km':''}</div></div>
+    <div class="chart-card" style="margin-top:14px"><h3>페이스 추이</h3><div class="cs" id="paceCaption"></div><div id="ch-pace"></div></div>
+    <div class="sect">기록</div>
+    <div class="grid2a">
+    <div class="chart-card"><h3>꾸준함 (최근 20주)</h3>
+      <div class="cs">하루 한 칸 · 진할수록 먼 거리 <span style="display:inline-flex;gap:2px;vertical-align:-2px"><span style="width:9px;height:9px;border-radius:2px;background:var(--grid)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--series-1-soft)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--series-1)"></span><span style="width:9px;height:9px;border-radius:2px;background:var(--seq-550)"></span></span> · 테두리 = 오늘</div>
+      <div id="ch-heat" style="overflow-x:auto"></div>
+      <div id="heatSummary" style="font-size:12.5px;color:var(--text-secondary);margin-top:10px"></div></div>
+    <div class="chart-card"><h3>최근 러닝</h3><div class="cs">최근 5회 · 전체 목록은 <a href="#" onclick="show('data');return false">데이터</a>에서</div>
+      <div id="recentList" style="margin-top:8px"></div></div>
     </div>
-    <div class="chart-card" style="margin-top:14px"><h3>최근 러닝</h3><div class="cs">최근 5회 · 전체 목록은 <a href="#" onclick="show('data');return false">데이터</a>에서</div>
-      <div id="recentList" style="margin-top:8px"></div></div>`;
+    <div class="statrow" style="margin-top:14px">
+      <div class="st"><div class="label">최장 거리 (PR)</div><div class="val">${a.longest?a.longest.distance_km.toFixed(2):'—'}<small>km</small></div></div>
+      <div class="st"><div class="label">최고 페이스</div><div class="val">${paceTxt(a.fastest?a.fastest.avg_pace_sec_per_km:null)}<small>/km</small></div></div>
+      <div class="st"><div class="label">총 시간</div><div class="val">${clock(a.t)}</div><div class="foot">평균 ${paceTxt(a.avgPace?Math.round(a.avgPace):null)}/km</div></div>
+    </div>`;
   drawHeatmap();drawDistance();drawPace();drawCumulative();drawRecent();hydrateThumbs();
 }
 function rangeTogHTML(){ /* 주/월/년 전환 — 거리·페이스 차트 공통 */
@@ -1708,7 +1780,7 @@ function setDashRange(r){
   if(_dashRange===r)return;
   _dashRange=r;
   document.querySelectorAll('.rangetog button').forEach(b=>b.classList.toggle('active',b.dataset.range===r));
-  drawDistance();drawPace();
+  drawDistance();drawPace();drawCumulative(); /* 누적도 같은 필터를 따른다 (REQ-0005) */
 }
 function drawDistance(){
   const m=rangeMeta();
