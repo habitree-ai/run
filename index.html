@@ -1407,6 +1407,17 @@ function paceCard(){
 }
 
 /* ---- 동기부여 대시보드 (planning/dashboard-motivation.html) — 링 게이지 · 넛지 · 스트릭 · 누적 진도 ---- */
+function firstRunDate(){ /* 기록 전체에서 가장 이른 날 — '언제부터 달렸나' (startPoint는 올해 계획 기준이라 별개) */
+  return state.records.reduce((m,x)=>(x.date&&(!m||x.date<m)?x.date:m),null);
+}
+function sinceCaption(){ /* 오늘 옆에 붙는 '시작일 · N일째' */
+  const f=firstRunDate();if(!f)return '';
+  const d0=new Date(f+'T00:00:00'),t=new Date(todayISO()+'T00:00:00');
+  if(isNaN(d0))return '';
+  const days=Math.floor((t-d0)/86400000)+1;
+  const yr=d0.getFullYear()!==t.getFullYear()?d0.getFullYear()+'. ':'';
+  return ` · ${yr}${d0.getMonth()+1}월 ${d0.getDate()}일 시작 <b>${days.toLocaleString()}일째</b>`;
+}
 function startPoint(){ /* 계획 시작점 — 설정값 > 올해 첫 기록일 > 1월 1일 */
   const y=todayISO().slice(0,4);
   const s=state.goals.start_date;
@@ -1775,7 +1786,7 @@ function renderDashboard(){
   const p=goalProgress(), g=state.goals;
   $('#stage').innerHTML=`
     <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
-      <div style="flex:1;min-width:200px"><h2 class="vh">대시보드</h2><p class="vsub">${(d=>d.getMonth()+1+'월 '+d.getDate()+'일 ('+WD[d.getDay()]+')')(new Date(todayISO()+'T00:00:00'))}</p></div>
+      <div style="flex:1;min-width:200px"><h2 class="vh">대시보드</h2><p class="vsub">${(d=>d.getMonth()+1+'월 '+d.getDate()+'일 ('+WD[d.getDay()]+')')(new Date(todayISO()+'T00:00:00'))}${sinceCaption()}</p></div>
       <button class="btn hide-mobile" onclick="show('add')">＋ 기록 추가</button>
     </div>
     <div class="totalrow">
