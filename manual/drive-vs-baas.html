@@ -57,7 +57,7 @@
 <header class="top"><div class="top-inner">
   <div class="brand"><h1>드라이브 연동 vs Supabase(BaaS)</h1></div>
   <div class="spacer"></div>
-  <nav class="tabs"><a href="../index.html">대시보드</a><a href="../drive.html">드라이브</a><a href="index.html">매뉴얼</a></nav>
+  <nav class="tabs"><a href="../index.html">대시보드</a><a href="../guide.html">사용법</a><a href="index.html">매뉴얼</a></nav>
   <button class="toggle" id="themeBtn" aria-label="테마 전환">◐</button>
 </div></header>
 <main>
@@ -83,12 +83,12 @@
 
 <h2>어느 쪽이 맞는 선택인가</h2>
 <ul>
-<li><b>지금 서비스에는 현재 방식이 의도된 설계</b> — 개인 러닝 기록(1인 데이터·소량·기기 간 동기화)에 충분하고, 운영 비용과 개인정보 리스크가 0. <a href="../platform.html">플랫폼 문서</a>에 "제로-DB 플랫폼" 원칙으로 문서화되어 있다.</li>
+<li><b>지금 서비스에는 현재 방식이 의도된 설계</b> — 개인 러닝 기록(1인 데이터·소량·기기 간 동기화)에 충분하고, 운영 비용과 개인정보 리스크가 0. "제로-DB 플랫폼"(운영 서버·DB 없이 사용자 저장소만 쓰는 구조)이 이 앱의 기본 원칙이다.</li>
 <li><b>중앙 DB(Supabase 등)가 필요해지는 시점</b> — 사용자 간 상호작용이 생기는 순간: 랭킹·피드 공유, 크루 기능, 운영자 통계 대시보드 등. 각자의 드라이브만으로는 남의 데이터를 볼 수 없으므로 불가능한 기능들이다.</li>
 <li><b>공존 가능</b> — 개인 정본은 드라이브에 유지하고, 공유용 집계만 중앙 DB에 올리는 하이브리드도 자연스러운 진화 경로다.</li>
 </ul>
 
-<div class="note">ℹ️ 관련 문서: <a href="multi-device-sync.html">PC·모바일 간 데이터 연계</a> · <a href="oauth-concepts.html">OAuth 개념 — 관리자 자격과 사용자 계정</a> · <a href="../drive.html">드라이브 연동 설계 v2</a></div>
+<div class="note">ℹ️ 관련 문서: <a href="multi-device-sync.html">PC·모바일 간 데이터 연계</a> · <a href="oauth-concepts.html">OAuth 개념 — 관리자 자격과 사용자 계정</a></div>
 </main>
 <script>
 const root=document.documentElement;

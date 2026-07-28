@@ -28,9 +28,22 @@ const ok=(cond,name)=>{(cond?logs:fails).push((cond?'PASS ':'FAIL ')+name);if(co
 
 await page.goto(BASE+'/index.html',{waitUntil:'networkidle'}).catch(e=>fails.push('goto: '+e.message));
 
-// 1. 대시보드 렌더 + 시드
+// 1. 첫 방문자 — 기록 0건이면 온보딩 카드 (시드 없음)
+ok(await page.locator('.onb h3').count()===1,'first-run onboarding shown');
+ok((await page.locator('.onb').textContent()).includes('첫 기록'),'onboarding copy');
+
+// 이후 테스트용 기록 1건 주입 — 앱이 더 이상 시드를 심지 않으므로 테스트가 직접 넣는다
+await page.evaluate(()=>{localStorage.setItem('run.records.v2',JSON.stringify([{
+  record_id:'260726', date:'2026-07-26', weekday:'일', start_time:'08:17', day_part:'오전',
+  title:'일요일 오전 러닝', location:'서울특별시, 대한민국', distance_km:3.18,
+  avg_pace_sec_per_km:328, duration_sec:1044, cadence_spm:165, avg_heart_rate_bpm:null,
+  elevation_gain_m:5, route_summary:['강변북로'], source:'seed', has_image:false,
+  image_url:'images/260726.png', schema_version:'2.0'}]));});
+await page.reload({waitUntil:'networkidle'});
+
+// 2. 대시보드 렌더
 ok(await page.locator('h2.vh').first().textContent()==='대시보드','dashboard renders');
-ok((await page.locator('#recentList').textContent()).includes('2026-07-26'),'seed record visible');
+ok((await page.locator('#recentList').textContent()).includes('2026-07-26'),'record visible');
 
 // 2. 서비스워커 등록
 const sw=await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();return !!r;});

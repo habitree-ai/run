@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <script>try{var _t=localStorage.getItem('run.theme.v1');if(_t)document.documentElement.setAttribute('data-theme',_t);}catch(e){}</script>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>사용법 · 다음 단계 (v1)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>사용법 · 러닝 누적기록</title>
+<meta name="description" content="러닝 앱 캡쳐 한 장을 올리면 거리·페이스·시간이 자동으로 기록됩니다. 서버 없이 내 브라우저와 내 구글드라이브에만 저장됩니다.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏃</text></svg>">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
 <style>
   :root{color-scheme:light;
     --surface-1:#fcfcfb;--plane:#f9f9f7;--text-primary:#0b0b0b;--text-secondary:#52514e;--muted:#898781;
@@ -25,162 +27,301 @@
     --good-soft:#123021;--good-text:#5fd48f;--warn:#fab219;--warn-soft:#3a2f10;
     --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);}}
   *{box-sizing:border-box}html,body{margin:0}
+  html{scroll-behavior:smooth}
+  @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
   body{background:var(--plane);color:var(--text-primary);font-family:var(--font);line-height:1.65;-webkit-font-smoothing:antialiased}
   a{color:var(--series-1);text-decoration:none}a:hover{text-decoration:underline}
+  /* 상단 — 대시보드·사용법 둘뿐 */
   header.top{border-bottom:1px solid var(--border);background:var(--surface-1);position:sticky;top:0;z-index:30}
-  .top-inner{display:flex;align-items:center;gap:14px;padding:11px 20px;flex-wrap:wrap;max-width:960px;margin:0 auto}
-  .brand h1{font-size:15.5px;margin:0}
+  .top-inner{display:flex;align-items:center;gap:14px;padding:11px 20px;max-width:900px;margin:0 auto}
+  .brand{display:flex;align-items:center;gap:10px;min-width:0}
+  .logo{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--series-1),var(--seq-700));
+    display:grid;place-items:center;color:#fff;flex:none}
+  .brand h1{font-size:15px;margin:0;letter-spacing:-.01em;white-space:nowrap}
   .spacer{flex:1}
-  .tabs{display:flex;gap:2px;flex-wrap:wrap}
-  .tabs a{padding:6px 10px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text-secondary)}
+  .tabs{display:flex;gap:2px}
+  .tabs a{padding:6px 11px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text-secondary)}
   .tabs a.active{background:var(--series-1-soft);color:var(--seq-700)}
   :root[data-theme="dark"] .tabs a.active{color:#fff}
-  .toggle{border:1px solid var(--border);background:transparent;color:var(--text-secondary);width:34px;height:34px;border-radius:9px;cursor:pointer}
-  main{max-width:760px;margin:0 auto;padding:32px 22px 80px}
-  h1.doc{font-size:24px;letter-spacing:-.01em;margin:0 0 4px}
-  .doc-sub{color:var(--muted);font-size:13px;margin:0 0 28px}
-  h2{font-size:18px;margin:34px 0 10px;letter-spacing:-.01em}
-  h3{font-size:14.5px;margin:20px 0 6px}
-  p,li{font-size:14px;color:var(--text-secondary)}
-  b,strong{color:var(--text-primary)}
-  table{border-collapse:collapse;width:100%;font-size:13px;background:var(--surface-1);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
-  th{background:var(--series-1-soft);color:var(--seq-700);text-align:left;padding:9px 11px;font-size:11.5px;white-space:nowrap}
-  :root[data-theme="dark"] th{color:#dbe9ff;background:#17324f}
-  td{padding:9px 11px;border-top:1px solid var(--border);vertical-align:top}
-  pre{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:16px;font-family:var(--mono);font-size:12px;line-height:1.6;overflow:auto;color:var(--text-secondary);box-shadow:var(--shadow)}
-  code{font-family:var(--mono);font-size:.92em;background:var(--series-1-soft);padding:1px 5px;border-radius:5px;color:var(--seq-700)}
-  :root[data-theme="dark"] code{color:#dbe9ff}
-  .note{font-size:13px;color:var(--text-secondary);background:var(--series-1-soft);border-radius:10px;padding:12px 14px;margin:14px 0}
+  .toggle{border:1px solid var(--border);background:transparent;color:var(--text-secondary);
+    width:34px;height:34px;border-radius:9px;cursor:pointer;display:grid;place-items:center;flex:none}
+  .toggle:hover{background:var(--plane)}
+  main{max-width:760px;margin:0 auto;padding:0 22px 90px;
+    padding-left:max(22px,env(safe-area-inset-left));padding-right:max(22px,env(safe-area-inset-right))}
+  /* 히어로 — 처음 온 사람이 보는 첫 화면 */
+  .hero{padding:56px 0 40px;text-align:center}
+  .hero h2{font-size:32px;line-height:1.3;letter-spacing:-.02em;margin:0 0 12px}
+  .hero h2 em{font-style:normal;color:var(--series-1)}
+  .hero p{font-size:15.5px;color:var(--text-secondary);margin:0 auto;max-width:520px;word-break:keep-all}
+  .cta{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:26px}
+  .btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--series-1);background:var(--series-1);
+    color:#fff;font-weight:650;font-size:14px;padding:12px 20px;border-radius:11px;min-height:46px}
+  .btn:hover{opacity:.9;text-decoration:none}
+  .btn.sec{background:transparent;color:var(--text-secondary);border-color:var(--border)}
+  .btn.sec:hover{background:var(--surface-1)}
+  /* 앱이 무엇을 해주는가 — 3장 카드 */
+  .whygrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(212px,1fr));gap:12px;margin:8px 0 4px}
+  .why{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:20px 18px}
+  .why .ic{width:38px;height:38px;border-radius:11px;background:var(--series-1-soft);color:var(--seq-700);
+    display:grid;place-items:center;margin-bottom:12px}
+  :root[data-theme="dark"] .why .ic{color:#dbe9ff}
+  .why>b{display:block;font-size:14.5px;margin-bottom:4px}
+  .why p{font-size:13px;color:var(--text-secondary);margin:0;word-break:keep-all}
+  h2.sec{font-size:20px;margin:52px 0 6px;letter-spacing:-.015em}
+  p.lead{font-size:14px;color:var(--muted);margin:0 0 18px}
+  /* 3단계 — 번호 + 아이콘 */
+  .steps{list-style:none;padding:0;margin:0;counter-reset:s}
+  .steps li{counter-increment:s;position:relative;display:flex;gap:16px;align-items:flex-start;
+    background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:18px;margin-bottom:12px}
+  .steps .num{width:34px;height:34px;flex:none;border-radius:50%;background:var(--series-1);color:#fff;
+    display:grid;place-items:center;font-weight:750;font-size:14px}
+  .steps .num::before{content:counter(s)}
+  .steps .body{min-width:0;flex:1}
+  .steps .body>b{font-size:15px;margin-bottom:3px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .steps .body>b svg{color:var(--series-1);flex:none}
+  .steps p{font-size:13.5px;color:var(--text-secondary);margin:0;word-break:keep-all}
+  .steps .kbd{font-family:var(--mono);font-size:11.5px;background:var(--plane);border:1px solid var(--border);
+    border-radius:5px;padding:1px 6px;color:var(--text-primary)}
+  /* 화면 안내 */
+  .screens{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+  .sc{display:flex;gap:12px;align-items:flex-start;background:var(--surface-1);border:1px solid var(--border);
+    border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+  .sc svg{color:var(--series-1);flex:none;margin-top:2px}
+  .sc>div>b{display:block;font-size:13.5px;margin-bottom:2px}
+  .sc p{font-size:12.5px;color:var(--text-secondary);margin:0;word-break:keep-all}
+  /* 안내 박스 */
+  .note{font-size:13px;color:var(--text-secondary);background:var(--series-1-soft);border-radius:11px;
+    padding:13px 15px;margin:16px 0;display:flex;gap:10px;align-items:flex-start;word-break:keep-all}
   :root[data-theme="dark"] .note{background:rgba(57,135,229,.12)}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .note{background:rgba(57,135,229,.12)}}
+  .note svg{flex:none;margin-top:2px;color:var(--series-1)}
   .note.warn{background:var(--warn-soft);color:var(--warn)}
-  ol.steps li{margin-bottom:8px}
-  .lead{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;margin:0 0 8px}
-  .lead p{margin:0}
-  .todo{list-style:none;padding:0;margin:12px 0}
-  .todo li{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface-1);margin-bottom:8px}
-  .todo .k{font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap;margin-top:2px}
-  .k.now{background:var(--good-soft);color:var(--good-text)}
-  .k.next{background:var(--series-1-soft);color:var(--seq-700)}
-  :root[data-theme="dark"] .k.next{color:#dbe9ff}
-  .k.later{background:var(--warn-soft);color:var(--warn)}
-  .todo .t{font-size:13.5px}
-  .todo .t b{display:block;color:var(--text-primary);margin-bottom:1px}
+  .note.warn svg{color:var(--warn)}
+  .note.good{background:var(--good-soft);color:var(--good-text)}
+  .note.good svg{color:var(--good-text)}
+  /* 자주 묻는 것 — 접힘 */
+  details{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;
+    padding:0 16px;margin-bottom:8px;box-shadow:var(--shadow)}
+  summary{cursor:pointer;font-size:14px;font-weight:650;padding:14px 0;list-style:none;
+    display:flex;align-items:center;gap:9px;min-height:48px}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:'';margin-left:auto;width:8px;height:8px;flex:none;
+    border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);
+    transform:rotate(45deg);transition:transform .15s}
+  details[open] summary::after{transform:rotate(-135deg)}
+  details p{font-size:13.5px;color:var(--text-secondary);margin:0 0 15px;word-break:keep-all}
+  code{font-family:var(--mono);font-size:.9em;background:var(--series-1-soft);padding:1px 6px;
+    border-radius:5px;color:var(--seq-700)}
+  :root[data-theme="dark"] code{color:#dbe9ff}
+  b,strong{color:var(--text-primary)}
+  .endcta{text-align:center;margin-top:56px;padding:34px 20px;background:var(--surface-1);
+    border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow)}
+  .endcta b{display:block;font-size:18px;margin-bottom:6px}
+  .endcta p{font-size:13.5px;color:var(--text-secondary);margin:0 0 20px}
+  footer{max-width:760px;margin:0 auto;padding:26px 22px 0;font-size:12px;color:var(--muted);text-align:center}
+  @media(max-width:560px){
+    .top-inner{padding:9px 14px;gap:8px}
+    .brand h1{font-size:14px}
+    main{padding-bottom:70px}
+    .hero{padding:38px 0 30px}
+    .hero h2{font-size:25px}
+    .hero p{font-size:14.5px}
+    h2.sec{font-size:18px;margin-top:42px}
+    .steps li{padding:15px;gap:13px}
+    .btn{width:100%;justify-content:center}
+  }
 </style>
 </head>
 <body>
 <header class="top"><div class="top-inner">
-  <div class="brand"><h1>사용법 · 다음 단계 <span style="font-size:11px;color:var(--muted)">v1</span></h1></div>
+  <a href="index.html" class="brand" style="color:inherit">
+    <span class="logo"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/><path d="M4 17l3-3 3 1 2-4 3 2 2-1"/><path d="M8.5 21l2.5-5 3 2 1 3"/></svg></span>
+    <h1>러닝 누적기록</h1>
+  </a>
   <div class="spacer"></div>
-  <nav class="tabs"><a href="index.html">대시보드</a><a href="guide.html" class="active">사용법</a><a href="drive.html">드라이브</a><a href="blog.html">블로그</a><a href="plan.html">기획서</a><a href="platform.html">플랫폼</a><a href="spec.html">설계</a></nav>
-  <button class="toggle" id="themeBtn" aria-label="테마 전환">◐</button>
+  <nav class="tabs"><a href="index.html">대시보드</a><a href="guide.html" class="active">사용법</a></nav>
+  <button class="toggle" id="themeBtn" aria-label="밝은 테마 / 어두운 테마 전환">
+    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+  </button>
 </div></header>
+
 <main>
-<h1 class="doc">사용법 · 다음 단계</h1>
-<p class="doc-sub">2026-07-27 · 집계 앱 v2 기준 · 캡쳐 한 장에서 블로그 발행까지</p>
 
-<div class="lead"><p>러닝 앱 캡쳐 한 장을 올리면 <b>기록이 누적되고</b>, 저장하는 순간 <b>블로그 글감(제목 + 사진)이 완성</b>됩니다. 데이터는 서버가 아니라 내 브라우저와 내 드라이브에만 저장됩니다.</p></div>
+<section class="hero">
+  <h2>러닝 앱 캡쳐 한 장이면,<br><em>기록이 알아서 쌓입니다</em></h2>
+  <p>거리·시간·페이스를 손으로 옮겨 적지 않아도 됩니다. 사진을 올리면 읽어서 채우고, 이번 달·올해 목표까지 얼마나 왔는지 보여줍니다.</p>
+  <div class="cta">
+    <a class="btn" href="index.html">지금 시작하기
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></a>
+    <a class="btn sec" href="#how">먼저 사용법 보기</a>
+  </div>
+</section>
 
-<h2>1. 매일 쓰는 흐름 (3분)</h2>
-<pre>러닝 종료 → 앱 기록 캡쳐
-  → [기록 추가]에 캡쳐 올리기 (또는 [드라이브에서 캡쳐 가져오기])
-  → OCR이 거리·페이스·시간을 자동으로 채움 → 확인·수정
-  → [저장]
-  → 블로그 글감 창이 자동으로 뜸
-       [🖼 이미지 복사] → [✍ 네이버 글쓰기 열기] → 본문 Ctrl+V → 제목 붙여넣기 → 발행
-  → 앱으로 돌아와 [✅ 발행 완료로 표시]
-  → 대시보드·목표 달성도에 즉시 반영</pre>
-<div class="note">ℹ️ OCR은 <b>빈 칸만</b> 채우는 보조 수단입니다. 값이 틀리면 저장 전에 고치세요 — 확인·수정이 정식 경로입니다.</div>
+<div class="whygrid">
+  <div class="why">
+    <span class="ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="15" rx="2.5"/><circle cx="12" cy="12.5" r="3.5"/><path d="M8 5l1.4-2h5.2L16 5"/></svg></span>
+    <b>찍어서 올리면 끝</b>
+    <p>NRC·스트라바 등 러닝 앱 캡쳐를 올리면 거리·시간·페이스를 자동으로 읽어 채웁니다. 틀린 값만 고치고 저장하세요.</p>
+  </div>
+  <div class="why">
+    <span class="ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.6"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg></span>
+    <b>목표까지 얼마나 왔는지</b>
+    <p>주·월·연 목표를 정해두면 달성률이 링으로 보입니다. 꼭 지킬 <b>계획</b>과 도전할 <b>목표</b>, 두 개의 선을 함께 볼 수 있습니다.</p>
+  </div>
+  <div class="why">
+    <span class="ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10.5" width="16" height="10" rx="2.5"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg></span>
+    <b>내 데이터는 내 것</b>
+    <p>기록은 내 브라우저와 <b>내 구글드라이브</b>에만 저장됩니다. 운영자 서버에 올라가지 않고, 언제든 파일로 통째로 꺼낼 수 있습니다.</p>
+  </div>
+</div>
 
-<h2>2. 화면별 사용법</h2>
-<table>
-<thead><tr><th>화면</th><th>할 수 있는 일</th></tr></thead>
-<tbody>
-<tr><td><b>대시보드</b></td><td>링 게이지 달성도·꾸준함 잔디·주간 거리·계획 대비 누적·페이스 추이·최근 러닝</td></tr>
-<tr><td><b>기록 추가</b></td><td>캡쳐 업로드(끌어다 놓기 · <b>붙여넣기 Ctrl+V</b> 가능) → OCR 프리필 → 확인·저장. 사진 없이 직접 입력도 가능(오늘 날짜 자동 입력)</td></tr>
-<tr><td><b>목표 · 달성도</b></td><td>계획·목표 2중 기준(횟수·거리·페이스) 설정과 달성률·이력. 기본값은 <b>주 3 · 월 15 · 연 180회</b></td></tr>
-<tr><td><b>데이터 · 내보내기</b></td><td>기록 표(<b>검색·월/출처 필터·컬럼 정렬</b> · 수정·삭제·블로그 글감), JSON/CSV 내보내기, JSON 가져오기(<b>병합/교체 선택</b>), 드라이브 연동, 블로그 설정</td></tr>
-</tbody>
-</table>
-
-<h3>블로그 글감 창</h3>
-<table>
-<thead><tr><th>버튼</th><th>동작</th></tr></thead>
-<tbody>
-<tr><td>📋 복사</td><td>제목(<code>26.07.28 - 3.2KM</code> 형식)을 클립보드로</td></tr>
-<tr><td>🖼 이미지 복사</td><td>캡쳐를 클립보드로 (PC — 에디터 본문에 Ctrl+V)</td></tr>
-<tr><td>📤 이미지·제목 공유</td><td>모바일 공유 시트 → 네이버 블로그 앱으로 바로 전달</td></tr>
-<tr><td>⬇ 이미지 저장</td><td>클립보드·공유를 모두 못 쓰는 브라우저용 폴백</td></tr>
-<tr><td>✍ 네이버 글쓰기 열기</td><td>내 블로그 글쓰기 창을 새 탭으로 (카테고리 지정 포함)</td></tr>
-<tr><td>✅ 발행 완료로 표시</td><td>발행 시각을 기록 — 데이터 표에 <b>✓ 발행</b> 배지, 미발행 목록에서 제외</td></tr>
-</tbody>
-</table>
-<div class="note warn">⚠️ <b>이미지 복사를 먼저, 글쓰기 창 열기를 나중에</b> 누르세요. 순서가 바뀌면 브라우저가 클립보드 접근을 막습니다(창이 포커스를 가져가기 때문). 두 동작을 한 버튼으로 합치지 않은 이유이기도 합니다.</div>
-
-<h2>3. 최초 설정 (각각 1회)</h2>
-<h3>블로그 설정 — 필수</h3>
+<h2 class="sec" id="how">쓰는 법 — 3단계</h2>
+<p class="lead">달리고 난 직후, 폰에서 1분이면 끝납니다.</p>
 <ol class="steps">
-<li><b>데이터 · 내보내기</b> → <b>네이버 블로그</b> 카드 → <code>⚙ 설정</code></li>
-<li><b>블로그 ID</b>: 블로그 주소의 마지막 부분 (예: <code>blog.naver.com/nevertheless-jos</code> → <code>nevertheless-jos</code>)</li>
-<li><b>카테고리 번호</b>(선택): 블로그에서 해당 카테고리를 열었을 때 주소의 <code>categoryNo=</code> 값 (예: 운동 → <code>150</code>)</li>
-<li><b>기록 저장 후 글감 자동 열기</b> 체크 → 저장</li>
+  <li>
+    <span class="num"></span>
+    <div class="body">
+      <b><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V16"/></svg>캡쳐 올리기</b>
+      <p><b>기록 추가</b>에서 러닝 앱 캡쳐를 고르거나, 끌어다 놓거나, 복사해 온 이미지를 <span class="kbd">Ctrl</span>+<span class="kbd">V</span>로 붙여넣으세요.</p>
+    </div>
+  </li>
+  <li>
+    <span class="num"></span>
+    <div class="body">
+      <b><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>숫자 확인하기</b>
+      <p>거리·시간·페이스가 자동으로 채워집니다. <b>맞는지 눈으로 한 번 보고</b> 틀린 칸만 고치세요. 사진 없이 직접 입력해도 됩니다.</p>
+    </div>
+  </li>
+  <li>
+    <span class="num"></span>
+    <div class="body">
+      <b><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>저장하기</b>
+      <p>저장하는 순간 대시보드의 누적·목표 달성률에 바로 반영됩니다. 끝입니다.</p>
+    </div>
+  </li>
 </ol>
-<h3>구글드라이브 연동 — 선택</h3>
-<p><b>데이터 · 내보내기 → 구글드라이브 → 🔗 구글 계정 연결</b>에서 로그인 한 번이면 끝입니다. 이후 기록을 저장·삭제할 때마다 몇 초 안에 내 드라이브의 정본(<code>running_records.json</code>)에 자동 반영되고, 다른 기기에서 저장한 기록도 이 브라우저로 합쳐집니다. 휴대폰에서 드라이브로 캡쳐를 자동 백업해 두면 <code>📥 캡쳐 가져오기</code>로 여러 장을 골라 순차 처리할 수 있습니다(이미 가져온 캡쳐는 자동 스킵). 상세 설계는 <a href="drive.html">드라이브 문서</a>를 보세요.</p>
-<div class="note">ℹ️ 설정값(블로그 ID 등)은 <b>이 브라우저에만</b> 저장되고 서버로 전송되지 않습니다. 드라이브 토큰도 메모리에만 보관됩니다 — 약 1시간 후 만료되면 화면을 한 번 클릭할 때 자동으로 다시 이어집니다.</div>
+<div class="note">
+  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.6v.6"/></svg>
+  <span>자동 인식은 <b>빈 칸을 대신 채워주는 보조 수단</b>입니다. 최종 확인은 항상 사람이 합니다 — 저장 전에 한 번만 훑어보세요.</span>
+</div>
 
-<h2>4. 백업 — 꼭 해두세요</h2>
-<p>기록은 이 브라우저(localStorage + IndexedDB)에만 있습니다. 브라우저 데이터를 지우면 <b>복구할 수 없습니다.</b></p>
-<ul>
-<li><b>데이터 · 내보내기 → ⬇ 정본 내보내기(JSON)</b> — 주기적으로 파일로 저장 (사진은 미포함)</li>
-<li><b>구글 계정 연결</b> — 연결해 두면 저장할 때마다 <code>running_records.json</code>이 내 드라이브에 자동 갱신</li>
-<li>복원은 <b>📁 JSON 가져오기</b> 한 번이면 끝 — <b>병합(권장)</b>은 겹치지 않는 기록만 추가하고, <b>전체 교체</b>는 파일 내용으로 덮어씁니다.</li>
-<li><b>⬇ CSV(엑셀)</b>는 스프레드시트 분석용입니다 — 백업 정본은 JSON입니다.</li>
-</ul>
+<h2 class="sec">화면 네 개가 전부입니다</h2>
+<p class="lead">PC는 왼쪽 메뉴, 폰은 아래쪽 탭바에 있습니다.</p>
+<div class="screens">
+  <div class="sc">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg>
+    <div><b>대시보드</b><p>목표 달성 링, 꾸준함 잔디, 주간 거리, 계획 대비 누적, 페이스 추이.</p></div>
+  </div>
+  <div class="sc">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    <div><b>기록 추가</b><p>캡쳐 업로드 → 자동 인식 → 확인 → 저장. 사진 없이 직접 입력도 가능합니다.</p></div>
+  </div>
+  <div class="sc">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>
+    <div><b>목표 · 달성도</b><p>주·월·연 기준을 정합니다. 기본값은 <b>주 3회 · 월 15회 · 연 180회</b>.</p></div>
+  </div>
+  <div class="sc">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="18" height="4" rx="1"/></svg>
+    <div><b>데이터 · 내보내기</b><p>기록 검색·수정·삭제, 파일로 내보내기·가져오기, 구글드라이브 연결.</p></div>
+  </div>
+</div>
 
-<h2>5. 홈 화면에 설치 (모바일 앱처럼)</h2>
-<p>이 앱은 PWA입니다 — 설치하면 아이콘으로 바로 열리고, 오프라인에서도 기록 조회가 됩니다(데이터가 기기에 있으므로).</p>
-<ul>
-<li><b>안드로이드 Chrome</b>: 메뉴(⋮) → <b>홈 화면에 추가</b> (또는 주소창의 설치 아이콘)</li>
-<li><b>아이폰 Safari</b>: 공유(□↑) → <b>홈 화면에 추가</b></li>
-<li>테마(라이트/다크)는 한 번 바꾸면 모든 페이지·재방문에 유지됩니다. 기본은 시스템 설정을 따릅니다.</li>
-</ul>
+<h2 class="sec" id="backup">기록을 잃지 않으려면</h2>
+<p class="lead">가장 중요한 한 가지입니다 — 딱 한 번만 해두세요.</p>
+<div class="note warn">
+  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L1.9 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17v.5"/></svg>
+  <span>기록은 <b>이 브라우저 안에</b> 저장됩니다. 브라우저 데이터를 지우거나 폰을 바꾸면 되돌릴 수 없습니다.</span>
+</div>
+<ol class="steps">
+  <li>
+    <span class="num"></span>
+    <div class="body">
+      <b><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15.5A4.5 4.5 0 0 1 5.3 7a6 6 0 0 1 11.4-1.3A4.6 4.6 0 0 1 20 15"/><path d="M12 11v9M8.5 16.5L12 20l3.5-3.5"/></svg>구글 계정 연결 <span style="font-size:11.5px;font-weight:700;color:var(--good-text);background:var(--good-soft);padding:1px 8px;border-radius:999px">권장</span></b>
+      <p><b>데이터 · 내보내기 → 구글드라이브 → 🔗 구글 계정 연결</b>. 로그인 한 번이면 이후 저장할 때마다 내 드라이브에 자동 백업되고, <b>다른 기기에서도 같은 기록</b>이 이어집니다.</p>
+    </div>
+  </li>
+  <li>
+    <span class="num"></span>
+    <div class="body">
+      <b><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M8 11l4 4 4-4"/><path d="M4 19h16"/></svg>가끔 파일로 내보내기</b>
+      <p><b>⬇ 정본 내보내기(JSON)</b>로 파일 하나를 받아두세요. 복원은 <b>📁 JSON 가져오기</b> 한 번이면 됩니다.</p>
+    </div>
+  </li>
+</ol>
+<div class="note good">
+  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10.5" width="16" height="10" rx="2.5"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg>
+  <span>드라이브에는 <b>이 앱이 만든 파일만</b> 접근합니다. 다른 문서·사진은 볼 수 없고, 운영자도 볼 수 없습니다.</span>
+</div>
 
-<h2>6. 관리자: 완전 자동 발행 (선택 · 트랙 B)</h2>
-<p>본인 PC에서 스크립트가 스마트에디터를 직접 조작해 <b>발행까지</b> 자동으로 처리합니다. 브라우저 자동화는 네이버 약관상 회색지대이므로 <b>본인 계정 · 소량</b>으로만 쓰세요. 자세한 리스크는 <a href="blog.html">블로그 문서 §6</a>.</p>
-<pre>cd scripts
-npm install
-npx playwright install chromium
-node blog-auto-post.mjs --login          # 최초 1회: 창에서 직접 로그인 (자동 입력 없음)
+<h2 class="sec">폰 홈 화면에 두기</h2>
+<p class="lead">앱처럼 아이콘으로 바로 열립니다. 인터넷이 끊겨도 기록 조회가 됩니다.</p>
+<div class="screens">
+  <div class="sc">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>
+    <div><b>아이폰 Safari</b><p>아래 <b>공유</b> 버튼 → <b>홈 화면에 추가</b></p></div>
+  </div>
+  <div class="sc">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>
+    <div><b>안드로이드 Chrome</b><p>오른쪽 위 <b>⋮</b> → <b>홈 화면에 추가</b></p></div>
+  </div>
+</div>
 
-# 앱에서 정본 JSON을 내보낸 뒤
-node blog-auto-post.mjs --json ../running_records.json --images ../기록 --blog nevertheless-jos --category 150
-    # 기본은 dry-run — 발행 직전에 멈추고 scripts/out/ 에 스크린샷을 남김
-node blog-auto-post.mjs ... --publish     # 확인 후 실제 발행 (기본 1건)</pre>
-<div class="note warn">⚠️ 첫 실행에서는 스마트에디터 화면 구조가 스크립트의 셀렉터와 다를 수 있습니다. dry-run 스크린샷을 보고 <code>blog-auto-post.mjs</code> 상단의 <code>SEL</code> 값을 맞춘 뒤 <code>--publish</code>를 쓰세요. 발행에 성공하면 JSON에 발행 시각이 기록되고, 그 JSON을 앱으로 가져오면 배지가 반영됩니다.</div>
+<h2 class="sec" id="blog">네이버 블로그에 올리고 싶다면 <span style="font-size:12.5px;font-weight:600;color:var(--muted)">선택</span></h2>
+<p class="lead">기록을 저장하면 블로그 글감(제목 + 사진)이 자동으로 만들어집니다.</p>
+<ol class="steps">
+  <li>
+    <span class="num"></span>
+    <div class="body">
+      <b>한 번만 설정하기</b>
+      <p><b>데이터 · 내보내기 → 네이버 블로그 → ⚙ 설정</b>에서 <b>블로그 ID</b>를 넣습니다. 블로그 주소의 마지막 부분이에요 — <code>blog.naver.com/myid</code> 라면 <code>myid</code>.</p>
+    </div>
+  </li>
+  <li>
+    <span class="num"></span>
+    <div class="body">
+      <b>저장하면 글감 창이 뜹니다</b>
+      <p><b>🖼 이미지 복사</b>를 먼저 누르고, 그다음 <b>✍ 네이버 글쓰기 열기</b>. 본문에 붙여넣고 제목을 넣어 발행한 뒤, 앱으로 돌아와 <b>✅ 발행 완료로 표시</b>를 누르면 됩니다.</p>
+    </div>
+  </li>
+</ol>
+<div class="note warn">
+  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L1.9 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17v.5"/></svg>
+  <span>순서가 중요합니다 — <b>이미지 복사가 먼저</b>. 글쓰기 창을 먼저 열면 브라우저가 복사를 막습니다. 폰에서는 <b>📤 공유</b> 버튼으로 블로그 앱에 바로 넘길 수 있습니다.</span>
+</div>
 
-<h2>7. 다음 단계</h2>
-<ul class="todo">
-<li><span class="k now">지금</span><span class="t"><b>블로그 설정 입력</b>데이터 · 내보내기 → 네이버 블로그 → ⚙ 설정에 블로그 ID와 카테고리 번호를 넣습니다. 이걸 해야 글감 자동 열기가 켜집니다.</span></li>
-<li><span class="k now">지금</span><span class="t"><b>실제 1건으로 왕복 확인</b>오늘 러닝 캡쳐로 저장 → 이미지 복사 → 글쓰기 창 → 붙여넣기 → 발행 → 발행 완료 표시까지 한 바퀴 돌려보고, 어색한 지점을 알려주세요.</span></li>
-<li><span class="k next">다음</span><span class="t"><b>모바일에서 공유 흐름 확인</b>휴대폰으로 앱을 열어 저장하면 <code>📤 공유</code> 버튼이 뜹니다. 네이버 블로그 앱으로 이미지가 잘 넘어가는지 확인이 필요합니다.</span></li>
-<li><span class="k next">다음</span><span class="t"><b>관리자 자동 발행 셋업(선택)</b>위 6번 절차대로 dry-run까지 돌려 셀렉터를 한 번 맞춰두면, 이후에는 명령 한 줄로 발행됩니다.</span></li>
-<li><span class="k later">이후</span><span class="t"><b>M2 · 드라이브 폴더 자동 스캔</b>Picker로 고르지 않아도 새 캡쳐를 감지해 가져오기 — <a href="drive.html">드라이브 문서 §7</a></span></li>
-<li><span class="k later">이후</span><span class="t"><b>M3 · 주간 리포트 자동발행</b>주간 집계를 카드 이미지로 만들어 블로그 글감으로 — <a href="blog.html">블로그 문서 §8</a></span></li>
-</ul>
+<h2 class="sec">막힐 때</h2>
+<details>
+  <summary>기록이 사라졌어요</summary>
+  <p>브라우저 데이터를 지웠거나, 시크릿 창이거나, 다른 기기입니다. 내보낸 JSON 파일이나 드라이브 백업을 <b>📁 JSON 가져오기</b>로 되살리세요. 이런 일을 막으려면 <a href="#backup">구글 계정 연결</a>을 해두는 게 좋습니다.</p>
+</details>
+<details>
+  <summary>숫자를 자꾸 잘못 읽어요</summary>
+  <p>캡쳐를 자르지 말고 화면 전체로, 밝은 테마로 찍으면 인식률이 올라갑니다. 그래도 틀리면 직접 고쳐서 저장하세요 — 그게 정상적인 사용법입니다.</p>
+</details>
+<details>
+  <summary>이미지 붙여넣기가 안 돼요</summary>
+  <p>글쓰기 창을 먼저 열었다면, 앱으로 돌아와 <b>🖼 이미지 복사</b>를 다시 누른 뒤 에디터로 이동하세요. 브라우저가 복사 기능을 지원하지 않으면 <b>⬇ 이미지 저장</b>으로 받아서 직접 첨부하면 됩니다.</p>
+</details>
+<details>
+  <summary>구글 로그인을 다시 하라고 떠요</summary>
+  <p>보안상 로그인은 약 1시간마다 만료됩니다. 다시 동의하면 됩니다 — 고장이 아닙니다.</p>
+</details>
+<details>
+  <summary>저장했는데 블로그 글감 창이 안 떠요</summary>
+  <p>블로그 ID가 비어 있거나 <b>자동 열기</b>가 꺼져 있습니다. <b>⚙ 설정</b>을 확인하세요. 드라이브에서 캡쳐를 여러 장 처리하는 중에는 일부러 뜨지 않고, 다 끝난 뒤 한꺼번에 안내합니다.</p>
+</details>
 
-<h2>8. 문제가 생기면</h2>
-<table>
-<thead><tr><th>증상</th><th>해결</th></tr></thead>
-<tbody>
-<tr><td>글감 창이 저장 후 안 뜬다</td><td>블로그 ID가 비어 있거나 <b>자동 열기</b>가 꺼져 있습니다. ⚙ 설정 확인. 드라이브로 여러 장을 처리 중일 때는 일부러 뜨지 않고, 다 끝난 뒤 미발행 목록으로 안내합니다.</td></tr>
-<tr><td>이미지 복사 버튼이 없다</td><td>브라우저가 클립보드 이미지를 지원하지 않거나 HTTPS가 아닙니다. <code>⬇ 이미지 저장</code>으로 내려받아 에디터에서 첨부하세요.</td></tr>
-<tr><td>붙여넣기가 안 된다</td><td>글쓰기 창을 먼저 열었다면 앱으로 돌아와 <b>이미지 복사를 다시</b> 누르고 에디터로 이동하세요.</td></tr>
-<tr><td>OCR 값이 자꾸 틀리다</td><td>캡쳐를 자르지 말고 전체 화면으로, 밝은 테마로 찍으면 인식률이 오릅니다. 그래도 틀리면 직접 수정해 저장하세요.</td></tr>
-<tr><td>기록이 사라졌다</td><td>브라우저 데이터 삭제·시크릿 창·다른 기기입니다. 내보낸 JSON이나 드라이브 백업을 <b>📁 JSON 가져오기</b>로 복원하세요.</td></tr>
-<tr><td>드라이브 창이 자꾸 로그인을 묻는다</td><td>토큰이 약 1시간마다 만료됩니다. 다시 동의하면 됩니다 — 정상 동작입니다.</td></tr>
-</tbody>
-</table>
+<div class="endcta">
+  <b>바로 시작해보세요</b>
+  <p>오늘 러닝 캡쳐 한 장이면 첫 기록이 만들어집니다.</p>
+  <a class="btn" href="index.html">대시보드 열기
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></a>
+</div>
+
 </main>
+<footer>러닝 누적기록 · 데이터는 내 브라우저와 내 드라이브에만 저장됩니다 · <a href="manual/index.html">자세한 매뉴얼</a></footer>
 <script>
 const root=document.documentElement;
 document.getElementById('themeBtn').addEventListener('click',()=>{const t=(root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'))==='dark'?'light':'dark';root.setAttribute('data-theme',t);try{localStorage.setItem('run.theme.v1',t);}catch(e){}});
