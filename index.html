@@ -154,6 +154,12 @@
   .note.warn{background:var(--warn-soft);color:var(--warn)}
   .drop{display:block;border:2px dashed var(--border);border-radius:12px;padding:26px;text-align:center;color:var(--muted);font-size:13px;background:var(--plane);cursor:pointer;transition:border-color .12s,background .12s}
   .drop.over,.drop:hover{border-color:var(--series-1);color:var(--series-1)}
+  /* 기록 추가 — 드라이브에서 바로 가져오기 진입점 */
+  .orrow{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:11.5px}
+  .orrow::before,.orrow::after{content:'';flex:1;height:1px;background:var(--border)}
+  .drivebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .drivebar .dhint{font-size:12px;color:var(--muted);flex:1;min-width:170px}
+  @media(max-width:560px){.drivebar .btn{width:100%}.drivebar .dhint{min-width:0}}
   /* table */
   table.data{border-collapse:collapse;width:100%;font-size:13px;background:var(--surface-1);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
   table.data th{background:var(--series-1-soft);color:var(--seq-700);text-align:left;padding:9px 11px;font-size:11.5px;font-weight:700;white-space:nowrap}
@@ -691,7 +697,7 @@ async function pickDriveFolder(){ /* 기본 캡쳐 폴더 1회 지정 — 다음
         const f=(d.docs||[])[0];if(!f||!f.id)return;
         const cur=driveSettings();cur.folderId=f.id;cur.folderName=f.name||null;saveDriveSettings(cur);
         toast('기본 폴더 지정: '+(f.name||f.id));
-        if(current==='data')renderData();
+        if(current==='data')renderData();refreshAddDrive(); /* 버튼에 붙은 폴더명도 함께 갱신 */
       });
     if(c.appId)b.setAppId(c.appId);
     b.build().setVisible(true);
@@ -964,7 +970,7 @@ async function connectDrive(){ /* 사용자 제스처에서 호출 — 최초 1�
         s.connectedPicture=u.picture||s.connectedPicture||null;}}catch(e){}
     saveDriveSettings(s);
     toast('구글 계정이 연결되었습니다'+(s.connectedEmail?' · '+s.connectedEmail:''));
-    setPill();if(current==='data')renderData();
+    setPill();if(current==='data')renderData();refreshAddDrive();
     await syncFromDrive(true);
     hydrateThumbs(); /* 연결로 토큰이 생겼으니 다른 기기 기록의 사진을 복구 */
   }catch(e){
@@ -998,7 +1004,7 @@ function disconnectDrive(){
   _gisToken=null;_gisTokenExp=0;_tokenClient=null;_pendingBackup=false;clearTokenCache();
   s.connected=false;delete s.connectedEmail;delete s.connectedName;delete s.connectedPicture;
   saveDriveSettings(s); /* jsonFileId는 유지 — 재연결 시 같은 정본 사용 */
-  toast('구글 계정 연결을 해제했습니다');setPill();if(current==='data')renderData();
+  toast('구글 계정 연결을 해제했습니다');setPill();if(current==='data')renderData();refreshAddDrive();
 }
 function scheduleAutoBackup(){ /* 저장 직후 3초 디바운스 — 드라이브 큐 연속 저장을 1회 업로드로 합침 */
   if(!_bootDone||!driveConnected())return;
@@ -1852,6 +1858,15 @@ function drawRecent(){
 }
 
 /* ============ 기록 추가 뷰 (사진 업로드 우선) ============ */
+function addDriveHTML(){ /* 기록 추가에서 바로 드라이브 캡쳐를 고른다 — 데이터 뷰를 거치지 않도록 */
+  const s=driveSettings();
+  return driveConnected()
+    ? `<div class="drivebar"><button class="btn sec" onclick="openDrivePicker()">📥 구글드라이브에서 캡쳐 가져오기${s.folderName?' · '+esc(s.folderName):''}</button>
+        <span class="dhint">여러 장을 골라도 됩니다 — 한 번에 검토하고 저장해요. 이미 가져온 캡쳐는 건너뜁니다.</span></div>`
+    : `<div class="drivebar"><button class="btn sec" onclick="connectDrive()">🔗 구글 계정 연결</button>
+        <span class="dhint">연결하면 폰에서 드라이브로 백업한 캡쳐를 여기서 바로 불러올 수 있어요.</span></div>`;
+}
+function refreshAddDrive(){const el=$('#addDrive');if(el)el.innerHTML=addDriveHTML();} /* 연결 상태만 갱신 — 작성 중인 폼을 날리지 않는다 */
 function renderAdd(){
   if(state.batch&&state.batch.active){ /* 일괄 검토 모드 — 카드 목록 또는 개별 수정 */
     if(state.batch.editIdx!=null)return renderBatchEdit(state.batch.editIdx);
@@ -1864,6 +1879,8 @@ function renderAdd(){
     <div class="addwrap">
       <label class="drop" for="photoFile" id="dropzone">📷 여기에 캡쳐 이미지를 선택하거나 끌어다 놓으세요<br><span style="font-size:11px">PNG · JPG · 붙여넣기(Ctrl+V) 가능 · 추출은 전부 브라우저 안에서 실행됩니다</span>
         <input id="photoFile" type="file" accept="image/*" class="hide"></label>
+      ${editing?'':`<div class="orrow"><span>또는</span></div>
+      <div id="addDrive">${addDriveHTML()}</div>`}
       <div id="ocrStatus" style="font-size:13px;color:var(--muted)"></div>
       <div id="queueCtl" class="hide" style="font-size:12.5px;color:var(--muted)"></div>
       <div id="photoPrev"></div>
