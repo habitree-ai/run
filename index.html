@@ -312,6 +312,8 @@
   .rc-top{display:flex;gap:11px;align-items:flex-start}
   .rc-h{min-width:0;flex:1}
   .rc-d{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .wx{font-size:12.5px;line-height:1;margin-left:4px} /* 날씨 아이콘 — 날짜 옆 (REQ-0010) */
+  .rc-d .wx{margin-left:0} /* 카드 쪽은 .rc-d의 flex gap이 이미 띄워 준다 */
   .rc-t{font-size:14.5px;font-weight:700;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .rc-m{display:flex;gap:18px;margin:11px 0 2px;font-variant-numeric:tabular-nums;flex-wrap:wrap}
   .rc-m i{display:block;font-style:normal;font-size:10.5px;font-weight:600;color:var(--muted)}
@@ -2444,6 +2446,84 @@ function saveGoalsForm(){
   saveGoals();toast('기준을 저장했습니다');renderGoals();
 }
 
+/* ============ 날씨 (Open-Meteo · REQ-0010) ============
+   서울 고정. 키가 필요 없고 CORS가 열려 있어 정적 배포에서 그대로 부를 수 있는 유일한 후보.
+   값은 레코드가 아니라 '날짜+시각' 캐시에 둔다 — 스키마(v2.0)와 드라이브 병합에 영향이 없다. */
+const LS_WEATHER='run.weather.v1', WX_LAT=37.5665, WX_LON=126.9780;
+const WX_ICON={clear:'☀️',cloud:'☁️',rain:'🌧️',snow:'❄️'};
+const WX_LABEL={clear:'맑음',cloud:'흐림',rain:'비',snow:'눈'};
+function wmoBucket(c){ /* WMO 코드 → 4단계. 안개는 흐림에, 뇌우는 비에 접는다 */
+  if(c==null)return null;c=+c;if(!isFinite(c))return null;
+  if(c<=1)return 'clear';
+  if(c<=3||c===45||c===48)return 'cloud';
+  if((c>=71&&c<=77)||c===85||c===86)return 'snow';
+  if((c>=51&&c<=67)||(c>=80&&c<=82)||(c>=95&&c<=99))return 'rain';
+  return null;
+}
+let _wxCache=null; const _wxTried=new Set(); let _wxBusy=false;
+function wxCache(){
+  if(_wxCache)return _wxCache;
+  try{const j=JSON.parse(localStorage.getItem(LS_WEATHER)||'{}');_wxCache=(j&&typeof j==='object'&&!Array.isArray(j))?j:{};}
+  catch(e){_wxCache={};}
+  return _wxCache;
+}
+function wxKey(r){ /* 시작 시각이 있으면 그 시각의 날씨 — 없으면 그날 대표값 */
+  const t=String(r.start_time||'');
+  return /^\d{2}:\d{2}/.test(t)?r.date+'T'+t.slice(0,2):r.date;
+}
+function wxBadge(r){ /* 값이 없으면 빈 문자열 — 자리를 잡지 않아 레이아웃이 흔들리지 않는다 */
+  const b=wxCache()[wxKey(r)];
+  return WX_ICON[b]?`<span class="wx" title="${WX_LABEL[b]}">${WX_ICON[b]}</span>`:'';
+}
+function wxDaysAgo(d){return Math.round((new Date(todayISO()+'T00:00:00')-new Date(d+'T00:00:00'))/86400000);}
+async function wxGet(u){ /* 실패·지연은 조용히 포기 — 날씨 때문에 목록이 막히면 안 된다 */
+  const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),8000);
+  try{const r=await fetch(u,{signal:ctl.signal});return r.ok?await r.json():null;}
+  catch(e){return null;}
+  finally{clearTimeout(t);}
+}
+function wxApply(j,rows){ /* 응답 → 캐시. 시각 키는 hourly, 날짜 키는 daily에서 찾는다 */
+  if(!j||j.error)return 0;
+  const H=new Map(),D=new Map(),c=wxCache();
+  const ht=(j.hourly&&j.hourly.time)||[],hc=(j.hourly&&j.hourly.weather_code)||[];
+  ht.forEach((t,i)=>H.set(String(t).slice(0,13),hc[i]));
+  const dt=(j.daily&&j.daily.time)||[],dc=(j.daily&&j.daily.weather_code)||[];
+  dt.forEach((t,i)=>D.set(String(t),dc[i]));
+  let n=0;
+  rows.forEach(r=>{const k=wxKey(r);
+    const b=wmoBucket(k.includes('T')?H.get(k):D.get(k));
+    if(b){c[k]=b;n++;}});
+  return n;
+}
+async function wxFetchRecent(rows){ /* 최근 7일 — 아카이브는 어제까지만이라 예보 API의 과거 구간을 쓴다 */
+  if(!rows.length)return 0;
+  const days=Math.min(92,Math.max(1,Math.max(...rows.map(r=>wxDaysAgo(r.date)))+1));
+  return wxApply(await wxGet(`https://api.open-meteo.com/v1/forecast?latitude=${WX_LAT}&longitude=${WX_LON}`
+    +`&hourly=weather_code&daily=weather_code&past_days=${days}&forecast_days=1&timezone=Asia%2FSeoul`),rows);
+}
+async function wxFetchArchive(rows){ /* 그 이전 — 필요한 날짜 전체를 한 구간으로 한 번에 */
+  if(!rows.length)return 0;
+  const ds=rows.map(r=>r.date).sort();
+  return wxApply(await wxGet(`https://archive-api.open-meteo.com/v1/archive?latitude=${WX_LAT}&longitude=${WX_LON}`
+    +`&hourly=weather_code&daily=weather_code&start_date=${ds[0]}&end_date=${ds[ds.length-1]}&timezone=Asia%2FSeoul`),rows);
+}
+async function ensureWeather(list){ /* 지금 화면에 있는 기록 중 아직 안 받아온 것만 1회 조회 */
+  if(_wxBusy||navigator.onLine===false)return;
+  const c=wxCache(),need=[];
+  list.forEach(r=>{const k=wxKey(r);
+    if(!c[k]&&!_wxTried.has(k)){_wxTried.add(k);need.push(r);}}); /* 실패해도 이 세션에선 재시도하지 않는다 */
+  if(!need.length)return;
+  _wxBusy=true;
+  try{
+    const recent=[],past=[];
+    need.forEach(r=>(wxDaysAgo(r.date)<=7?recent:past).push(r));
+    const n=(await wxFetchRecent(recent))+(await wxFetchArchive(past));
+    if(!n)return;
+    try{localStorage.setItem(LS_WEATHER,JSON.stringify(_wxCache));}catch(e){} /* 캐시 실패는 표시를 막지 않는다 */
+    if(current==='records')updateDataTable();
+  }finally{_wxBusy=false;}
+}
+
 /* ============ 데이터 뷰 ============ */
 let _dq={q:'',ym:'',src:''},_dsort={k:'date',d:-1}; /* 검색·정렬 상태 — 세션 내 유지 */
 function dataFiltered(){
@@ -2465,7 +2545,7 @@ function dataTableHTML(list){
       <th>사진</th><th class="sortable" onclick="setDataSort('date')">날짜${sortArr('date')}</th><th>제목</th><th class="sortable" onclick="setDataSort('dist')">거리${sortArr('dist')}</th><th class="sortable" onclick="setDataSort('pace')">페이스${sortArr('pace')}</th><th class="sortable" onclick="setDataSort('dur')">시간${sortArr('dur')}</th><th>고도</th><th>케이던스</th><th>심박</th><th>출처</th><th>블로그</th><th></th><th></th></tr></thead>
       <tbody>${list.map(x=>`<tr>
         <td>${(x.has_image||x.image_url)?`<span class="thumbwrap"><img class="thumb sm" data-rid="${esc(x.record_id)}" alt="" onclick="showImageModal('${esc(x.record_id)}')"></span>`:'—'}</td>
-        <td>${esc(x.date)} ${x.weekday?'('+esc(x.weekday)+')':''}</td><td>${esc(x.title||'러닝')}</td>
+        <td>${esc(x.date)} ${x.weekday?'('+esc(x.weekday)+')':''}${wxBadge(x)}</td><td>${esc(x.title||'러닝')}</td>
         <td>${(x.distance_km||0).toFixed(2)}</td><td>${paceTxt(x.avg_pace_sec_per_km)}</td><td>${clock(x.duration_sec)}</td>
         <td>${x.elevation_gain_m??'—'}</td><td>${x.cadence_spm||'—'}</td><td>${x.avg_heart_rate_bpm||'—'}</td>
         <td><span class="src ${esc(x.source||'manual')}">${esc((x.source||'manual').toUpperCase())}</span></td>
@@ -2487,7 +2567,7 @@ function dataCardsHTML(list){ /* 한 기록 = 한 카드 · 핵심 3지표를 �
       <div class="rc-top">
         ${img?`<span class="thumbwrap"><img class="thumb" data-rid="${id}" alt="" onclick="showImageModal('${id}')"></span>`:''}
         <div class="rc-h">
-          <div class="rc-d">${esc(x.date)}${x.weekday?' ('+esc(x.weekday)+')':''}
+          <div class="rc-d">${esc(x.date)}${x.weekday?' ('+esc(x.weekday)+')':''}${wxBadge(x)}
             <span class="src ${esc(x.source||'manual')}">${esc((x.source||'manual').toUpperCase())}</span>
             ${x.blog_posted_at?'<span class="src posted" title="블로그 발행됨">✓ 발행</span>':''}</div>
           <div class="rc-t">${esc(x.title||'러닝')}</div>
@@ -2515,6 +2595,7 @@ function updateDataTable(){ /* 표/카드만 부분 재렌더 — 검색 입력 
   const c=$('#dcount');if(c)c.textContent=list.length+'건'+(list.length!==state.records.length?' / 전체 '+state.records.length+'건':'');
   const rs=$('#dreset');if(rs)rs.classList.toggle('hide',!(_dq.q||_dq.ym||_dq.src));
   hydrateThumbs();
+  ensureWeather(list); /* 캐시에 없는 날짜만 뒤늦게 채워 넣고 다시 그린다 (REQ-0010) */
 }
 /* ============ 기록 뷰 — 내 러닝 목록만 (백업·연동은 '데이터 · 백업'으로 분리) ============ */
 function refreshLists(){ /* 기록 목록·연동 카드가 함께 바뀌는 동작에서 현재 화면만 다시 그린다 */
