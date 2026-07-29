@@ -14,7 +14,7 @@ const srv=createServer(async(req,res)=>{
   catch(e){res.writeHead(404);res.end('nf');}
 });
 await new Promise(r=>srv.listen(8348,r));
-const BASE='http://127.0.0.1:8348';
+const BASE=process.env.WX_BASE||'http://127.0.0.1:8348'; // WX_BASE=https://run.habitree.io 로 실배포 확인
 
 const fails=[];
 const ok=(c,n)=>{console.log(c?'PASS':'FAIL',n);if(!c)fails.push(n);};
