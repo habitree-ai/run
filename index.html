@@ -676,6 +676,37 @@ async function driveToken(fresh){ /* fresh: 만료 전 선제 갱신용 — 캐�
   });
   try{return await _tokenP;}finally{_tokenP=null;}
 }
+/* Picker는 docs.google.com iframe으로 뜬다. iOS Safari의 '사이트 간 추적 방지'가 그
+   iframe의 쿠키를 막으면 구글 세션을 잡지 못해 Picker가 자기 오류 화면을 그린다 —
+   "The API developer key is invalid" · "Can't access your Google Account". 둘 다
+   iframe 안이라 콜백이 오지 않아 앱은 실패를 알 수 없고, 사용자는 키가 잘못된 줄 안다.
+   키·콘솔 설정은 정상이며 PC에서는 그대로 열린다 (2026-07-29 대조 확인, REQ-0009).
+   그래서 로드 신호를 기다렸다가, 안 오면 우리가 닫고 사진 업로드로 보낸다. */
+const PICKER_LOAD_TIMEOUT=8000; /* 느린 회선의 오판을 피할 만큼 넉넉히 */
+let _pickerWatch=null;
+function pickerLoaded(){if(_pickerWatch){clearTimeout(_pickerWatch);_pickerWatch=null;}}
+function watchPicker(p){
+  pickerLoaded();
+  _pickerWatch=setTimeout(()=>{_pickerWatch=null;
+    try{p.setVisible(false);if(p.dispose)p.dispose();}catch(e){} /* 오류 화면을 걷어내야 안내가 보인다 */
+    openPickerFallback();},PICKER_LOAD_TIMEOUT);
+}
+function openPickerFallback(){
+  openModal(`<h3>드라이브 창을 열지 못했습니다</h3>
+    <p style="font-size:13px;margin:0 0 10px">이 브라우저가 구글 드라이브 창의 쿠키를 막고 있습니다 —
+      <b>계정이나 앱 설정 문제가 아닙니다.</b> 아이폰 Safari에서 주로 일어납니다.</p>
+    <p style="font-size:13px;margin:0 0 6px"><b>지금 바로 기록하려면</b> — 사진 앱에서 캡쳐를 직접 고르세요.
+      드라이브에서 가져올 때와 똑같이 읽어 채웁니다.</p>
+    <p style="font-size:12.5px;color:var(--text-secondary);margin:0 0 4px"><b>드라이브 창을 계속 쓰려면</b> —
+      아이폰 <b>설정 → Safari → 사이트 간 추적 방지</b>를 끄고 다시 시도하세요.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:16px">
+      <button class="btn sm sec" onclick="closeModal();openDrivePicker()">다시 시도</button>
+      <button class="btn sm" onclick="closeModal();pickPhotoInstead()">📷 사진에서 고르기</button></div>`);
+}
+function pickPhotoInstead(){
+  if(current!=='add')show('add');
+  const f=$('#photoFile');if(f)f.click(); /* 클릭 핸들러 안에서 동기 호출해야 iOS가 제스처로 인정한다 */
+}
 async function openDrivePicker(){
   const c=driveCreds(),s=driveSettings();
   if(!c||!c.apiKey){openDriveSetup();return;}
@@ -689,7 +720,7 @@ async function openDrivePicker(){
       .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
       .setTitle('러닝 캡쳐 선택'+(s.folderName?' — '+s.folderName:'')).setCallback(pickerCb);
     if(c.appId)b.setAppId(c.appId);
-    b.build().setVisible(true);
+    const p=b.build();p.setVisible(true);watchPicker(p);
   }catch(e){toast('드라이브 연결 실패: '+((e&&e.message)||e));}
 }
 async function pickDriveFolder(){ /* 기본 캡쳐 폴더 1회 지정 — 다음부터 Picker가 이 폴더에서 열린다 */
@@ -704,14 +735,17 @@ async function pickDriveFolder(){ /* 기본 캡쳐 폴더 1회 지정 — 다음
       .setOAuthToken(token).setDeveloperKey(c.apiKey).addView(view)
       .setTitle('기본 캡쳐 폴더 선택')
       .setCallback(d=>{
-        if(!(window.google&&google.picker)||d.action!==google.picker.Action.PICKED)return;
+        if(!(window.google&&google.picker))return;
+        if(d.action===google.picker.Action.LOADED||d.action===google.picker.Action.CANCEL)pickerLoaded();
+        if(d.action!==google.picker.Action.PICKED)return;
+        pickerLoaded();
         const f=(d.docs||[])[0];if(!f||!f.id)return;
         const cur=driveSettings();cur.folderId=f.id;cur.folderName=f.name||null;saveDriveSettings(cur);
         toast('기본 폴더 지정: '+(f.name||f.id));
         if(current==='data')renderData();refreshAddDrive(); /* 버튼에 붙은 폴더명도 함께 갱신 */
       });
     if(c.appId)b.setAppId(c.appId);
-    b.build().setVisible(true);
+    const p=b.build();p.setVisible(true);watchPicker(p);
   }catch(e){toast('폴더 선택 실패: '+((e&&e.message)||e));}
 }
 function clearDriveFolder(){
@@ -720,7 +754,11 @@ function clearDriveFolder(){
   if(current==='data')renderData();
 }
 function pickerCb(data){
-  if(!(window.google&&google.picker)||data.action!==google.picker.Action.PICKED)return;
+  if(!(window.google&&google.picker))return;
+  /* LOADED·CANCEL·PICKED 어느 것이든 도착했다면 Picker는 살아 있다 — 폴백 타이머를 끈다 */
+  if(data.action===google.picker.Action.LOADED||data.action===google.picker.Action.CANCEL)pickerLoaded();
+  if(data.action!==google.picker.Action.PICKED)return;
+  pickerLoaded();
   processDriveFiles(data.docs||[]);
 }
 function processDriveFiles(docs){
