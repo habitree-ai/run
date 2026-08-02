@@ -53,6 +53,11 @@ await page.evaluate(async()=>{
 await page.waitForTimeout(500);
 ok(await page.inputValue('#f_date')==='2026-07-26','날짜 앵커 프리필은 유지',await page.inputValue('#f_date'));
 ok(await page.inputValue('#f_time')==='','캡쳐 시각(08:17)이 시작 시각에 들어가지 않음',"'"+await page.inputValue('#f_time')+"'");
+// 앵커가 시각을 아예 들고 있지 않아야 한다 — 필드가 없으면 같은 버그를 다시 배선할 수 없다
+const anc=await page.evaluate(()=>buildAnchor('Screenshot_20260726_081700.png',null,0));
+ok(anc&&anc.date==='2026-07-26'&&!('time'in anc),'앵커는 날짜만 낸다 (시각 필드 없음)',JSON.stringify(anc));
+const ancD=await page.evaluate(()=>buildAnchor('IMG_5125.PNG',{createdTime:'2026-08-02T03:36:10.393Z'},0));
+ok(ancD&&!('time'in ancD),'드라이브 저장일 앵커도 시각 없음',JSON.stringify(ancD));
 await ctx.close();
 
 /* ---- 3. 기존 기록 보정 — 캡쳐에 실제 시작 줄이 있는 것만 ---- */

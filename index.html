@@ -831,7 +831,7 @@ async function processBatch(){
       const res=await new Promise(r=>runOCR(it.file,it.anchor,(parsed,err,raw)=>r({parsed,err,raw})));
       if(state.batch!==b)return;
       const p=res.parsed||{};
-      if(it.anchor){p.date=p.date||it.anchor.date;p.start_time=p.start_time||it.anchor.time;} /* OCR이 못 채운 칸만 앵커로 */
+      if(it.anchor)p.date=p.date||it.anchor.date; /* 날짜만 앵커로 — 앵커의 시각은 캡쳐 시각이라 시작 시각이 아니다 (REQ-0013) */
       it.parsed=p;it.raw=res.raw||null;
       it.warn=res.err?'인식 실패 — 수정에서 직접 입력':batchWarn(p);
       it.status=it.warn?'suspect':'ready';
@@ -1334,24 +1334,25 @@ function paceTimeMismatch(dist,pace,dur){ /* 거리×페이스 ≈ 시간 — 60
   if(!(dist>0)||!pace||!dur)return false;
   return Math.abs(dist*pace-dur)>Math.max(60,dur*0.07);
 }
-/* ---- 날짜 앵커: 캡쳐를 며칠 뒤 가져와도 러닝 날짜를 정확히 — 파일명 → EXIF → 드라이브 저장일 (planning/nrc-capture-flow.html §3) ---- */
-function parseNameStamp(name){ /* 캡쳐 파일명의 타임스탬프 (Screenshot_20260726_081712 · Screenshot_2026-07-26-08-17-12 등) */
+/* ---- 날짜 앵커: 캡쳐를 며칠 뒤 가져와도 러닝 날짜를 정확히 — 파일명 → EXIF → 드라이브 저장일 (planning/nrc-capture-flow.html §3)
+     날짜만 낸다. 이 경로들의 시각은 전부 '캡쳐 시각'이라 러닝 시작 시각이 될 수 없다 (REQ-0013) ---- */
+function parseNameStamp(name){ /* 캡쳐 파일명의 날짜 (Screenshot_20260726_081712 · Screenshot_2026-07-26-08-17-12 등) */
   const m=String(name||'').match(/(?:^|\D)(20\d{2})[-_.]?([01]\d)[-_.]?([0-3]\d)(?:\D{0,3}([0-2]\d)[-_.h시:]?([0-5]\d))?/);
   if(!m)return null;
   const date=m[1]+'-'+m[2]+'-'+m[3];
   const dt=new Date(date+'T00:00:00');
   if(isNaN(dt)||dt.getDate()!==+m[3]||+m[2]<1||+m[2]>12)return null; /* 2월 31일 등 배제 */
-  return {date,time:m[4]?m[4]+':'+m[5]:null};
+  return {date};
 }
 function buildAnchor(name,meta,fileMs){ /* 우선순위: 파일명 → EXIF 촬영시각 → 드라이브 저장일 → 파일 수정일 */
   const ns=parseNameStamp(name);
-  if(ns)return {date:ns.date,time:ns.time,source:'filename'};
+  if(ns)return {date:ns.date,source:'filename'};
   const ex=meta&&meta.imageMediaMetadata&&meta.imageMediaMetadata.time; /* "2026:07:26 08:17:12" */
-  if(ex){const m=String(ex).match(/(20\d{2})[:\-](\d{2})[:\-](\d{2})\D+([0-2]\d):([0-5]\d)/);
-    if(m)return {date:m[1]+'-'+m[2]+'-'+m[3],time:m[4]+':'+m[5],source:'exif'};}
+  if(ex){const m=String(ex).match(/(20\d{2})[:\-](\d{2})[:\-](\d{2})/);
+    if(m)return {date:m[1]+'-'+m[2]+'-'+m[3],source:'exif'};}
   const d=meta&&meta.createdTime?new Date(meta.createdTime):(fileMs>0?new Date(fileMs):null);
   if(d&&!isNaN(d))return {date:d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()),
-    time:pad(d.getHours())+':'+pad(d.getMinutes()),source:meta&&meta.createdTime?'drive':'file'};
+    source:meta&&meta.createdTime?'drive':'file'};
   return null;
 }
 const ANCHOR_SRC={filename:'캡쳐 파일명 기준 자동 입력 — 수정 가능',exif:'촬영 정보(EXIF) 기준 자동 입력 — 수정 가능',
