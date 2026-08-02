@@ -514,6 +514,20 @@ function loadRecords(){
   try{const j=JSON.parse(localStorage.getItem(LS_RECORDS)||'[]');return Array.isArray(j)?normalizeRecords(j):[];}
   catch(e){return [];}
 }
+const LS_MIG_ST='run.mig.starttime.v1';
+function fixCapturedStartTimes(){ /* 캡쳐 시각이 시작 시각으로 저장돼 있던 기록 보정 (REQ-0013).
+     캡쳐 안에 실제 시작 줄이 남아 있는 것만 바꾼다 — 정보가 없으면 손대지 않는다. 1회만 실행. */
+  if(localStorage.getItem(LS_MIG_ST))return 0;
+  let n=0;
+  state.records.forEach(r=>{
+    if(!r.raw_ocr)return;
+    const t=ocrStartTime(r.raw_ocr);
+    if(!t||t===r.start_time)return;
+    r.start_time=t;r.day_part=+t.slice(0,2)<12?'오전':'오후';r.updated_at=new Date().toISOString();n++;
+  });
+  try{localStorage.setItem(LS_MIG_ST,'1');}catch(e){}
+  return n;
+}
 function saveRecords(){
   try{localStorage.setItem(LS_RECORDS,JSON.stringify(state.records));}
   catch(e){toast('저장 공간이 부족합니다 — JSON 내보내기 후 오래된 기록을 정리하세요');}
@@ -1348,6 +1362,12 @@ function setDateHint(k){const el=$('#dateHint');if(el)el.textContent=k?'📎 '+(
 function detectCaptureType(t){ /* NRC 캡쳐 유형: 격자 지표(케이던스·심박·고도)가 보이면 상세, 아니면 요약 (planning §5) */
   return /케이던스|심박|고도|spm|bpm/i.test(t)?'detail':'summary';
 }
+function ocrStartTime(t){ /* 캡쳐 속 시작 시각 줄 — '오늘 - 06:01'. OCR이 '오늘'을 '개'·'='로 뭉개도 줄 모양으로 건진다.
+     줄 전체가 '<짧은 토큰> - HH:MM'일 때만 잡아 기록·구간의 시계형 숫자와 섞이지 않는다 (REQ-0013) */
+  const m=String(t||'').match(/^[ \t]*\S{0,3}[ \t]*[-–—][ \t]*([0-2]?\d:[0-5]\d)[ \t]*\r?$/m);
+  if(!m)return null;
+  return m[1].length===4?'0'+m[1]:m[1];
+}
 function parseRunningText(t,anchor){
   const r={};let m;
   const kind=detectCaptureType(t);
@@ -1368,6 +1388,7 @@ function parseRunningText(t,anchor){
       r.date=dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());}
     r.start_time=m[2].length===4?'0'+m[2]:m[2];
   }
+  if(!r.start_time)r.start_time=ocrStartTime(t);
   if(!r.start_time){m=t.match(/(오전|오후)\s*(\d{1,2}):(\d{2})/); /* NRC 헤더의 '오전 8:17' */
     if(m){let h=+m[2]%12;if(m[1]==='오후')h+=12;r.start_time=pad(h)+':'+m[3];}}
   m=t.match(/(\d+[.,]\d+)\s*(?:킬로미터|km|㎞)/i)||t.match(/(?:킬로미터|km|거리)[^\d]{0,8}(\d+[.,]\d+)/i);
@@ -2233,7 +2254,7 @@ function renderAdd(){
     $('#ocrStatus').textContent='저장된 기록을 수정합니다. 새 사진을 올리면 사진이 교체됩니다.';
   }
 }
-let _prevUrl=null,_autoDate=null,_autoTime=null;
+let _prevUrl=null,_autoDate=null;
 function handleFile(f){
   if(!f.type||!f.type.startsWith('image/')){toast('이미지 파일만 업로드할 수 있습니다');return;}
   if(!state.pendingDrive)state.pendingAnchor=buildAnchor(f.name,null,f.lastModified); /* 로컬 업로드도 파일명·수정일 앵커 적용 */
@@ -2244,10 +2265,10 @@ function handleFile(f){
   $('#manualLink').classList.add('hide');
   if(!$('#f_date'))showForm({});
   /* 날짜 앵커 즉시 프리필 — OCR을 기다리지 않음. 빈 칸만 채우고 언제든 수정 가능 (planning §3) */
-  _autoDate=null;_autoTime=null;
+  _autoDate=null;
   const a=state.pendingAnchor;
   if(a&&$('#f_date')&&!$('#f_date').value){$('#f_date').value=a.date;_autoDate=a.date;setDateHint(a.source);}
-  if(a&&a.time&&$('#f_time')&&!$('#f_time').value){$('#f_time').value=a.time;_autoTime=a.time;}
+  /* 앵커의 시각은 파일명·EXIF·저장일 어느 쪽이든 '캡쳐 시각'이라 러닝 시작이 아니다 → 프리필하지 않는다 (REQ-0013) */
   updateQueueCtl();
   $('#ocrStatus').innerHTML='⏳ 이미지에서 값을 읽는 중… (최초 실행 시 OCR 엔진 로딩으로 수십 초 걸릴 수 있어요 — 기다리는 동안 직접 입력해도 됩니다)';
   runOCR(f,a,(parsed,err,raw)=>{
@@ -2258,7 +2279,6 @@ function handleFile(f){
     const p=parsed||{};
     /* 캡쳐 속 '오늘/어제'(앵커 보정됨)가 앵커 추정치보다 정확 — 사용자가 손대지 않았을 때만 교체 */
     if(p.date&&_autoDate&&$('#f_date')&&$('#f_date').value===_autoDate&&p.date!==_autoDate)$('#f_date').value='';
-    if(p.start_time&&_autoTime&&$('#f_time')&&$('#f_time').value===_autoTime)$('#f_time').value='';
     applyPrefill(p);
     if(p.date&&$('#f_date')&&$('#f_date').value===p.date&&p.date!==_autoDate)setDateHint('ocr');
     const warn=validatePrefill(); /* 거리·페이스·시간 상호 검증 (planning §5) */
@@ -2829,12 +2849,14 @@ if(_sharedSum){
   state.records=loadRecords();
   state.goals=loadGoals();
   state.deletedIds=loadDeleted();
+  const _fixedST=fixCapturedStartTimes();
   saveRecords(); /* v1 → v2 마이그레이션 결과 즉시 반영 (부트 중엔 자동 백업 미발동) */
   setPill();
   show('dashboard');
   if('serviceWorker' in navigator&&location.protocol!=='file:') /* PWA — 홈 화면 설치·오프라인 조회 */
     navigator.serviceWorker.register('sw.js').catch(()=>{});
   _bootDone=true; /* 이후 저장부터 자동 백업 활성 */
+  if(_fixedST)toast('시작 시각 '+_fixedST+'건을 캡쳐 속 실제 시각으로 바로잡았습니다');
   if(driveConnected()) /* 재방문 자동 로그인 — 계정 힌트로 조용히 세션 복구, 팝업 차단 시 첫 클릭에서 폴백 */
     driveToken().then(()=>{if(_pendingBackup)runAutoBackup();syncFromDrive(true);hydrateThumbs();}).catch(()=>{setPill();});
 }
