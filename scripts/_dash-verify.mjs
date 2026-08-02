@@ -65,7 +65,7 @@ ok(a.t===10097,'시간 합계도 짧은 러닝 포함 유지',a.t);
 /* ---- 2. 추세는 그래프만 — 거리 막대차트 제거 ---- */
 ok(await page.locator('#ch-dist').count()===0,'거리 막대차트 제거됨');
 ok(await page.locator('#ch-cum').count()===1,'추세에 누적 차트 있음');
-ok(await page.locator('#ch-pace').count()===1,'추세에 페이스 차트 있음');
+ok(await page.locator('#ch-pace').count()===0,'페이스 추세 차트 제거됨');
 ok(await page.locator('.nowtrend').count()===1,'지금·추세 2단 레이아웃');
 
 /* ---- 3. 데스크톱 첫 화면에 누적·지금·추세가 함께 ---- */
@@ -75,7 +75,6 @@ const inFold=async(p,sel,vh)=>p.evaluate(([s,h])=>{
 ok(await inFold(page,'.totalrow',900),'첫 화면에 누적');
 ok(await inFold(page,'.nowtrend .hero',900),'첫 화면에 지금(원형)');
 ok(await inFold(page,'#ch-cum',900),'첫 화면에 추세(누적 그래프)');
-ok(await inFold(page,'#ch-pace',900),'첫 화면에 추세(페이스 그래프)');
 const cols=await page.evaluate(()=>getComputedStyle(document.querySelector('.nowtrend')).gridTemplateColumns.split(' ').length);
 ok(cols===2,'데스크톱은 2단',cols+'단');
 ok(!(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+1)),'가로 스크롤 없음(데스크톱)');
