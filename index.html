@@ -1401,12 +1401,15 @@ function agg(){
   const paced=r.filter(x=>x.avg_pace_sec_per_km&&x.distance_km);
   const pd=paced.reduce((a,x)=>a+x.distance_km,0);
   const avgPace=pd?paced.reduce((a,x)=>a+x.avg_pace_sec_per_km*x.distance_km,0)/pd:null;
-  return {n:r.length,...tot,avgPace};
+  return {n:runDays(r),...tot,avgPace};
+}
+function runDays(list){ /* 횟수 = 달린 '날' 수 — 하루를 2건으로 나눠 기록해도 1회 (REQ-0011) */
+  return new Set(list.filter(x=>x.date).map(x=>x.date)).size;
 }
 function periodTotals(keyFn,key){
-  let dist=0,runs=0;
-  state.records.forEach(x=>{if(x.date&&keyFn(x.date)===key){dist+=x.distance_km||0;runs++;}});
-  return {dist,runs};
+  let dist=0;const days=new Set();
+  state.records.forEach(x=>{if(x.date&&keyFn(x.date)===key){dist+=x.distance_km||0;days.add(x.date);}});
+  return {dist,runs:days.size};
 }
 function periodPace(keyFn,key){ /* 기간 대표 페이스 — 거리 가중 평균(짧은 러닝이 평균을 흔들지 않게) */
   let d=0,s=0;
@@ -1474,7 +1477,7 @@ function buildSummary(scope){
   else for(let i=1;i<=12;i++)keys.push(y+'-'+pad(i));
   const m=keys.map(k=>Math.round(rs.filter(x=>String(x.date).slice(0,7)===k)
     .reduce((a,x)=>a+(x.distance_km||0),0)*10)/10);
-  return {v:1, sc:all?'a':'y', n:rs.length,
+  return {v:1, sc:all?'a':'y', n:runDays(rs),
     d:Math.round(tot.d*10)/10, t:tot.t,
     ap:pd?Math.round(paced.reduce((a,x)=>a+x.avg_pace_sec_per_km*x.distance_km,0)/pd):null,
     bp:paced.length?Math.min(...paced.map(x=>x.avg_pace_sec_per_km)):null,
@@ -1713,6 +1716,7 @@ function openPeriodDetail(kind){ /* 카드 상세 — 이 숫자가 어떤 러�
       gp:proratedYearly(g.plan.yearly),gt:proratedYearly(g.target.yearly)}}[kind];
   if(!M)return;
   const list=state.records.filter(r=>r.date&&M.keyFn(r.date)===M.key).slice().reverse();
+  const days=runDays(list);
   const dist=list.reduce((a,x)=>a+(x.distance_km||0),0), dur=list.reduce((a,x)=>a+(x.duration_sec||0),0);
   const pace=periodPace(M.keyFn,M.key), remain=periodRemain(kind);
   const line=(label,actual,b,a,unit,dec)=>{
@@ -1724,13 +1728,13 @@ function openPeriodDetail(kind){ /* 카드 상세 — 이 숫자가 어떤 러�
   openModal(`<h3 style="margin-bottom:2px">${esc(M.title)} 내역</h3>
     <p style="font-size:12px;color:var(--muted);margin:0 0 12px">${esc(M.sub||'')}${remain?` · ${remain}일 남음`:''}</p>
     <div class="statrow statrow-sm" style="box-shadow:none;margin-bottom:14px">
-      <div class="st"><div class="label">횟수</div><div class="val">${list.length}<small>회</small></div></div>
+      <div class="st"><div class="label">횟수</div><div class="val">${days}<small>회</small></div></div>
       <div class="st"><div class="label">거리</div><div class="val">${dist.toFixed(1)}<small>km</small></div></div>
       <div class="st"><div class="label">시간</div><div class="val">${clock(dur)}</div></div>
       <div class="st"><div class="label">평균 페이스</div><div class="val">${paceTxt(pace)}</div></div>
     </div>
     <table class="data" style="margin-bottom:14px"><thead><tr><th></th><th>현재</th><th>계획</th><th>목표</th></tr></thead>
-      <tbody>${line('횟수',list.length,M.gp.runs,M.gt.runs,'회')}${line('거리',dist,M.gp.distance_km,M.gt.distance_km,'km',1)}</tbody></table>
+      <tbody>${line('횟수',days,M.gp.runs,M.gt.runs,'회')}${line('거리',dist,M.gp.distance_km,M.gt.distance_km,'km',1)}</tbody></table>
     ${list.length?`<div style="max-height:34vh;overflow:auto">${list.map(x=>`
       <div style="display:flex;gap:10px;padding:7px 0;border-top:1px solid var(--border);font-size:12.5px">
         <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(x.date)} ${x.weekday?'('+esc(x.weekday)+')':''} · ${esc(x.title||'러닝')}</span>
