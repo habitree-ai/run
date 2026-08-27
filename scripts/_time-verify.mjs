@@ -33,13 +33,20 @@ for(const [w,h,kind] of [[1280,900,'table'],[390,844,'card']]){
   await page.reload({waitUntil:'networkidle'});
   await page.evaluate(()=>show('records'));
   await page.waitForTimeout(400);
-  const sel=kind==='table'?'table.data tbody tr td:nth-child(2)':'.reccard .rc-d';
+  const sel=kind==='table'?'table.data tbody tr td:nth-child(3)':'.reccard .rc-d';
   const texts=await page.locator(sel).allTextContents().then(a=>a.map(s=>s.replace(/\s+/g,' ').trim()));
   console.log(kind,texts);
   ok(texts.length===3,kind+': 3 rows rendered');
-  ok(texts.some(t=>t.includes('2026-08-25 (화) 19:40')),kind+': 19:40 shown after weekday');
-  ok(texts.some(t=>t.includes('2026-08-25 (화) 06:03')),kind+': 06:03 shown');
-  ok(texts.some(t=>/^2026-08-23 \(일\)/.test(t)&&!/\d{2}:\d{2}/.test(t)),kind+': no time when start_time null');
+  if(kind==='table'){
+    ok(texts[0]==='06:03'&&texts[1]==='19:40','table: 시작 column shows 06:03, 19:40');
+    ok(texts[2]==='—','table: 시작 column shows — when start_time null');
+    const hd=await page.locator('table.data thead th').allTextContents();
+    ok(hd[2].trim()==='시작'&&hd[3].trim()==='제목','table: 시작 header between 날짜 and 제목');
+  }else{
+    ok(texts.some(t=>t.includes('2026-08-25 (화) 19:40')),'card: 19:40 shown after weekday');
+    ok(texts.some(t=>t.includes('2026-08-25 (화) 06:03')),'card: 06:03 shown');
+    ok(texts.some(t=>/^2026-08-23 \(일\)/.test(t)&&!/\d{2}:\d{2}/.test(t)),'card: no time when start_time null');
+  }
   await page.screenshot({path:join(OUT,'time-'+kind+'.png'),fullPage:false});
   await ctx.close();
 }

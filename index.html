@@ -2566,10 +2566,10 @@ function sortArr(k){return _dsort.k===k?(_dsort.d===1?' ▲':' ▼'):'';}
 function dataTableHTML(list){
   if(!list.length)return '<div class="empty">조건에 맞는 기록이 없습니다.</div>';
   return `<div style="overflow:auto"><table class="data"><thead><tr>
-      <th>사진</th><th class="sortable" onclick="setDataSort('date')">날짜${sortArr('date')}</th><th>제목</th><th class="sortable" onclick="setDataSort('dist')">거리${sortArr('dist')}</th><th class="sortable" onclick="setDataSort('pace')">페이스${sortArr('pace')}</th><th class="sortable" onclick="setDataSort('dur')">시간${sortArr('dur')}</th><th>고도</th><th>케이던스</th><th>심박</th><th>출처</th><th>블로그</th><th></th><th></th></tr></thead>
+      <th>사진</th><th class="sortable" onclick="setDataSort('date')">날짜${sortArr('date')}</th><th>시작</th><th>제목</th><th class="sortable" onclick="setDataSort('dist')">거리${sortArr('dist')}</th><th class="sortable" onclick="setDataSort('pace')">페이스${sortArr('pace')}</th><th class="sortable" onclick="setDataSort('dur')">시간${sortArr('dur')}</th><th>고도</th><th>케이던스</th><th>심박</th><th>출처</th><th>블로그</th><th></th><th></th></tr></thead>
       <tbody>${list.map(x=>`<tr>
         <td>${(x.has_image||x.image_url)?`<span class="thumbwrap"><img class="thumb sm" data-rid="${esc(x.record_id)}" alt="" onclick="showImageModal('${esc(x.record_id)}')"></span>`:'—'}</td>
-        <td>${esc(x.date)} ${x.weekday?'('+esc(x.weekday)+')':''}${x.start_time?' '+esc(x.start_time):''}${wxBadge(x)}</td><td>${esc(x.title||'러닝')}</td>
+        <td>${esc(x.date)} ${x.weekday?'('+esc(x.weekday)+')':''}${wxBadge(x)}</td><td>${x.start_time?esc(x.start_time):'—'}</td><td>${esc(x.title||'러닝')}</td>
         <td>${(x.distance_km||0).toFixed(2)}</td><td>${paceTxt(x.avg_pace_sec_per_km)}</td><td>${clock(x.duration_sec)}</td>
         <td>${x.elevation_gain_m??'—'}</td><td>${x.cadence_spm||'—'}</td><td>${x.avg_heart_rate_bpm||'—'}</td>
         <td><span class="src ${esc(x.source||'manual')}">${esc((x.source||'manual').toUpperCase())}</span></td>
