@@ -1497,40 +1497,65 @@ function paceCard(){
 }
 
 /* ---- 동기부여 대시보드 (planning/dashboard-motivation.html) — 링 게이지 · 넛지 · 스트릭 · 누적 진도 ---- */
-/* ============ 공유 — 요약 객체 · 링크 인코딩 (REQ-0004) ============
+/* ============ 공유 — 요약 객체 · 링크 인코딩 (REQ-0004 · 주/월 확장 REQ-0014) ============
    링크와 카드 이미지가 이 객체 하나를 함께 보므로 두 경로의 숫자가 어긋날 수 없다.
-   개별 레코드·날짜·시간·위치·사진·계정은 담지 않는다. */
+   개별 레코드·시간·위치·사진·계정은 담지 않는다.
+   단, 주/월 범위는 성격상 일자별 거리 합계(m)가 담긴다 — 모달 안내 문구가 이를 밝힌다. */
 function buildSummary(scope){
-  const today=todayISO(), y=today.slice(0,4);
-  const all=scope!=='year';
-  const rs=all?state.records:state.records.filter(r=>String(r.date).slice(0,4)===y);
+  const today=todayISO(), y=today.slice(0,4), g=state.goals;
+  let rs,keys,keyOf,sc,gp=null,gt=null;
+  const pair=t=>[t.runs||0,t.distance_km||0];
+  if(scope==='week'){ /* 요일별 거리 7칸 (월~일) */
+    const wk=isoWeekKey(today);sc='w';
+    rs=state.records.filter(r=>r.date&&isoWeekKey(r.date)===wk);
+    keys=[];const d=new Date(wk+'T00:00:00');
+    for(let i=0;i<7;i++){keys.push(d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()));d.setDate(d.getDate()+1);}
+    keyOf=x=>String(x.date);
+    gp=pair(g.plan.weekly);gt=pair(g.target.weekly);
+  }else if(scope==='month'){ /* 일별 거리 — 그 달의 일수만큼 */
+    const mk=today.slice(0,7);sc='m';
+    rs=state.records.filter(r=>String(r.date).slice(0,7)===mk);
+    const last=new Date(+y,+today.slice(5,7),0).getDate();
+    keys=[];for(let i=1;i<=last;i++)keys.push(mk+'-'+pad(i));
+    keyOf=x=>String(x.date);
+    gp=pair(g.plan.monthly);gt=pair(g.target.monthly);
+  }else{ /* 월별 거리 12칸 — 올해는 1~12월, 전체는 최근 12개월. 라벨은 at(생성일)에서 다시 계산한다 */
+    const all=scope!=='year';sc=all?'a':'y';
+    rs=all?state.records:state.records.filter(r=>String(r.date).slice(0,4)===y);
+    keys=[];
+    if(all){const d=new Date(today.slice(0,7)+'-01T00:00:00');d.setMonth(d.getMonth()-11);
+      for(let i=0;i<12;i++){keys.push(d.getFullYear()+'-'+pad(d.getMonth()+1));d.setMonth(d.getMonth()+1);}}
+    else for(let i=1;i<=12;i++)keys.push(y+'-'+pad(i));
+    keyOf=x=>String(x.date).slice(0,7);
+    if(!all){gp=pair(g.plan.yearly);gt=pair(g.target.yearly);}
+  }
   const tot=rs.reduce((a,x)=>({d:a.d+(x.distance_km||0),t:a.t+(x.duration_sec||0)}),{d:0,t:0});
   const paced=pacedRecs(rs);
   const pd=paced.reduce((a,x)=>a+x.distance_km,0);
-  const g=state.goals;
-  /* 월별 거리 12칸 — 올해는 1~12월, 전체는 최근 12개월. 라벨은 at(생성일)에서 다시 계산한다 */
-  const keys=[];
-  if(all){const d=new Date(today.slice(0,7)+'-01T00:00:00');d.setMonth(d.getMonth()-11);
-    for(let i=0;i<12;i++){keys.push(d.getFullYear()+'-'+pad(d.getMonth()+1));d.setMonth(d.getMonth()+1);}}
-  else for(let i=1;i<=12;i++)keys.push(y+'-'+pad(i));
-  const m=keys.map(k=>Math.round(rs.filter(x=>String(x.date).slice(0,7)===k)
+  const m=keys.map(k=>Math.round(rs.filter(x=>keyOf(x)===k)
     .reduce((a,x)=>a+(x.distance_km||0),0)*10)/10);
-  return {v:1, sc:all?'a':'y', n:runDays(rs),
+  return {v:1, sc, n:runDays(rs),
     d:Math.round(tot.d*10)/10, t:tot.t,
     ap:pd?Math.round(paced.reduce((a,x)=>a+x.avg_pace_sec_per_km*x.distance_km,0)/pd):null,
     bp:paced.length?Math.min(...paced.map(x=>x.avg_pace_sec_per_km)):null,
     st:betaStreak(),
-    gp:all?null:[g.plan.yearly.runs||0,g.plan.yearly.distance_km||0],
-    gt:all?null:[g.target.yearly.runs||0,g.target.yearly.distance_km||0],
-    m, at:today};
+    gp, gt, m, at:today};
 }
 function sumPeriodLabel(s){ /* 링크·카드·읽기전용 뷰가 같은 문구를 쓴다 */
-  return s.sc==='y'?(s.at||'').slice(0,4)+'년':'전체 기간';
+  const at=s.at||todayISO();
+  if(s.sc==='w')return weekLabelOf(at)+' ('+weekRange(isoWeekKey(at))+')';
+  if(s.sc==='m')return at.slice(0,4)+'년 '+(+at.slice(5,7))+'월';
+  if(s.sc==='y')return at.slice(0,4)+'년';
+  return '전체 기간';
 }
-function sumMonthLabels(s){
-  if(s.sc==='y')return Array.from({length:12},(_,i)=>(i+1)+'월');
+function sumPeriodNoun(s){return s.sc==='w'?'주간':s.sc==='m'?'월간':s.sc==='y'?'올해':'';}
+function sumChartTitle(s){return s.sc==='w'?'요일별 거리':s.sc==='m'?'일별 거리':'월별 거리';}
+function sumChartTicks(s){ /* m과 같은 길이 — 빈 문자열 칸은 라벨을 찍지 않는다 */
+  if(s.sc==='w')return ['월','화','수','목','금','토','일'];
+  if(s.sc==='m')return s.m.map((_,i)=>i%5?'':String(i+1));
+  if(s.sc==='y')return Array.from({length:12},(_,i)=>i%2?'':(i+1)+'월');
   const d=new Date((s.at||todayISO()).slice(0,7)+'-01T00:00:00');d.setMonth(d.getMonth()-11);
-  return Array.from({length:12},()=>{const t=(d.getMonth()+1)+'월';d.setMonth(d.getMonth()+1);return t;});
+  return Array.from({length:12},(_,i)=>{const t=(d.getMonth()+1)+'월';d.setMonth(d.getMonth()+1);return i%2?'':t;});
 }
 function b64uEnc(str){
   const b=new TextEncoder().encode(str);let s='';
@@ -1588,9 +1613,10 @@ function drawShareCard(s){
   const dTxt=s.d.toFixed(1);x.fillText(dTxt,P,330);
   const dW=x.measureText(dTxt).width;
   x.fillStyle=SHARE_C.mute;x.font=F(700,42);x.fillText('km',P+dW+14,330);
-  /* 3열 지표 */
-  const cells=[['러닝',String(s.n),'회'],['시간',clock(s.t),''],['평균 페이스',s.ap?paceTxt(s.ap):'—','/km']];
-  const cw=(S-P*2)/3;
+  /* 4열 지표 */
+  const cells=[['러닝',String(s.n),'회'],['시간',clock(s.t),''],
+    ['평균 페이스',s.ap?paceTxt(s.ap):'—',s.ap?'/km':''],['최고 페이스',s.bp?paceTxt(s.bp):'—',s.bp?'/km':'']];
+  const cw=(S-P*2)/4;
   x.strokeStyle=SHARE_C.line;x.lineWidth=2;
   x.beginPath();x.moveTo(P,378);x.lineTo(S-P,378);x.stroke();
   cells.forEach(([lab,val,unit],i)=>{
@@ -1603,40 +1629,54 @@ function drawShareCard(s){
   });
   x.beginPath();x.moveTo(P,502);x.lineTo(S-P,502);x.stroke();
   let yy=560;
-  /* 계획 대비 진도 — 올해 범위에서 기준이 있을 때만 */
+  /* 계획 대비 진도 — 주/월/올해 범위에서 기준이 있을 때만. 횟수·거리 반폭 2개 */
   if(s.gp&&(s.gp[0]||s.gp[1])){
-    const beta=s.gp[0]||0, alpha=(s.gt&&s.gt[0])||0, max=alpha||beta;
-    x.fillStyle=SHARE_C.sub;x.font=F(650,25);x.fillText('올해 횟수',P,yy);
-    x.fillStyle=SHARE_C.ink;x.font=F(750,25);
-    const rt=s.n+' / '+(max||'—')+'회';x.fillText(rt,S-P-x.measureText(rt).width,yy);
-    const bw=S-P*2,bh=18,by=yy+16;
-    x.fillStyle=SHARE_C.plane;rr(P,by,bw,bh,9);x.fill();
-    const pct=max?Math.min(1,s.n/max):0;
-    if(pct>0){x.fillStyle=s.n>=beta&&beta?SHARE_C.good:SHARE_C.brand;rr(P,by,Math.max(bh,bw*pct),bh,9);x.fill();}
-    if(beta&&alpha&&alpha>beta){const mx=P+bw*(beta/alpha);
-      x.strokeStyle=SHARE_C.beta;x.lineWidth=4;x.beginPath();x.moveTo(mx,by-4);x.lineTo(mx,by+bh+4);x.stroke();}
-    x.fillStyle=SHARE_C.mute;x.font=F(600,21);
-    x.fillText((beta?'계획 '+beta+'회':'')+(beta&&alpha?'  ·  ':'')+(alpha?'목표 '+alpha+'회':''),P,by+bh+30);
+    const noun=sumPeriodNoun(s), bh=18, by=yy+16;
+    const drawGoal=(x0,w,label,actual,actualTxt,beta,alpha,unit)=>{
+      const max=alpha||beta;
+      x.fillStyle=SHARE_C.sub;x.font=F(650,25);x.fillText(label,x0,yy);
+      x.fillStyle=SHARE_C.ink;x.font=F(750,25);
+      const rt=actualTxt+' / '+(max||'—')+unit;x.fillText(rt,x0+w-x.measureText(rt).width,yy);
+      x.fillStyle=SHARE_C.plane;rr(x0,by,w,bh,9);x.fill();
+      const pct=max?Math.min(1,actual/max):0;
+      if(pct>0){x.fillStyle=actual>=beta&&beta?SHARE_C.good:SHARE_C.brand;rr(x0,by,Math.max(bh,w*pct),bh,9);x.fill();}
+      if(beta&&alpha&&alpha>beta){const mx=x0+w*(beta/alpha);
+        x.strokeStyle=SHARE_C.beta;x.lineWidth=4;x.beginPath();x.moveTo(mx,by-4);x.lineTo(mx,by+bh+4);x.stroke();}
+      x.fillStyle=SHARE_C.mute;x.font=F(600,21);
+      x.fillText((beta?'계획 '+beta+unit:'')+(beta&&alpha?' · ':'')+(alpha?'목표 '+alpha+unit:''),x0,by+bh+30);
+    };
+    const bars=[];
+    if(s.gp[0]||(s.gt&&s.gt[0]))bars.push([noun+' 횟수',s.n,String(s.n),s.gp[0]||0,(s.gt&&s.gt[0])||0,'회']);
+    if(s.gp[1]||(s.gt&&s.gt[1]))bars.push([noun+' 거리',s.d,s.d.toFixed(1),s.gp[1]||0,(s.gt&&s.gt[1])||0,'km']);
+    const w=bars.length>1?(S-P*2-44)/2:S-P*2;
+    bars.forEach((b,i)=>drawGoal(P+(w+44)*i,w,...b));
     yy=by+bh+88;
-  }else yy=600; /* 기준이 없으면 카드가 위로 쏠리지 않게 월별 거리를 내린다 */
-  /* 월별 거리 */
-  x.fillStyle=SHARE_C.sub;x.font=F(650,25);x.fillText('월별 거리',P,yy);
-  const labels=sumMonthLabels(s), maxM=Math.max(1,...s.m);
-  const gw=S-P*2, bwid=gw/12, top=yy+28, gh=182;
+  }else yy=600; /* 기준이 없으면 카드가 위로 쏠리지 않게 차트를 내린다 */
+  /* 범위별 거리 차트 — 주: 요일별 7칸 · 월: 일별 · 올해/전체: 월별 12칸 */
+  const maxM=Math.max(1,...s.m), mi=s.m.indexOf(Math.max(...s.m)), hasRun=s.m.some(v=>v>0);
+  x.fillStyle=SHARE_C.sub;x.font=F(650,25);
+  const ct=sumChartTitle(s), ctW=x.measureText(ct).width;
+  x.fillText(ct,P,yy);
+  if(hasRun){ /* 최고 구간 값 — 제목 옆에 적고 막대는 진한 색으로 강조 */
+    x.fillStyle=SHARE_C.mute;x.font=F(600,22);
+    x.fillText('최고 '+s.m[mi].toFixed(1)+'km',P+ctW+18,yy);
+  }
+  const ticks=sumChartTicks(s), N=s.m.length;
+  const gw=S-P*2, bwid=gw/N, top=yy+28, gh=182;
   s.m.forEach((v,i)=>{
     const h=Math.max(v>0?5:0,Math.round(gh*(v/maxM)));
     const bx=P+bwid*i+bwid*0.19, bwd=bwid*0.62;
-    x.fillStyle=v>0?SHARE_C.brand:SHARE_C.line;
-    rr(bx,top+gh-h,bwd,Math.max(h,3),5);x.fill();
+    x.fillStyle=v>0?(i===mi?SHARE_C.deep:SHARE_C.brand):SHARE_C.line;
+    rr(bx,top+gh-h,bwd,Math.max(h,3),Math.min(5,bwd/2));x.fill();
   });
   x.fillStyle=SHARE_C.mute;x.font=F(600,19);
-  labels.forEach((t,i)=>{if(i%2)return;const w=x.measureText(t).width;
+  ticks.forEach((t,i)=>{if(!t)return;const w=x.measureText(t).width;
     x.fillText(t,P+bwid*i+bwid/2-w/2,top+gh+28);});
   /* 꼬리말 */
   const fy=S-96;
   x.strokeStyle=SHARE_C.line;x.lineWidth=2;x.beginPath();x.moveTo(P,fy-42);x.lineTo(S-P,fy-42);x.stroke();
   if(s.st>0){x.fillStyle=SHARE_C.ink;x.font=F(700,26);x.fillText('🔥 계획 연속 '+s.st+'주 달성 중',P,fy);}
-  else if(s.bp){x.fillStyle=SHARE_C.ink;x.font=F(700,26);x.fillText('최고 페이스 '+paceTxt(s.bp)+'/km',P,fy);}
+  else if(s.ap){x.fillStyle=SHARE_C.ink;x.font=F(700,26);x.fillText('평균 페이스 '+paceTxt(s.ap)+'/km',P,fy);}
   x.fillStyle=SHARE_C.mute;x.font=F(600,24);
   const brand='run.habitree.io';
   x.fillText(brand,S-P-x.measureText(brand).width,fy);
@@ -2010,8 +2050,10 @@ function openShareModal(){
   _shareScope=state.records.some(r=>String(r.date).slice(0,4)===todayISO().slice(0,4))?'year':'all';
   _shareBlob=null;_shareFile=null;
   openModal(`<h3>공유</h3>
-    <p style="font-size:12.5px;color:var(--text-secondary);margin:0 0 12px">요약만 공유됩니다 — 개별 러닝의 날짜·시간·위치는 담기지 않아요.</p>
+    <p id="shareNote" style="font-size:12.5px;color:var(--text-secondary);margin:0 0 12px"></p>
     <div class="rangetog" role="group" aria-label="공유 범위" style="margin-bottom:12px">
+      <button data-sc="week" onclick="setShareScope('week')">이번 주</button>
+      <button data-sc="month" onclick="setShareScope('month')">이번 달</button>
       <button data-sc="year" onclick="setShareScope('year')">올해</button>
       <button data-sc="all" onclick="setShareScope('all')">전체</button>
     </div>
@@ -2028,6 +2070,10 @@ function openShareModal(){
 function setShareScope(v){_shareScope=v;refreshShareModal();}
 async function refreshShareModal(){
   document.querySelectorAll('.rangetog button[data-sc]').forEach(b=>b.classList.toggle('active',b.dataset.sc===_shareScope));
+  const note=$('#shareNote'); /* 주/월은 일자별 거리 합계가 담긴다 — 범위에 맞는 문구 */
+  if(note)note.textContent=(_shareScope==='week'||_shareScope==='month')
+    ?'요약과 일자별 거리 합계만 공유됩니다 — 개별 러닝의 시간·위치는 담기지 않아요.'
+    :'요약만 공유됩니다 — 개별 러닝의 날짜·시간·위치는 담기지 않아요.';
   const s=shareSummaryNow(),u=shareUrl(s),li=$('#shareLink');
   if(li)li.value=u;
   const prev=$('#sharePrev'),btns=$('#shareBtns');
@@ -2078,11 +2124,12 @@ function downloadShareImage(){
    내 기록을 읽지도 쓰지도 않는다. 요약 객체만으로 그린다. */
 function renderSharedView(s){
   document.body.classList.add('shared');
-  const mx=Math.max(1,...s.m), labels=sumMonthLabels(s);
-  const bar=(v,i)=>`<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:5px">
-    <div style="width:62%;min-height:3px;height:${Math.max(v>0?4:3,Math.round(96*(v/mx)))}px;border-radius:4px;
-      background:${v>0?'var(--series-1)':'var(--grid)'}"></div>
-    <span style="font-size:10px;color:var(--muted)">${i%2?'':esc(labels[i])}</span></div>`;
+  const mx=Math.max(1,...s.m), mi=s.m.indexOf(Math.max(...s.m)), hasRun=s.m.some(v=>v>0);
+  const ticks=sumChartTicks(s), noun=sumPeriodNoun(s), dense=s.m.length>14;
+  const bar=(v,i)=>`<div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:5px">
+    <div style="width:${dense?'72%':'62%'};min-height:3px;height:${Math.max(v>0?4:3,Math.round(96*(v/mx)))}px;border-radius:${dense?3:4}px;
+      background:${v>0?(i===mi?'var(--seq-550)':'var(--series-1)'):'var(--grid)'}"></div>
+    <span style="font-size:10px;color:var(--muted);white-space:nowrap">${esc(ticks[i]||'')}</span></div>`;
   $('#stage').innerHTML=`
     <div class="sharedban">공유받은 러닝 요약 · ${esc(String(s.at||'').replace(/-/g,'.'))} 기준</div>
     <h2 class="vh">${esc(sumPeriodLabel(s))} 러닝 요약</h2>
@@ -2094,12 +2141,12 @@ function renderSharedView(s){
         <div class="foot">평균 ${s.ap?paceTxt(s.ap):'—'}/km</div></div>
     </div>
     ${s.gp&&(s.gp[0]||s.gp[1])?`<div class="card" style="margin-top:14px">
-      ${goalBarHTML('올해 횟수',s.n,s.gp[0]||0,(s.gt&&s.gt[0])||0,'회')}
-      ${goalBarHTML('올해 거리',Math.round(s.d*10)/10,s.gp[1]||0,(s.gt&&s.gt[1])||0,'km')}
+      ${goalBarHTML(noun+' 횟수',s.n,s.gp[0]||0,(s.gt&&s.gt[0])||0,'회')}
+      ${goalBarHTML(noun+' 거리',Math.round(s.d*10)/10,s.gp[1]||0,(s.gt&&s.gt[1])||0,'km')}
     </div>`:''}
-    <div class="chart-card" style="margin-top:14px"><h3>월별 거리</h3>
-      <div class="cs">km · 가장 많이 달린 달 ${mx.toFixed(1)}km</div>
-      <div style="display:flex;gap:4px;align-items:flex-end;height:126px;margin-top:8px">${s.m.map(bar).join('')}</div></div>
+    <div class="chart-card" style="margin-top:14px"><h3>${sumChartTitle(s)}</h3>
+      <div class="cs">km${hasRun?` · 가장 많이 달린 ${s.sc==='w'||s.sc==='m'?'날':'달'} ${mx.toFixed(1)}km`:''}</div>
+      <div style="display:flex;gap:${dense?2:4}px;align-items:flex-end;height:126px;margin-top:8px">${s.m.map(bar).join('')}</div></div>
     <div class="card" style="margin-top:14px;display:flex;gap:14px;flex-wrap:wrap">
       <div style="flex:1;min-width:130px"><div style="font-size:11.5px;color:var(--text-secondary)">최고 페이스</div>
         <div style="font-size:19px;font-weight:750">${s.bp?paceTxt(s.bp)+'<small style="font-size:12px;color:var(--muted)">/km</small>':'—'}</div></div>
