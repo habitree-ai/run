@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<script>try{var _t=localStorage.getItem('run.theme.v1');if(_t)document.documentElement.setAttribute('data-theme',_t);}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>아이폰에서 드라이브 창이 열리지 않는 이유 · 매뉴얼</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏃</text></svg>">
+<style>
+  :root{color-scheme:light;
+    --surface-1:#fcfcfb;--plane:#f9f9f7;--text-primary:#0b0b0b;--text-secondary:#52514e;--muted:#898781;
+    --border:rgba(11,11,11,0.10);--series-1:#2a78d6;--series-1-soft:#cde2fb;--seq-700:#0d366b;
+    --good:#0ca30c;--warn:#b26a00;--warn-soft:#fdecc8;
+    --radius:14px;--shadow:0 1px 2px rgba(11,11,11,.04),0 4px 16px rgba(11,11,11,.05);
+    --font:system-ui,-apple-system,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Consolas,monospace;}
+  :root[data-theme="dark"]{color-scheme:dark;
+    --surface-1:#1a1a19;--plane:#0d0d0d;--text-primary:#fff;--text-secondary:#c3c2b7;--muted:#898781;
+    --border:rgba(255,255,255,0.10);--series-1:#3987e5;--series-1-soft:#184f95;--seq-700:#b7d3f6;
+    --warn:#fab219;--warn-soft:#3a2f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+    --surface-1:#1a1a19;--plane:#0d0d0d;--text-primary:#fff;--text-secondary:#c3c2b7;--muted:#898781;
+    --border:rgba(255,255,255,0.10);--series-1:#3987e5;--series-1-soft:#184f95;--seq-700:#b7d3f6;
+    --warn:#fab219;--warn-soft:#3a2f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.35);}}
+  *{box-sizing:border-box}html,body{margin:0}
+  body{background:var(--plane);color:var(--text-primary);font-family:var(--font);line-height:1.65;-webkit-font-smoothing:antialiased}
+  a{color:var(--series-1);text-decoration:none}a:hover{text-decoration:underline}
+  header.top{border-bottom:1px solid var(--border);background:var(--surface-1);position:sticky;top:0;z-index:30}
+  .top-inner{display:flex;align-items:center;gap:14px;padding:11px 20px;flex-wrap:wrap;max-width:960px;margin:0 auto}
+  .brand h1{font-size:15.5px;margin:0}
+  .spacer{flex:1}
+  .tabs{display:flex;gap:2px}
+  .tabs a{padding:6px 10px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text-secondary)}
+  .tabs a.active{background:var(--series-1-soft);color:var(--seq-700)}
+  :root[data-theme="dark"] .tabs a.active{color:#fff}
+  .toggle{border:1px solid var(--border);background:transparent;color:var(--text-secondary);width:34px;height:34px;border-radius:9px;cursor:pointer}
+  main{max-width:760px;margin:0 auto;padding:32px 22px 80px}
+  h1.doc{font-size:24px;letter-spacing:-.01em;margin:0 0 4px}
+  .doc-sub{color:var(--muted);font-size:13px;margin:0 0 28px}
+  h2{font-size:18px;margin:34px 0 10px;letter-spacing:-.01em}
+  p,li{font-size:14px;color:var(--text-secondary)}
+  b,strong{color:var(--text-primary)}
+  table{border-collapse:collapse;width:100%;font-size:13px;background:var(--surface-1);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  th{background:var(--series-1-soft);color:var(--seq-700);text-align:left;padding:9px 11px;font-size:11.5px;white-space:nowrap}
+  :root[data-theme="dark"] th{color:#dbe9ff;background:#17324f}
+  td{padding:9px 11px;border-top:1px solid var(--border);vertical-align:top}
+  pre{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:16px;font-family:var(--mono);font-size:12px;line-height:1.6;overflow:auto;color:var(--text-secondary);box-shadow:var(--shadow)}
+  code{font-family:var(--mono);font-size:.92em;background:var(--series-1-soft);padding:1px 5px;border-radius:5px;color:var(--seq-700)}
+  :root[data-theme="dark"] code{color:#dbe9ff}
+  .note{font-size:13px;color:var(--text-secondary);background:var(--series-1-soft);border-radius:10px;padding:12px 14px;margin:14px 0}
+  :root[data-theme="dark"] .note{background:rgba(57,135,229,.12)}
+  .qa{border-left:3px solid var(--series-1);padding:2px 0 2px 14px;margin:14px 0;font-size:14px;color:var(--text-primary);font-weight:600}
+  .wrap{overflow-x:auto}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-inner">
+  <div class="brand"><h1>아이폰 · 드라이브 창</h1></div>
+  <div class="spacer"></div>
+  <nav class="tabs"><a href="../index.html">대시보드</a><a href="../guide.html">사용법</a><a href="index.html">매뉴얼</a></nav>
+  <button class="toggle" id="themeBtn" aria-label="테마 전환">◐</button>
+</div></header>
+<main>
+<h1 class="doc">아이폰에서 "Can't access your Google Account"가 뜨며 드라이브 창이 열리지 않는 이유</h1>
+<p class="doc-sub">2026-09-03 · 진단 Q&amp;A · REQ-0015 기준</p>
+
+<div class="qa">Q. 아이폰에서 기록 추가 → 📥 캡쳐 가져오기를 누르면 드라이브 창 대신 "Can't access your Google Account — Try signing into your Google account or allowing cookie access" 화면이 뜨고 사라지지 않는다. 로그인은 되어 있고 PC에서는 잘 된다.</div>
+<p><b>A. 아이폰 브라우저가 구글 드라이브 창의 쿠키를 막기 때문이다.</b> 계정·앱·키 설정의 문제가 아니며, 아이폰이면 Safari든 Chrome이든 똑같이 일어난다. 그래서 앱은 아이폰에서 이 창을 열기 전에 <b>사진 앱에서 고르기</b>를 먼저 권하고, 그래도 열었을 때는 화면 아래에 <b>✕ 닫기 · 📷 사진에서 고르기</b> 탈출 바를 띄운다.</p>
+
+<h2>무엇이 어디서 막히는가</h2>
+<pre>[정상]   기록 추가 → 📥 캡쳐 가져오기
+         → ① 구글 로그인 토큰 (accounts.google.com · 별도 팝업)   ✔ 아이폰에서도 정상
+         → ② 드라이브 창 = docs.google.com 을 우리 페이지 안에 iframe으로 삽입
+              구글이 "이 사람이 누구인지" 확인하려고 iframe 안의 구글 쿠키를 읽음
+         → ③ 파일 선택 → 다운로드 (Drive API · 토큰만 사용)          ✔ 아이폰에서도 정상
+
+[아이폰]  ②에서 iframe 안의 구글 쿠키가 차단됨 (다른 사이트 안에 박힌 "제3자" 쿠키)
+         → 구글은 토큰이 유효해도 세션을 못 잡아 안내 화면을 그림
+            "Can't access your Google Account … allowing cookie access"
+         → 이 화면은 닫기 버튼이 없어 새로고침 외에는 빠져나올 수 없었음</pre>
+<p>동기화·백업·프로필 표시는 ①과 ③만 쓰므로 아이폰에서도 멀쩡하다. 헤더에 프로필과 기록 건수가 보이는 것이 그 증거다. <b>깨지는 것은 드라이브 창(Picker) 하나</b>뿐이다.</p>
+
+<h2>왜 아이폰만 그런가</h2>
+<ul>
+<li><b>Safari</b> — "사이트 간 추적 방지"(ITP)가 기본으로 켜져 있고, iOS 13.4부터 제3자 쿠키를 예외 없이 막는다.</li>
+<li><b>Chrome · Edge 등 다른 브라우저 앱</b> — 아이폰에서는 모두 Safari 엔진(WKWebView)을 쓰도록 강제된다. iOS 14부터 이 엔진에도 같은 추적 방지가 기본 적용되며, 스위치는 아이폰 <b>설정 → 해당 앱 → 크로스 사이트 추적 허용</b>에 있다(기본 꺼짐).</li>
+<li><b>안드로이드 Chrome · PC</b> — 기본 설정에서는 제3자 쿠키가 허용돼 창이 열린다. 시크릿 모드나 "타사 쿠키 차단"을 켠 경우에만 같은 증상이 난다.</li>
+</ul>
+
+<h2>앱이 하는 일 (2026-09-03 개선)</h2>
+<div class="wrap"><table><tr><th>상황</th><th>동작</th></tr>
+<tr><td>아이폰에서 📥 캡쳐 가져오기</td><td>창을 열지 않고 선택 창을 띄운다 — <b>📷 사진에서 고르기</b>(기본) / <b>드라이브 창 열기</b>. 사진 앱에서 고른 캡쳐도 드라이브에서 가져올 때와 똑같이 OCR로 읽어 채운다.</td></tr>
+<tr><td>아이폰에서 📁 캡쳐 폴더 지정</td><td>같은 안내. 폴더 지정은 드라이브 창이 열리는 환경에서만 의미가 있다.</td></tr>
+<tr><td>드라이브 창을 굳이 열었는데 먹통</td><td>화면 아래 탈출 바(<b>✕ 닫기 · 📷 사진에서 고르기</b>)로 빠져나온다. 8초 안에 아무 신호가 없거나 구글이 오류를 알리면 앱이 창을 닫고 안내를 띄운다.</td></tr>
+<tr><td>드라이브 창으로 파일을 한 번 골라낸 기기</td><td>추적 허용을 켠 것으로 보고 다음부터 안내 없이 바로 창을 연다(이 브라우저에만 기억).</td></tr>
+</table></div>
+
+<h2>드라이브 창을 꼭 쓰고 싶다면</h2>
+<div class="wrap"><table><tr><th>브라우저</th><th>스위치 위치</th></tr>
+<tr><td>Safari</td><td>아이폰 설정 → Safari → <b>사이트 간 추적 방지</b> 끄기 (그리고 "모든 쿠키 차단"이 꺼져 있는지 확인)</td></tr>
+<tr><td>Chrome</td><td>아이폰 설정 → Chrome → <b>크로스 사이트 추적 허용</b> 켜기</td></tr>
+<tr><td>그 밖의 브라우저 앱</td><td>아이폰 설정 → 해당 앱 → <b>크로스 사이트 추적 허용</b> 켜기</td></tr>
+</table></div>
+<p>바꾼 뒤 앱 페이지를 새로고침하고 <b>드라이브 창 열기</b>를 누른다. 다만 이 스위치는 모든 사이트에 적용되는 개인정보 설정이라, 아이폰에서는 사진 앱에서 고르는 흐름을 권한다 — 달리고 난 직후의 캡쳐는 어차피 사진 앱에 있다.</p>
+
+<h2>같은 뿌리의 다른 오류 문구</h2>
+<ul>
+<li><code>The API developer key is invalid</code> — 세션 없이 진행된 키 검증이 실패하며 나오는 문구. 키는 멀쩡하다(2026-07-29 콘솔 실물 확인). 대처는 이 문서와 같다.</li>
+<li><code>400 origin_mismatch</code> — 이건 다른 문제다. 접속 주소가 구글에 등록돼 있지 않을 때 나며, 앱이 별도 안내를 띄운다.</li>
+</ul>
+
+<div class="note">ℹ️ 앱은 <code>drive.file</code>(앱이 만든·사용자가 골라 준 파일만 접근) 스코프만 쓴다. 드라이브 창 없이 폴더를 직접 훑으려면 제한 등급 스코프가 필요해 구글 앱 심사 대상이 되므로 채택하지 않았다. 원리는 <a href="multi-device-sync.html">PC·모바일 데이터 연계</a> 문서 참조.</div>
+</main>
+<script>
+const root=document.documentElement;
+document.getElementById('themeBtn').addEventListener('click',()=>{const t=(root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'))==='dark'?'light':'dark';root.setAttribute('data-theme',t);try{localStorage.setItem('run.theme.v1',t);}catch(e){}});
+</script>
+</body>
+</html>
